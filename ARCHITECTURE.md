@@ -124,8 +124,9 @@ ImageSelection Hook ──── D-Pad による手動クロップ (/lab/crop/:p
     │          ★ ここで初めて ExtractedImage レコードを INSERT。
     ▼
 メタデータ入力フォーム (/lab/label/:image_id)
-    │  Step 4: caption, label, site, period, artifact_type を手入力。自動ラベリング保存。
-    │          Save & Finish 時に PTIF 生成ジョブを自動 dispatch。
+    │  Step 4: caption, label, site, period, artifact_type を手入力。
+    │          さらに任意のメタデータを追加できる**動的カスタムフィールド**も利用可能。
+    │          保存完了後、自動的に PTIF 生成ジョブを自動 dispatch。
     │          geometry nil の場合は保存をブロック。
     ▼
 [vix/libvips] ── クロップ画像 → PTIF 生成 (バックグラウンド)
@@ -191,6 +192,7 @@ IIIF クライアント (Mirador, Universal Viewer 等)
 │    users     │           │ site                   │
 ├──────────────┤           │ period                 │
 │ id           │ ◄─────────│ artifact_type          │
+│ custom_metadata (JSONB)│
 │ email        │   N:1     │ inserted_at            │
 │ hashed_pw    │           │ updated_at             │
 │ confirmed_at │           └────────────────────────┘
