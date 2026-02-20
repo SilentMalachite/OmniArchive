@@ -18,8 +18,6 @@ OmniArchive は、静的な PDFファイル を、国際的な画像相互運用
 
 ### 🧙 ウィザード型インスペクタ (Lab)
 
-![Lab Wizard Interface](priv/static/images/wizard.jpg)
-
 直感的な **5 ステップ**のウィザード形式で、PDF から IIIF アセットを作成します。
 
 | ステップ | アイコン | 内容 |
@@ -45,8 +43,6 @@ OmniArchive は、静的な PDFファイル を、国際的な画像相互運用
 | **ゴミ箱管理** | 削除されたプロジェクトは `/admin/trash` で管理。復元または完全削除が可能です。公開済プロジェクトは削除から保護されます |
 
 ### 🔍 検索・発見
-
-![Gallery Interface](priv/static/images/gallery.jpg)
 
 - **全文検索**: キャプションの PostgreSQL FTS (tsvector + GIN インデックス)
 - **ファセット検索**: 遺跡名・時代・遺物種別によるフィルタリング
