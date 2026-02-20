@@ -42,6 +42,7 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
      |> assign(:site, extracted_image.site || "")
      |> assign(:period, extracted_image.period || "")
      |> assign(:artifact_type, extracted_image.artifact_type || "")
+     |> assign(:metadata_list, map_to_list(extracted_image.custom_metadata))
      |> assign(:undo_stack, [])
      |> assign(:duplicate_record, check_duplicate_label(extracted_image))
      |> assign(:validation_errors, %{})
@@ -53,6 +54,62 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
   end
 
   # --- メタデータ更新イベント ---
+
+  @impl true
+  def handle_event("add_metadata", _, socket) do
+    current_snapshot = take_snapshot(socket)
+    undo_stack = [current_snapshot | socket.assigns.undo_stack] |> Enum.take(20)
+
+    new_row = %{"id" => Ecto.UUID.generate(), "key" => "", "value" => ""}
+    metadata_list = socket.assigns.metadata_list ++ [new_row]
+
+    socket =
+      socket
+      |> assign(:undo_stack, undo_stack)
+      |> assign(:metadata_list, metadata_list)
+      |> auto_save_field("custom_metadata_list", metadata_list)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("remove_metadata", %{"id" => id}, socket) do
+    current_snapshot = take_snapshot(socket)
+    undo_stack = [current_snapshot | socket.assigns.undo_stack] |> Enum.take(20)
+
+    filtered = Enum.reject(socket.assigns.metadata_list, &(&1["id"] == id))
+
+    socket =
+      socket
+      |> assign(:undo_stack, undo_stack)
+      |> assign(:metadata_list, filtered)
+      |> auto_save_field("custom_metadata_list", filtered)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event(
+        "update_metadata_field",
+        %{"id" => id, "field" => field, "value" => value},
+        socket
+      ) do
+    current_snapshot = take_snapshot(socket)
+    undo_stack = [current_snapshot | socket.assigns.undo_stack] |> Enum.take(20)
+
+    updated_list =
+      Enum.map(socket.assigns.metadata_list, fn row ->
+        if row["id"] == id, do: Map.put(row, field, value), else: row
+      end)
+
+    socket =
+      socket
+      |> assign(:undo_stack, undo_stack)
+      |> assign(:metadata_list, updated_list)
+      |> auto_save_field("custom_metadata_list", updated_list)
+
+    {:noreply, socket}
+  end
 
   @impl true
   def handle_event("update_field", %{"field" => field, "value" => value}, socket) do
@@ -103,6 +160,7 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
          |> assign(:site, previous.site)
          |> assign(:period, previous.period)
          |> assign(:artifact_type, previous.artifact_type)
+         |> assign(:metadata_list, previous.custom_metadata_list)
          |> assign(:undo_stack, rest)
          |> auto_save_all(previous)}
 
@@ -163,7 +221,8 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
       label: socket.assigns.label,
       site: socket.assigns.site,
       period: socket.assigns.period,
-      artifact_type: socket.assigns.artifact_type
+      artifact_type: socket.assigns.artifact_type,
+      custom_metadata_list: socket.assigns.metadata_list
     }
   end
 
@@ -218,7 +277,8 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
       label: socket.assigns.label,
       site: socket.assigns.site,
       period: socket.assigns.period,
-      artifact_type: socket.assigns.artifact_type
+      artifact_type: socket.assigns.artifact_type,
+      custom_metadata_list: socket.assigns.metadata_list
     }
 
     Ingestion.update_extracted_image(
@@ -341,6 +401,15 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
       {:ok, %{width: w, height: h}} -> {w, h}
       _error -> {0, 0}
     end
+  end
+
+  defp map_to_list(nil), do: []
+  defp map_to_list(map) when map == %{}, do: []
+
+  defp map_to_list(map) do
+    Enum.map(map, fn {k, v} ->
+      %{"id" => Ecto.UUID.generate(), "key" => k, "value" => v}
+    end)
   end
 
   @impl true
@@ -512,6 +581,71 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
               placeholder="例: 土器"
               name="artifact_type"
             />
+          </div>
+
+          <div class="metadata-custom-section" style="margin-top: 2rem;">
+            <div class="flex items-center justify-between" style="margin-bottom: 1rem;">
+              <label class="form-label" style="margin-bottom: 0;">➕ 動的メタデータ (カスタム属性)</label>
+              <button
+                type="button"
+                phx-click="add_metadata"
+                class="btn-secondary"
+                style="padding: 0.25rem 0.5rem; font-size: 0.875rem;"
+                aria-label="カスタムフィールドを追加"
+              >
+                + フィールドを追加
+              </button>
+            </div>
+
+            <div class="space-y-3" style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <%= if Enum.empty?(@metadata_list) do %>
+                <p style="font-size: 0.875rem; color: #9ca3af; font-style: italic;">
+                  追加の属性がある場合は「フィールドを追加」を押してください。
+                </p>
+              <% else %>
+                <div
+                  :for={meta <- @metadata_list}
+                  class="flex gap-2 items-start"
+                  style="display: flex; gap: 0.5rem; align-items: flex-start;"
+                >
+                  <div style="flex: 1;">
+                    <input
+                      type="text"
+                      value={meta["key"]}
+                      phx-blur="update_metadata_field"
+                      phx-value-id={meta["id"]}
+                      phx-value-field="key"
+                      placeholder="属性名 (例: 撮影者)"
+                      class="form-input form-input-large"
+                      style="width: 100%;"
+                    />
+                  </div>
+                  <div style="flex: 2; display: flex; gap: 0.5rem;">
+                    <input
+                      type="text"
+                      value={meta["value"]}
+                      phx-blur="update_metadata_field"
+                      phx-value-id={meta["id"]}
+                      phx-value-field="value"
+                      placeholder="値"
+                      class="form-input form-input-large"
+                      style="flex-grow: 1;"
+                    />
+                    <button
+                      type="button"
+                      phx-click="remove_metadata"
+                      phx-value-id={meta["id"]}
+                      style="padding: 0.5rem; color: #ef4444; border-radius: 0.25rem; transition: background-color 0.2s;"
+                      onmouseover="this.style.backgroundColor='#fef2f2'"
+                      onmouseout="this.style.backgroundColor='transparent'"
+                      aria-label="削除"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              <% end %>
+            </div>
           </div>
         </div>
 

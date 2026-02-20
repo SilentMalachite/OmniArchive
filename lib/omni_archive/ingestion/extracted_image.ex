@@ -35,6 +35,8 @@ defmodule OmniArchive.Ingestion.ExtractedImage do
     field :artifact_type, :string
     # ステータス (draft / pending_review / rejected / published)
     field :status, :string, default: "draft"
+    # 動的メタデータ (Key-Value) — JSONB
+    field :custom_metadata, :map, default: %{}
     # レビュアーによる差し戻し理由
     field :review_comment, :string
     # 楽観的ロック用バージョンカウンター
@@ -52,6 +54,8 @@ defmodule OmniArchive.Ingestion.ExtractedImage do
 
   @doc "バリデーション用 changeset"
   def changeset(extracted_image, attrs) do
+    attrs = transform_metadata(attrs)
+
     extracted_image
     |> cast(attrs, [
       :pdf_source_id,
@@ -64,6 +68,7 @@ defmodule OmniArchive.Ingestion.ExtractedImage do
       :site,
       :period,
       :artifact_type,
+      :custom_metadata,
       :status,
       :review_comment,
       :lock_version,
@@ -109,6 +114,52 @@ defmodule OmniArchive.Ingestion.ExtractedImage do
       end
     else
       changeset
+    end
+  end
+
+  # 動的メタデータ変換: リスト（またはマップ）構造をJSONB登録用のMapに変換。空のKeyは除外
+  defp transform_metadata(attrs) do
+    has_str_key = Map.has_key?(attrs, "custom_metadata_list")
+    has_atom_key = Map.has_key?(attrs, :custom_metadata_list)
+
+    if not has_str_key and not has_atom_key do
+      attrs
+    else
+      raw_list =
+        Map.get(attrs, "custom_metadata_list") || Map.get(attrs, :custom_metadata_list) || %{}
+
+      list =
+        cond do
+          is_map(raw_list) ->
+            # LiveView フォームからの送信時 (%{"0" => %{...}, "1" => %{...}})
+            raw_list
+            |> Enum.sort_by(fn {idx, _} -> String.to_integer(to_string(idx)) end)
+            |> Enum.map(fn {_idx, data} -> data end)
+
+          is_list(raw_list) ->
+            raw_list
+
+          true ->
+            []
+        end
+
+      map_data =
+        list
+        |> Enum.reject(fn data ->
+          key = Map.get(data, "key", Map.get(data, :key, ""))
+          is_nil(key) or String.trim(to_string(key)) == ""
+        end)
+        |> Enum.into(%{}, fn data ->
+          key = Map.get(data, "key", Map.get(data, :key, ""))
+          val = Map.get(data, "value", Map.get(data, :value, ""))
+          {String.trim(to_string(key)), to_string(val)}
+        end)
+
+      if has_str_key do
+        Map.put(attrs, "custom_metadata", map_data)
+      else
+        Map.put(attrs, :custom_metadata, map_data)
+      end
     end
   end
 end

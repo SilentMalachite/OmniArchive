@@ -151,5 +151,80 @@ defmodule OmniArchive.Ingestion.ExtractedImageTest do
       changeset = ExtractedImage.changeset(%ExtractedImage{}, attrs)
       assert changeset.valid?
     end
+
+    # --- 動的メタデータ (custom_metadata) 変換 ---
+
+    test "custom_metadata_list (マップリスト) から custom_metadata (Map) へ変換される" do
+      pdf_source = insert_pdf_source()
+
+      # Phoenix の input フォーム風 (index が key の Map)
+      metadata_list = %{
+        "0" => %{"key" => "撮影者", "value" => "山田太郎"},
+        "1" => %{"key" => "特記事項", "value" => "破損箇所あり"}
+      }
+
+      attrs = %{
+        pdf_source_id: pdf_source.id,
+        page_number: 1,
+        custom_metadata_list: metadata_list
+      }
+
+      changeset = ExtractedImage.changeset(%ExtractedImage{}, attrs)
+      assert changeset.valid?
+
+      custom_metadata = Ecto.Changeset.get_change(changeset, :custom_metadata)
+
+      assert custom_metadata == %{
+               "撮影者" => "山田太郎",
+               "特記事項" => "破損箇所あり"
+             }
+    end
+
+    test "custom_metadata_list (配列リスト) から custom_metadata へ変換される" do
+      pdf_source = insert_pdf_source()
+
+      metadata_list = [
+        %{"key" => "所有者", "value" => "博物館"},
+        %{"key" => "色", "value" => "赤褐"}
+      ]
+
+      attrs = %{
+        pdf_source_id: pdf_source.id,
+        page_number: 1,
+        custom_metadata_list: metadata_list
+      }
+
+      changeset = ExtractedImage.changeset(%ExtractedImage{}, attrs)
+      assert changeset.valid?
+
+      custom_metadata = Ecto.Changeset.get_change(changeset, :custom_metadata)
+
+      assert custom_metadata == %{
+               "所有者" => "博物館",
+               "色" => "赤褐"
+             }
+    end
+
+    test "custom_metadata_list で key が空の場合は除外される" do
+      pdf_source = insert_pdf_source()
+
+      metadata_list = [
+        %{"key" => "有効なキー", "value" => "値１"},
+        %{"key" => "", "value" => "無視される値"},
+        %{"key" => "  ", "value" => "これも無視される"}
+      ]
+
+      attrs = %{
+        pdf_source_id: pdf_source.id,
+        page_number: 1,
+        custom_metadata_list: metadata_list
+      }
+
+      changeset = ExtractedImage.changeset(%ExtractedImage{}, attrs)
+      assert changeset.valid?
+
+      custom_metadata = Ecto.Changeset.get_change(changeset, :custom_metadata)
+      assert custom_metadata == %{"有効なキー" => "値１"}
+    end
   end
 end
