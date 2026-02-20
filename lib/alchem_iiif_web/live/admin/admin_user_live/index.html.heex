@@ -1,0 +1,166 @@
+<div class="max-w-7xl mx-auto px-4 py-8">
+  <%!-- ヘッダー --%>
+  <div class="mb-8 flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-100 flex items-center gap-2">
+        👥 ユーザー管理
+      </h1>
+      <p class="mt-2 text-sm text-gray-400">
+        登録ユーザー一覧（{length(@users)} 件）
+      </p>
+    </div>
+    <button
+      phx-click="open_modal"
+      class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-500 transition-colors duration-150 shadow-lg shadow-indigo-500/20"
+    >
+      <.icon name="hero-plus" class="size-4" /> 新規ユーザー
+    </button>
+  </div>
+
+  <%!-- 新規ユーザー作成モーダル --%>
+  <div
+    :if={@show_modal}
+    class="fixed inset-0 z-50 flex items-center justify-center"
+    phx-window-keydown="close_modal"
+    phx-key="Escape"
+  >
+    <%!-- バックドロップ --%>
+    <div class="fixed inset-0 bg-black/60" phx-click="close_modal"></div>
+
+    <%!-- モーダル本体 --%>
+    <div class="relative bg-gray-800 border border-gray-700 shadow-2xl rounded-xl max-w-md w-full mx-4 p-6 z-10">
+      <button
+        phx-click="close_modal"
+        class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 text-gray-400 hover:text-gray-200"
+      >
+        ✕
+      </button>
+      <h3 class="text-lg font-bold text-gray-100 mb-6">👤 新規ユーザー作成</h3>
+
+      <.form for={@form} phx-change="validate" phx-submit="save" class="space-y-4">
+        <.input
+          field={@form[:email]}
+          type="email"
+          label="メールアドレス"
+          placeholder="user@example.com"
+          required
+        />
+        <.input
+          field={@form[:password]}
+          type="password"
+          label="パスワード"
+          placeholder="12文字以上"
+          required
+        />
+        <.input
+          field={@form[:role]}
+          type="select"
+          label="ロール"
+          options={[{"一般ユーザー", "user"}, {"管理者", "admin"}]}
+        />
+
+        <div class="pt-4">
+          <button
+            type="submit"
+            phx-disable-with="作成中..."
+            class="w-full inline-flex justify-center items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-500 transition-colors duration-150 disabled:opacity-50"
+          >
+            <.icon name="hero-user-plus" class="size-4" /> ユーザーを作成
+          </button>
+        </div>
+      </.form>
+    </div>
+  </div>
+
+  <%!-- テーブル --%>
+  <div class="overflow-x-auto rounded-lg border border-gray-700 shadow-lg">
+    <table class="min-w-full divide-y divide-gray-700">
+      <thead class="bg-gray-800">
+        <tr>
+          <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+            ID
+          </th>
+          <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+            Email
+          </th>
+          <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+            Role
+          </th>
+          <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+            Inserted At
+          </th>
+          <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+            Actions
+          </th>
+        </tr>
+      </thead>
+      <tbody class="bg-gray-900 divide-y divide-gray-800">
+        <%= for user <- @users do %>
+          <tr class="hover:bg-gray-800/60 transition-colors duration-150">
+            <%!-- ID --%>
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-300 font-mono">
+              {user.id}
+            </td>
+
+            <%!-- Email --%>
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
+              {user.email}
+            </td>
+
+            <%!-- Role --%>
+            <td class="px-4 py-3 whitespace-nowrap text-sm">
+              <%= if user.role == "admin" do %>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-900/50 text-purple-300 border border-purple-700">
+                  🛡️ admin
+                </span>
+              <% else %>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-700/50 text-gray-300 border border-gray-600">
+                  👤 user
+                </span>
+              <% end %>
+            </td>
+
+            <%!-- Inserted At --%>
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-400">
+              {Calendar.strftime(user.inserted_at, "%Y-%m-%d %H:%M")}
+            </td>
+
+            <%!-- Actions --%>
+            <td class="px-4 py-3 whitespace-nowrap text-sm">
+              <%= if user.id != @current_user.id do %>
+                <button
+                  phx-click="delete"
+                  phx-value-id={user.id}
+                  data-confirm="本当にこのユーザーを削除しますか？"
+                  class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-red-900/30 text-red-400 border border-red-800 hover:bg-red-900/60 hover:text-red-300 transition-colors duration-150"
+                >
+                  🗑 削除
+                </button>
+              <% else %>
+                <span class="text-xs text-gray-500 italic">自分自身</span>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <%!-- 空の場合 --%>
+  <%= if @users == [] do %>
+    <div class="mt-8 text-center py-12">
+      <span class="text-4xl">📭</span>
+      <p class="mt-4 text-gray-400">ユーザーが登録されていません。</p>
+    </div>
+  <% end %>
+
+  <%!-- フッターナビゲーション --%>
+  <div class="mt-8 flex gap-4">
+    <.link navigate={~p"/admin/dashboard"} class="btn-secondary btn-large">
+      📊 Dashboard
+    </.link>
+    <.link navigate={~p"/lab"} class="btn-secondary btn-large">
+      ← Lab に戻る
+    </.link>
+  </div>
+</div>

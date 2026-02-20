@@ -1,0 +1,123 @@
+defmodule AlchemIiif.MixProject do
+  use Mix.Project
+
+  def project do
+    [
+      app: :alchem_iiif,
+      version: "0.2.7",
+      elixir: "~> 1.15",
+      elixirc_paths: elixirc_paths(Mix.env()),
+      start_permanent: Mix.env() == :prod,
+      aliases: aliases(),
+      deps: deps(),
+      compilers: [:phoenix_live_view] ++ Mix.compilers(),
+      listeners: [Phoenix.CodeReloader],
+      # ExDoc 設定
+      name: "AlchemIIIF",
+      source_url: "https://github.com/SilentMalachite/AlchemIIIF",
+      docs: [
+        main: "AlchemIiif",
+        output: "docs",
+        extras: ["README.md", "ARCHITECTURE.md", "IIIF_SPEC.md"],
+        groups_for_modules: [
+          検索: [AlchemIiif.Search],
+          取り込み: [~r/AlchemIiif\.Ingestion/],
+          "配信（IIIF）": [~r/AlchemIiif\.IIIF/, ~r/AlchemIiifWeb\.IIIF/],
+          パイプライン: [~r/AlchemIiif\.Pipeline/],
+          Web: [~r/AlchemIiifWeb/]
+        ]
+      ],
+      # Dialyzer 設定
+      dialyzer: [
+        ignore_warnings: ".dialyzer_ignore.exs"
+      ]
+    ]
+  end
+
+  # Configuration for the OTP application.
+  #
+  # Type `mix help compile.app` for more information.
+  def application do
+    [
+      mod: {AlchemIiif.Application, []},
+      extra_applications: [:logger, :runtime_tools]
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [precommit: :test, review: :dev]
+    ]
+  end
+
+  # Specifies which paths to compile per environment.
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
+
+  # Specifies your project dependencies.
+  #
+  # Type `mix help deps` for examples and options.
+  defp deps do
+    [
+      {:bcrypt_elixir, "~> 3.0"},
+      {:phoenix, "~> 1.8.1"},
+      {:phoenix_ecto, "~> 4.5"},
+      {:ecto_sql, "~> 3.13"},
+      {:postgrex, ">= 0.0.0"},
+      {:phoenix_html, "~> 4.1"},
+      {:phoenix_live_reload, "~> 1.2", only: :dev},
+      {:phoenix_live_view, "~> 1.1.0"},
+      {:lazy_html, ">= 0.1.0", only: :test},
+      {:phoenix_live_dashboard, "~> 0.8.3"},
+      {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
+      {:tailwind, "~> 0.2", runtime: Mix.env() == :dev},
+      {:swoosh, "~> 1.16"},
+      {:req, "~> 0.5"},
+      {:telemetry_metrics, "~> 1.0"},
+      {:telemetry_poller, "~> 1.0"},
+      {:gettext, "~> 0.26"},
+      {:jason, "~> 1.2"},
+      {:dns_cluster, "~> 0.2.0"},
+      {:bandit, "~> 1.5"},
+      # 画像処理: libvips ラッパー (PTIF生成・タイル切り出し)
+      {:vix, "~> 0.33"},
+      # 品質・セキュリティツール
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:sobelow, "~> 0.13", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.34", only: :dev, runtime: false}
+    ]
+  end
+
+  # Aliases are shortcuts or tasks specific to the current project.
+  # For example, to install project dependencies and perform other setup tasks, run:
+  #
+  #     $ mix setup
+  #
+  # See the documentation for `Mix` for more info on aliases.
+  defp aliases do
+    [
+      setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],
+      "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
+      "ecto.reset": ["ecto.drop", "ecto.setup"],
+      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
+      "assets.build": ["compile", "tailwind alchem_iiif", "esbuild alchem_iiif"],
+      "assets.deploy": [
+        "tailwind alchem_iiif --minify",
+        "esbuild alchem_iiif --minify",
+        "phx.digest"
+      ],
+      precommit: ["compile --warning-as-errors", "deps.unlock --unused", "format", "test"],
+      # Mozilla-Standard レビューゲート（単一コマンドで品質チェック）
+      review: [
+        "review.check_db_version",
+        "compile --warnings-as-errors",
+        "credo --strict",
+        "sobelow --config",
+        "dialyzer",
+        "review.summary"
+      ]
+    ]
+  end
+end

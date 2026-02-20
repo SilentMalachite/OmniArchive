@@ -1,0 +1,43 @@
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <div class="mx-auto max-w-sm space-y-4">
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-[#1a1a2e]">⚗️ ログイン</h1>
+      <p class="mt-2 text-base-content/60">
+        <%= if @current_scope do %>
+          セキュリティのため、再認証が必要です。
+        <% else %>
+          管理者から招待を受けてください。
+        <% end %>
+      </p>
+    </div>
+
+    <div class="card bg-base-200 shadow-xl">
+      <div class="card-body">
+        <.form :let={f} for={@form} as={:user} id="login_form_password" action={~p"/users/log-in"}>
+          <.input
+            readonly={!!@current_scope}
+            field={f[:email]}
+            type="email"
+            label="メールアドレス"
+            autocomplete="email"
+            required
+            phx-mounted={JS.focus()}
+          />
+          <.input
+            field={f[:password]}
+            type="password"
+            label="パスワード"
+            autocomplete="current-password"
+            required
+          />
+          <.button class="btn bg-[#d4a844] text-[#1a1a2e] border-none hover:bg-[#c49a38] w-full mt-4" name={@form[:remember_me].name} value="true">
+            ログイン（次回から自動ログイン） <span aria-hidden="true">→</span>
+          </.button>
+          <.button class="btn btn-ghost w-full mt-2 text-base-content/60">
+            今回のみログイン
+          </.button>
+        </.form>
+      </div>
+    </div>
+  </div>
+</Layouts.app>

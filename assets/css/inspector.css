@@ -1,0 +1,1129 @@
+/* Inspector Lab Styles */
+
+.inspector-container {
+  @apply container mx-auto px-4 py-8 max-w-4xl;
+}
+
+/* Wizard Header */
+.wizard-header {
+  @apply mb-12;
+}
+
+.wizard-steps {
+  @apply flex justify-between items-center relative mb-6;
+}
+
+.wizard-steps::before {
+  content: '';
+  @apply absolute top-1/2 left-0 w-full h-1 bg-base-200 -z-10 transform -translate-y-1/2;
+}
+
+.wizard-step {
+  @apply flex flex-col items-center bg-base-100 z-10 px-2;
+}
+
+.step-number {
+  @apply flex items-center justify-center w-10 h-10 rounded-full font-bold text-lg mb-2 transition-all duration-300 border-2;
+}
+
+/* Step States */
+.step-number.upcoming {
+  @apply bg-base-100 border-base-300 text-base-content/50;
+}
+
+.step-number.active {
+  @apply bg-primary text-primary-content border-primary ring-4 ring-primary/20;
+}
+
+.step-number.completed {
+  @apply bg-success text-success-content border-success;
+}
+
+.step-label {
+  @apply text-sm font-medium text-base-content/70 flex flex-col items-center gap-1;
+}
+
+.step-icon {
+  @apply text-xl;
+}
+
+.wizard-step.active .step-label {
+  @apply text-primary font-bold;
+}
+
+.wizard-current-location {
+  @apply text-center text-sm text-base-content/60 bg-base-200/50 py-2 rounded-lg inline-block px-4 mx-auto block w-fit;
+}
+
+/* Upload Area */
+.upload-area {
+  @apply bg-base-100 rounded-box border-2 border-dashed border-base-300 p-12 text-center transition-all duration-300;
+}
+
+.upload-area:hover,
+.upload-area:focus-within {
+  @apply border-primary bg-base-200/30;
+}
+
+.section-title {
+  @apply text-2xl font-bold mb-2;
+}
+
+.section-description {
+  @apply text-base-content/60 mb-8;
+}
+
+.upload-dropzone {
+  @apply relative cursor-pointer py-16 px-4 rounded-xl transition-colors hover:bg-base-200/50 mb-6;
+}
+
+.dropzone-content {
+  @apply flex flex-col items-center gap-4 text-base-content/50 pointer-events-none;
+}
+
+.dropzone-icon {
+  @apply text-6xl opacity-50;
+}
+
+.file-input {
+  @apply absolute inset-0 w-full h-full opacity-0 cursor-pointer;
+}
+
+/* Processing Pulse */
+.processing-pulse {
+  @apply flex flex-col items-center justify-center gap-3 p-4;
+}
+
+.pulse-indicator {
+  @apply flex gap-2;
+}
+
+.pulse-dot {
+  @apply w-3 h-3 rounded-full bg-primary animate-bounce;
+}
+
+.pulse-dot:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.pulse-dot:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+.pulse-message {
+  @apply text-sm font-medium text-primary animate-pulse;
+}
+
+/* Auto Save Indicator */
+.auto-save-indicator {
+  @apply fixed bottom-4 right-4 bg-base-100 shadow-lg rounded-full px-4 py-2 border border-base-200 flex items-center gap-2 text-sm z-50 transition-all duration-300;
+}
+
+.save-saved {
+  @apply text-success border-success/20 bg-success/10;
+}
+
+.save-saving {
+  @apply text-info border-info/20 bg-info/10;
+}
+
+/* ページサムネイルグリッド */
+.page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.page-thumbnail {
+  border: 3px solid transparent;
+  border-radius: 8px;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--color-base-100, #fff);
+  min-height: 44px;
+  /* WM 70 タッチターゲット */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.page-thumbnail:hover {
+  border-color: var(--color-primary, #570df8);
+  transform: scale(1.03);
+}
+
+.page-thumbnail:active {
+  border-color: #DAA520;
+  box-shadow: 0 0 0 3px rgba(218, 165, 32, 0.3);
+  transform: scale(1.05);
+}
+
+/* Harvest Gold アクティブ状態 */
+.page-thumbnail.selected {
+  border-color: #DAA520;
+  box-shadow: 0 0 0 3px rgba(218, 165, 32, 0.3);
+  transform: scale(1.05);
+}
+
+.page-thumbnail img {
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+.page-label {
+  display: block;
+  text-align: center;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* アクションバー */
+.action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-base-200, #e5e7eb);
+}
+
+/* === クロッピング UI === */
+
+/* クロッパーコンテナ — 相対配置で SVG オーバーレイ */
+.cropper-container {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto 1.5rem;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #1a1a2e;
+  cursor: crosshair;
+  touch-action: none;
+  /* タッチスクロール無効化（ドラッグ選択優先） */
+  user-select: none;
+}
+
+.crop-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+  /* ドラッグイベントはコンテナで処理 */
+}
+
+/* SVG オーバーレイ（phx-update="ignore" ラッパー含む） */
+#crop-svg-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.crop-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* 選択範囲の枠線アニメーション（デフォルト: 未保存 dashed） */
+.selection-rect {
+  animation: dash-march 0.8s linear infinite;
+  transition: stroke 0.3s ease, stroke-width 0.3s ease;
+}
+
+@keyframes dash-march {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
+/* ダブルクリック保存ヒント */
+.crop-save-hint {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.75);
+  color: #FFD700;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  pointer-events: none;
+  z-index: 10;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(4px);
+}
+
+/* ドラフト（未保存）インジケーターカラー */
+.save-draft {
+  color: #E6B422;
+  border-color: rgba(230, 180, 34, 0.2);
+  background: rgba(230, 180, 34, 0.1);
+}
+
+/* === D-Pad ナッジコントロール — 64px Deep Indigo + Harvest Gold === */
+
+/* 2カラムレイアウト: 画像(左) + コントロール(右) */
+.crop-layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+/* 左カラム: 画像エリア */
+.crop-main {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 右カラム: コントロールサイドバー */
+.crop-sidebar {
+  width: 14rem;
+  flex-shrink: 0;
+  position: sticky;
+  top: 2rem;
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* サイドバーラベル */
+.sidebar-label {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #E6B422;
+  margin-bottom: 0.25rem;
+  opacity: 0.9;
+}
+
+/* --- D-Pad 3×3 Grid --- */
+.nudge-controls {
+  display: grid;
+  grid-template-columns: repeat(3, 64px);
+  grid-template-rows: repeat(3, 64px);
+  gap: 8px;
+}
+
+/* Grid 配置: [縮小][↑][拡大] / [←][UNDO][→] / [ ][↓][ ] */
+.dpad-shrink {
+  grid-area: 1 / 1;
+}
+
+.dpad-up {
+  grid-area: 1 / 2;
+}
+
+.dpad-expand {
+  grid-area: 1 / 3;
+}
+
+.dpad-left {
+  grid-area: 2 / 1;
+}
+
+.dpad-center {
+  grid-area: 2 / 2;
+}
+
+.dpad-right {
+  grid-area: 2 / 3;
+}
+
+.dpad-down {
+  grid-area: 3 / 2;
+}
+
+/* --- D-Pad ボタン共通 --- */
+.nudge-btn {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1A2C42;
+  color: #E6B422;
+  border: 2px solid #E6B422;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(230, 180, 34, 0.1);
+  min-height: 64px;
+  min-width: 64px;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.nudge-btn:hover {
+  background: #22354D;
+  border-color: #f0c040;
+  color: #f0c040;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(230, 180, 34, 0.25),
+    inset 0 1px 0 rgba(230, 180, 34, 0.15);
+}
+
+/* Active 反転: Gold 背景 + Indigo テキスト */
+.nudge-btn:active {
+  background: #E6B422;
+  color: #1A2C42;
+  border-color: #E6B422;
+  transform: scale(0.94);
+  box-shadow: 0 1px 4px rgba(230, 180, 34, 0.4),
+    inset 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.nudge-btn:focus-visible {
+  outline: 3px solid #E6B422;
+  outline-offset: 3px;
+}
+
+/* D-Pad アイコン */
+.nudge-icon {
+  width: 28px;
+  height: 28px;
+  color: #E6B422;
+}
+
+/* --- 拡大/縮小ボタン: Indigo & Gold テーマ統一 --- */
+/* .nudge-btn の共通スタイル (Deep Indigo + Gold) がそのまま適用されます */
+
+/* --- D-Pad 中央: Undo ボタン --- */
+.dpad-undo-btn {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #A0AEC0;
+  border: 2px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  font-size: 0.6rem;
+  font-weight: 600;
+  min-height: 64px;
+  min-width: 64px;
+  user-select: none;
+}
+
+.dpad-undo-btn:hover:not(:disabled) {
+  background: rgba(230, 180, 34, 0.1);
+  border-color: rgba(230, 180, 34, 0.4);
+  color: #E6B422;
+}
+
+.dpad-undo-btn:active:not(:disabled) {
+  background: rgba(230, 180, 34, 0.2);
+  transform: scale(0.94);
+}
+
+.dpad-undo-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.dpad-undo-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.dpad-undo-count {
+  font-size: 0.6rem;
+  opacity: 0.7;
+  line-height: 1;
+}
+
+/* === ラベル画面クロッププレビュー === */
+.label-crop-preview {
+  overflow: hidden;
+  border: 3px solid #E6B422;
+  /* Harvest Gold ボーダー */
+  border-radius: 12px;
+  max-width: 360px;
+  max-height: 360px;
+  /* クロップ領域の実アスペクト比に自動追従。大きさも制限 */
+  margin: 0 auto 1.5rem;
+  background: #1a1a2e;
+  box-shadow: 0 4px 16px rgba(230, 180, 34, 0.15);
+}
+
+.label-crop-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* viewBox のアスペクト比から自動算出 */
+}
+
+/* フォールバック：ジオメトリなしの従来表示 */
+.label-preview {
+  max-width: 480px;
+  margin: 0 auto 1.5rem;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid var(--color-base-300, #d1d5db);
+}
+
+.label-preview-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 400px;
+  object-fit: contain;
+  /* 大きな画像でもプレビュー領域を適切に制限 */
+}
+
+/* Undo バー */
+.undo-bar {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0;
+}
+
+.btn-undo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: 2px solid var(--color-base-300, #d1d5db);
+  border-radius: 10px;
+  background: var(--color-base-100, #fff);
+  color: var(--color-base-content, #333);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  min-height: 44px;
+}
+
+.btn-undo:hover:not(:disabled) {
+  background: var(--color-base-200, #f3f4f6);
+  border-color: #E6B422;
+}
+
+.btn-undo:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.undo-count {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+/* === アクションバー（2ボタン分割） === */
+.action-bar-split {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-base-200, #e5e7eb);
+  gap: 1rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* Save & Continue — Harvest Gold プライマリ */
+.btn-save-continue {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 60px;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(145deg, #E6B422, #d4a31e);
+  color: #1a1a2e;
+  border: 2px solid #E6B422;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(230, 180, 34, 0.25);
+  min-width: 44px;
+  /* タッチターゲット */
+}
+
+.btn-save-continue:hover {
+  background: linear-gradient(145deg, #f0c040, #E6B422);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(230, 180, 34, 0.4);
+}
+
+.btn-save-continue:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 1px 4px rgba(230, 180, 34, 0.3);
+}
+
+/* Save & Finish — Deep Indigo セカンダリ */
+.btn-save-finish {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 60px;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(145deg, #1A2C42, #152336);
+  color: #e0e6ed;
+  border: 2px solid #2a4060;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(26, 44, 66, 0.25);
+  min-width: 44px;
+  /* タッチターゲット */
+}
+
+.btn-save-finish:hover {
+  background: linear-gradient(145deg, #243a54, #1A2C42);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(26, 44, 66, 0.4);
+}
+
+.btn-save-finish:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 1px 4px rgba(26, 44, 66, 0.3);
+}
+
+/* ボタンアイコン */
+.btn-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+/* モバイル縦積みレイアウト */
+@media (max-width: 600px) {
+  .action-bar-split {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .btn-save-continue,
+  .btn-save-finish {
+    width: 100%;
+  }
+}
+
+/* レスポンシブ: モバイルでは D-Pad を下部固定配置 */
+@media (max-width: 768px) {
+  .crop-layout {
+    flex-direction: column;
+  }
+
+  .crop-sidebar {
+    width: 100%;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    z-index: 50;
+    background: rgba(26, 44, 66, 0.95);
+    backdrop-filter: blur(8px);
+    padding: 0.75rem;
+    border-top: 1px solid rgba(230, 180, 34, 0.2);
+    flex-direction: row;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .nudge-controls {
+    grid-template-columns: repeat(3, 56px);
+    grid-template-rows: repeat(3, 56px);
+    gap: 4px;
+  }
+
+  .nudge-btn {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    min-height: 56px;
+  }
+
+  .dpad-undo-btn {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    min-height: 56px;
+  }
+
+  .sidebar-label {
+    display: none;
+  }
+
+  /* 画像エリアの max-width 制限を解除 + 下部余白 */
+  .cropper-container {
+    max-width: 100%;
+  }
+
+  /* D-Pad 分の下部余白を確保 */
+  .crop-area {
+    padding-bottom: 220px;
+  }
+}
+
+/* === 重複検出 UI (Duplicate Detective) === */
+
+/* 入力フィールドのエラー状態 */
+.input-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
+}
+
+/* 重複警告コンテナ */
+.duplicate-warning {
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 10px;
+  animation: shake-subtle 0.4s ease-out;
+}
+
+@keyframes shake-subtle {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-3px);
+  }
+
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+/* エラーテキスト */
+.duplicate-error-text {
+  color: #ef4444;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+}
+
+/* フィールド単位のバリデーションエラー */
+.field-error-text {
+  color: #ef4444;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin: 0.25rem 0 0;
+  animation: shake-subtle 0.4s ease-out;
+}
+
+/* リンクカード */
+.duplicate-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--color-base-100, #fff);
+  border: 1px solid var(--color-base-300, #d1d5db);
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.duplicate-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.duplicate-card-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-base-content, #333);
+  opacity: 0.6;
+}
+
+.duplicate-card-id {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-base-content, #333);
+}
+
+.duplicate-card-caption {
+  font-size: 0.8rem;
+  color: var(--color-base-content, #333);
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* マージボタン */
+.btn-merge {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  background: linear-gradient(145deg, #1A2C42, #152336);
+  color: #E6B422;
+  border: 1.5px solid #E6B422;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  min-height: 40px;
+}
+
+.btn-merge:hover {
+  background: linear-gradient(145deg, #243a54, #1A2C42);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(230, 180, 34, 0.3);
+}
+
+.btn-merge:active {
+  transform: translateY(1px) scale(0.97);
+}
+
+/* モバイル: カード縦積み */
+@media (max-width: 480px) {
+  .duplicate-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-merge {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* === Lab タブ UI === */
+
+.lab-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid var(--color-base-200, #e5e7eb);
+}
+
+.lab-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  background: transparent;
+  color: var(--color-base-content, #333);
+  opacity: 0.6;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+}
+
+.lab-tab:hover {
+  opacity: 0.85;
+  background: var(--color-base-200, #f3f4f6);
+}
+
+.lab-tab-active {
+  opacity: 1;
+  border-bottom-color: #E6B422;
+  color: #E6B422;
+}
+
+.lab-tab-alert {
+  color: #ef4444;
+}
+
+.lab-tab-alert.lab-tab-active {
+  border-bottom-color: #ef4444;
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.375rem;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 999px;
+  line-height: 1;
+}
+
+/* === 差し戻しアラート === */
+
+.rejection-alert {
+  padding: 1rem 1.25rem;
+  background: linear-gradient(135deg, #fef2f2, #fff5f5);
+  border: 2px solid #fca5a5;
+  border-left: 5px solid #ef4444;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.rejection-alert-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.rejection-alert-icon {
+  font-size: 1.25rem;
+}
+
+.rejection-alert-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #b91c1c;
+}
+
+.rejection-alert-text {
+  font-size: 0.95rem;
+  color: #991b1b;
+  line-height: 1.6;
+  margin: 0.25rem 0 0.5rem;
+  padding: 0.75rem;
+  background: rgba(239, 68, 68, 0.06);
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.15);
+}
+
+/* 差し戻し理由ボックス（ラベリング画面用） */
+.rejection-reason-box {
+  margin: 0.5rem 0 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-left: 4px solid #ef4444;
+  border-radius: 8px;
+  line-height: 1.6;
+}
+
+.rejection-reason-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #b91c1c;
+  margin-right: 0.375rem;
+}
+
+.rejection-reason-text {
+  font-size: 0.95rem;
+  color: #991b1b;
+}
+
+.rejection-alert-hint {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* コンパクト版（カード内用） */
+.rejection-alert-compact {
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  border-width: 1px;
+  border-left-width: 3px;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.375rem;
+}
+
+.rejection-alert-compact .rejection-alert-text {
+  font-size: 0.8rem;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
+}
+
+/* === 再提出ボタン === */
+
+.btn-resubmit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 60px;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(145deg, #059669, #047857);
+  color: #fff;
+  border: 2px solid #059669;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);
+  min-width: 44px;
+  text-decoration: none;
+}
+
+.btn-resubmit:hover {
+  background: linear-gradient(145deg, #10b981, #059669);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4);
+  color: #fff;
+}
+
+.btn-resubmit:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 1px 4px rgba(5, 150, 105, 0.3);
+}
+
+/* === 要修正カードリスト（2行レイアウト） === */
+
+.rejected-area {
+  @apply bg-base-100 rounded-box border border-base-300 p-8;
+}
+
+.rejected-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* カード全体: 縦積みレイアウト */
+.rejected-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  background: var(--color-base-100, #fff);
+  border: 2px solid var(--color-base-200, #e5e7eb);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.rejected-card:hover {
+  border-color: #E6B422;
+  box-shadow: 0 2px 12px rgba(230, 180, 34, 0.15);
+}
+
+/* Row 1: メタ情報 & 修正ボタン */
+.rejected-card-row1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.875rem 1rem;
+  gap: 1rem;
+}
+
+/* ラベル + ファイル名 + ページ番号 */
+.rejected-card-info {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* ラベル（fig-X） */
+.rejected-card-label {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-base-content, #333);
+  white-space: nowrap;
+}
+
+/* Row 2: レビューコメント全文表示 */
+.rejected-card-comment {
+  padding: 0.75rem 1rem;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  border-top: 1px solid #fecaca;
+  border-left: 4px solid #ef4444;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* コンパクト修正ボタン */
+.btn-resubmit-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(145deg, #059669, #047857);
+  color: #fff;
+  border: 1.5px solid #059669;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2);
+  white-space: nowrap;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.btn-resubmit-sm:hover {
+  background: linear-gradient(145deg, #10b981, #059669);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(5, 150, 105, 0.35);
+  color: #fff;
+}
+
+.btn-resubmit-sm:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 1px 4px rgba(5, 150, 105, 0.3);
+}
+
+/* モバイル: Row 1 を縦積み */
+@media (max-width: 600px) {
+  .rejected-card-row1 {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .btn-resubmit-sm {
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+  }
+}

@@ -1,0 +1,73 @@
+<%!-- Admin タブレイアウト --%>
+<%!-- @current_path を使って現在のタブをハイライト --%>
+
+<main class="min-h-[calc(100vh-4rem)]">
+  <%!-- タブナビゲーション --%>
+  <nav class="bg-[#12121f] border-b border-gray-700/50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex space-x-1">
+        <.link
+          navigate={~p"/admin/dashboard"}
+          class={[
+            "px-4 py-3 text-sm font-medium rounded-t-lg transition-colors duration-150",
+            "hover:bg-[#1a1a2e] hover:text-[#e8d5a3]",
+            if(String.starts_with?(@current_path, "/admin/dashboard"),
+              do: "bg-[#1a1a2e] text-[#e8d5a3] border-b-2 border-[#d4a844]",
+              else: "text-gray-400"
+            )
+          ]}
+        >
+          📊 Dashboard
+        </.link>
+
+        <.link
+          navigate={~p"/admin/users"}
+          class={[
+            "px-4 py-3 text-sm font-medium rounded-t-lg transition-colors duration-150",
+            "hover:bg-[#1a1a2e] hover:text-[#e8d5a3]",
+            if(String.starts_with?(@current_path, "/admin/users"),
+              do: "bg-[#1a1a2e] text-[#e8d5a3] border-b-2 border-[#d4a844]",
+              else: "text-gray-400"
+            )
+          ]}
+        >
+          👥 Users
+        </.link>
+
+        <.link
+          navigate={~p"/admin/review"}
+          class={[
+            "px-4 py-3 text-sm font-medium rounded-t-lg transition-colors duration-150",
+            "hover:bg-[#1a1a2e] hover:text-[#e8d5a3]",
+            if(String.starts_with?(@current_path, "/admin/review"),
+              do: "bg-[#1a1a2e] text-[#e8d5a3] border-b-2 border-[#d4a844]",
+              else: "text-gray-400"
+            )
+          ]}
+        >
+          🔍 Review
+        </.link>
+
+        <.link
+          navigate={~p"/admin/trash"}
+          class={[
+            "px-4 py-3 text-sm font-medium rounded-t-lg transition-colors duration-150",
+            "hover:bg-[#1a1a2e] hover:text-[#e8d5a3]",
+            if(String.starts_with?(@current_path, "/admin/trash"),
+              do: "bg-[#1a1a2e] text-[#e8d5a3] border-b-2 border-[#d4a844]",
+              else: "text-gray-400"
+            )
+          ]}
+        >
+          🗑️ Trash
+        </.link>
+      </div>
+    </div>
+  </nav>
+
+  <%!-- フラッシュメッセージ --%>
+  <.flash_group flash={@flash} />
+
+  <%!-- メインコンテンツ --%>
+  {@inner_content}
+</main>

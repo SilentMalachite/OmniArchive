@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="alchemiiif">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content={get_csrf_token()} />
+    <.live_title default="AlchemIIIF" suffix=" · AlchemIIIF">
+      {assigns[:page_title]}
+    </.live_title>
+    <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+
+    <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
+    </script>
+  </head>
+  <body class="bg-base-100 min-h-screen">
+    <!-- 認証ナビゲーションバー -->
+    <nav class="navbar bg-[#1a1a2e] text-[#e8d5a3] shadow-lg px-4 sm:px-6 lg:px-8">
+      <div class="flex-1">
+        <a href="/" class="btn btn-ghost text-lg font-bold tracking-wide">
+          ⚗️ AlchemIIIF
+        </a>
+      </div>
+      <div class="flex-none">
+        <ul class="menu menu-horizontal px-1 gap-1 items-center">
+          <%= if @current_scope && @current_scope.user do %>
+            <li>
+              <span class="text-[#e8d5a3]/70 text-sm">
+                {@current_scope.user.email}
+              </span>
+            </li>
+            <li>
+              <.link href={~p"/users/settings"} class="text-[#e8d5a3] hover:text-white">
+                設定
+              </.link>
+            </li>
+            <li>
+              <.link href={~p"/users/log-out"} method="delete" class="text-[#e8d5a3] hover:text-white">
+                ログアウト
+              </.link>
+            </li>
+          <% else %>
+            <li>
+              <.link href={~p"/users/log-in"} class="btn btn-sm bg-[#d4a844] text-[#1a1a2e] border-none hover:bg-[#c49a38]">
+                ログイン
+              </.link>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    </nav>
+    {@inner_content}
+  </body>
+</html>

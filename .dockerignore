@@ -1,0 +1,49 @@
+# ビルド成果物
+/_build/
+/cover/
+/deps/
+/doc/
+/.fetch
+erl_crash.dump
+*.ez
+*.tar
+.DS_Store
+.elixir_ls/
+
+# 開発用ファイル
+/tmp/
+npm-debug.log
+/assets/node_modules/
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# 静的ファイル (ビルド時に生成)
+/priv/static/assets/
+/priv/static/cache_manifest.json
+
+# アップロード・キャッシュ (ランタイムデータ)
+/priv/static/uploads/
+/priv/static/iiif_cache/
+/priv/static/iiif_images/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ドキュメント
+IIIF_SPEC.md
+README.md
+*.md
+
+# テスト
+/test/

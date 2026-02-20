@@ -1,0 +1,21 @@
+[
+  verbose: false,
+  private: false,
+  skip: false,
+  router: "lib/alchem_iiif_web/router.ex",
+  exit: "high",
+  format: "txt",
+  ignore: [
+    "Config.HTTPS",
+    "Config.CSP",
+    # IIIF Image API のキャッシュファイル配信（内部パス生成のため安全）
+    "Traversal.SendFile",
+    # File.mkdir_p! / File.cp! / File.rm / File.write! は内部生成パスのみ使用
+    "Traversal.FileModule",
+    # System.cmd は固定コマンド（pdftoppm / pdfinfo）のみ呼び出し
+    "CI.System",
+    # format_to_mime は固定マッピング、image_data は libvips のバイナリ出力
+    "XSS.ContentType",
+    "XSS.SendResp"
+  ]
+]

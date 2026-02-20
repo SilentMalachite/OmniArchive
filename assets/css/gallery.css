@@ -1,0 +1,381 @@
+/* ====================================================
+   Gallery — Niigata Indigo & Harvest Gold テーマ
+   ====================================================
+   公開ギャラリー用ダークテーマ。
+   Admin Review Dashboard と統一されたデザインシステム。
+*/
+
+/* --- カラー変数（Admin と共有） --- */
+.gallery-container {
+    --gallery-bg: #1A2C42;
+    /* Deep Indigo */
+    --gallery-bg-card: #22354D;
+    /* カード背景 */
+    --gallery-bg-dark: #0F1923;
+    /* SVG / 入力背景 */
+    --gallery-text: #E0E0E0;
+    /* Mist Grey */
+    --gallery-text-muted: #A0AEC0;
+    /* 補助テキスト */
+    --gallery-border: #2A4060;
+    /* 標準ボーダー */
+    --gallery-gold: #E6B422;
+    /* Harvest Gold */
+    --gallery-gold-hover: #f0c040;
+    /* Gold ホバー */
+}
+
+/* --- コンテナ --- */
+.gallery-container {
+    min-height: 100vh;
+    background: var(--gallery-bg);
+    color: var(--gallery-text);
+    padding: 2rem 1.5rem 3rem;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+/* --- ヘッダー --- */
+.gallery-header {
+    max-width: 1200px;
+    margin: 0 auto 2rem;
+    text-align: center;
+}
+
+.gallery-container .section-title {
+    color: var(--gallery-gold);
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+}
+
+.gallery-container .section-description {
+    color: var(--gallery-text-muted);
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+/* --- 検索バー --- */
+.search-bar {
+    max-width: 640px;
+    margin: 0 auto 1.5rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    font-size: 1.1rem;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.875rem 1rem 0.875rem 2.75rem;
+    background: var(--gallery-bg-dark);
+    color: var(--gallery-text);
+    border: 2px solid var(--gallery-border);
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    outline: none;
+}
+
+.search-input::placeholder {
+    color: var(--gallery-text-muted);
+    opacity: 0.6;
+}
+
+.search-input:focus {
+    border-color: var(--gallery-gold);
+    box-shadow: 0 0 0 3px rgba(230, 180, 34, 0.15);
+}
+
+/* --- フィルターセクション --- */
+.filter-section {
+    max-width: 800px;
+    margin: 0 auto 1.5rem;
+}
+
+.filter-group {
+    margin-bottom: 0.75rem;
+}
+
+.filter-group-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--gallery-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
+}
+
+.filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    min-width: 48px;
+    padding: 0.5rem 1.25rem;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--gallery-text);
+    border: 1.5px solid var(--gallery-border);
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.filter-chip:hover {
+    background: rgba(230, 180, 34, 0.08);
+    border-color: rgba(230, 180, 34, 0.4);
+    color: var(--gallery-gold);
+}
+
+.filter-chip.active {
+    background: rgba(230, 180, 34, 0.15);
+    border-color: var(--gallery-gold);
+    color: var(--gallery-gold);
+    font-weight: 700;
+    box-shadow: 0 0 0 1px rgba(230, 180, 34, 0.2);
+}
+
+/* フィルタークリアボタン */
+.gallery-container .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 48px;
+    padding: 0.5rem 1.25rem;
+    background: transparent;
+    color: var(--gallery-text);
+    border: 2px solid var(--gallery-border);
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.gallery-container .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--gallery-gold);
+    color: var(--gallery-gold);
+}
+
+/* --- 結果カウント --- */
+.results-count {
+    max-width: 1200px;
+    margin: 0 auto 1rem;
+    font-size: 0.9rem;
+    color: var(--gallery-text-muted);
+    font-weight: 500;
+}
+
+/* --- 結果グリッド --- */
+.results-grid {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* --- アーティファクトカード --- */
+.result-card {
+    background: var(--gallery-bg-card);
+    border: 2px solid transparent;
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color 0.3s ease;
+    will-change: transform;
+    display: flex;
+    flex-direction: column;
+}
+
+.result-card:hover {
+    border-color: var(--gallery-gold);
+}
+
+.result-card-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+
+/* --- カード内 SVG クロップ表示（Tailwind max-w/h-full で制御） --- */
+
+/* --- カード内 フォールバック画像 --- */
+.result-card-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: var(--gallery-bg-dark);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* --- カードボディ --- */
+.result-card-body {
+    padding: 1rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.result-card-title {
+    color: var(--gallery-gold);
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0;
+}
+
+.result-card-caption {
+    color: var(--gallery-text-muted);
+    font-size: 0.85rem;
+    line-height: 1.4;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.result-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: auto;
+}
+
+.gallery-container .meta-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.2rem 0.6rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    font-size: 0.75rem;
+    color: var(--gallery-text-muted);
+}
+
+/* --- ダウンロードボタン（ゴーストスタイル） --- */
+.download-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    color: var(--gallery-gold);
+    background: transparent;
+    border-top: 1px solid rgba(230, 180, 34, 0.15);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s;
+    border-radius: 0 0 14px 14px;
+}
+
+.download-btn:hover {
+    background: rgba(230, 180, 34, 0.1);
+    color: var(--gallery-gold-hover);
+}
+
+.download-btn:active {
+    background: rgba(230, 180, 34, 0.2);
+}
+
+.download-icon {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+}
+
+/* --- 「結果なし」表示 --- */
+.no-results-container {
+    max-width: 800px;
+    margin: 3rem auto;
+    padding: 0 1rem;
+}
+
+.no-results-card {
+    background: #2A3C52;
+    /* Lighter Indigo for distinction */
+    border: 2px dashed var(--gallery-border);
+    border-radius: 20px;
+    padding: 4rem 2rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.no-results-icon-box {
+    background: var(--gallery-bg-dark);
+    padding: 1.5rem;
+    border-radius: 50%;
+    margin-bottom: 0.5rem;
+}
+
+.no-results-title {
+    color: var(--gallery-gold);
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.btn-reset-filters {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--gallery-gold);
+    color: var(--gallery-bg-dark);
+    border: none;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 0.5rem;
+}
+
+.btn-reset-filters:hover {
+    background: var(--gallery-gold-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(230, 180, 34, 0.2);
+}
+
+.btn-reset-filters:active {
+    transform: translateY(0);
+}
+
+/* === レスポンシブ対応 === */
+@media (max-width: 768px) {
+    .gallery-container {
+        padding: 1rem;
+    }
+
+    /* Results grid styling moved to inline Tailwind classes for Masonry layout */
+
+    .filter-chip {
+        min-height: 44px;
+        padding: 0.4rem 1rem;
+        font-size: 0.8rem;
+    }
+}

@@ -1,0 +1,49 @@
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <div class="mx-auto max-w-sm">
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-[#1a1a2e]">⚗️ アカウント設定</h1>
+      <p class="mt-2 text-base-content/60">メールアドレスとパスワードを管理します</p>
+    </div>
+
+    <div class="card bg-base-200 shadow-xl">
+      <div class="card-body">
+        <h2 class="card-title text-[#1a1a2e] text-lg">メールアドレス変更</h2>
+        <.form :let={f} for={@email_changeset} action={~p"/users/settings"} id="update_email">
+          <input type="hidden" name="action" value="update_email" />
+          <.input field={f[:email]} type="email" label="メールアドレス" autocomplete="email" required />
+          <.button variant="primary" phx-disable-with="変更中..." class="btn bg-[#d4a844] text-[#1a1a2e] border-none hover:bg-[#c49a38] w-full mt-4">
+            メールアドレスを変更
+          </.button>
+        </.form>
+      </div>
+    </div>
+
+    <div class="divider" />
+
+    <div class="card bg-base-200 shadow-xl">
+      <div class="card-body">
+        <h2 class="card-title text-[#1a1a2e] text-lg">パスワード変更</h2>
+        <.form :let={f} for={@password_changeset} action={~p"/users/settings"} id="update_password">
+          <input type="hidden" name="action" value="update_password" />
+          <.input
+            field={f[:password]}
+            type="password"
+            label="新しいパスワード"
+            autocomplete="new-password"
+            required
+          />
+          <.input
+            field={f[:password_confirmation]}
+            type="password"
+            label="パスワード確認"
+            autocomplete="new-password"
+            required
+          />
+          <.button variant="primary" phx-disable-with="変更中..." class="btn bg-[#1a1a2e] text-[#e8d5a3] border-none hover:bg-[#2a2a4e] w-full mt-4">
+            パスワードを保存
+          </.button>
+        </.form>
+      </div>
+    </div>
+  </div>
+</Layouts.app>

@@ -1,0 +1,87 @@
+<Layouts.flash_group flash={@flash} />
+
+<%!-- ── メインセクション: デジタルミュージアムの入口 ── --%>
+<div
+  id="landing-hero"
+  class="min-h-screen flex flex-col items-center justify-center bg-[#001f3f] px-6 py-16"
+>
+  <%!-- 装飾ライン (上部) --%>
+  <div class="w-24 h-px bg-[#d4af37] mb-12" aria-hidden="true"></div>
+
+  <%!-- タイトル --%>
+  <h1 class="text-5xl sm:text-6xl md:text-7xl font-bold text-[#d4af37] tracking-tight text-center leading-tight">
+    AlchemIIIF
+  </h1>
+
+  <%!-- サブタイトル --%>
+  <p class="mt-6 text-lg sm:text-xl text-white/80 text-center max-w-xl leading-relaxed">
+    考古学報告書を、デジタルアーカイブへ。
+  </p>
+
+  <%!-- 装飾ライン (中央) --%>
+  <div class="w-16 h-px bg-[#d4af37]/40 my-10" aria-hidden="true"></div>
+
+  <%!-- CTA ボタン: /gallery へのリンク (60x60px以上のタッチターゲット) --%>
+  <a
+    href="/gallery"
+    id="cta-gallery"
+    class="
+      inline-flex items-center justify-center
+      min-w-[240px] min-h-[60px]
+      px-10 py-4
+      bg-[#d4af37] text-[#001f3f]
+      text-lg sm:text-xl font-bold
+      rounded-lg
+      shadow-lg shadow-[#d4af37]/20
+      transition-all duration-300 ease-in-out
+      hover:bg-[#e8c84a] hover:shadow-xl hover:shadow-[#d4af37]/30 hover:scale-105
+      focus:outline-none focus:ring-4 focus:ring-[#d4af37]/50
+      active:scale-95
+    "
+  >
+    Enter the Digital Gallery
+    <svg
+      class="ml-3 w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.5"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
+      />
+    </svg>
+  </a>
+
+  <%!-- 補足テキスト --%>
+  <p class="mt-8 text-sm text-white/40 text-center">
+    IIIF準拠のデジタルギャラリーを閲覧できます
+  </p>
+</div>
+
+<%!-- ── フッター: 内部リンク（控えめ配置） ── --%>
+<footer class="bg-[#001a35] border-t border-white/5 py-8 px-6">
+  <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+    <p class="text-xs text-white/25">
+      &copy; {DateTime.utc_now().year} AlchemIIIF
+    </p>
+    <nav aria-label="Internal tools" class="flex items-center gap-6">
+      <a
+        href="/lab"
+        class="text-xs text-white/25 hover:text-white/50 transition-colors duration-200"
+      >
+        Lab
+      </a>
+      <span class="text-white/10" aria-hidden="true">|</span>
+      <a
+        href="/admin/review"
+        class="text-xs text-white/25 hover:text-white/50 transition-colors duration-200"
+      >
+        Admin
+      </a>
+    </nav>
+  </div>
+</footer>
