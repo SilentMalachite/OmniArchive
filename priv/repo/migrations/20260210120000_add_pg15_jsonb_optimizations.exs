@@ -1,4 +1,4 @@
-defmodule AlchemIiif.Repo.Migrations.AddPg15JsonbOptimizations do
+defmodule OmniArchive.Repo.Migrations.AddPg15JsonbOptimizations do
   @moduledoc """
   PostgreSQL 15+ JSONB 最適化マイグレーション。
 

@@ -1,6 +1,6 @@
 # デプロイ手順書
 
-AlchemIIIF のデプロイ方法を説明します。
+OmniArchive のデプロイ方法を説明します。
 
 ---
 
@@ -20,7 +20,7 @@ AlchemIIIF のデプロイ方法を説明します。
 
 | 変数名 | 必須 | 説明 | 例 |
 |:---|:---:|:---|:---|
-| `DATABASE_URL` | ✅ | PostgreSQL 接続 URL | `ecto://user:pass@localhost/alchem_iiif_prod` |
+| `DATABASE_URL` | ✅ | PostgreSQL 接続 URL | `ecto://user:pass@localhost/omni_archive_prod` |
 | `SECRET_KEY_BASE` | ✅ | セッション暗号化キー (64文字以上) | `mix phx.gen.secret` で生成 |
 | `PHX_HOST` | ✅ | 本番ホスト名 | `iiif.example.com` |
 | `PORT` | | HTTP ポート番号 | `4000` (デフォルト) |
@@ -44,22 +44,22 @@ mix phx.gen.secret
 ### ビルド
 
 ```bash
-docker build -t alchem_iiif .
+docker build -t omni_archive .
 ```
 
 ### 起動
 
 ```bash
 docker run -d \
-  --name alchem_iiif \
+  --name omni_archive \
   -p 4000:4000 \
-  -e DATABASE_URL="ecto://user:pass@host/alchem_iiif_prod" \
+  -e DATABASE_URL="ecto://user:pass@host/omni_archive_prod" \
   -e SECRET_KEY_BASE="your_secret_key_base_here" \
   -e PHX_HOST="your-domain.com" \
-  -v alchem_iiif_uploads:/app/priv/static/uploads \
-  -v alchem_iiif_cache:/app/priv/static/iiif_cache \
-  -v alchem_iiif_images:/app/priv/static/iiif_images \
-  alchem_iiif
+  -v omni_archive_uploads:/app/priv/static/uploads \
+  -v omni_archive_cache:/app/priv/static/iiif_cache \
+  -v omni_archive_images:/app/priv/static/iiif_images \
+  omni_archive
 ```
 
 > **⚠️ 重要**: アップロードデータ、キャッシュ、PTIF 画像は永続ボリュームにマウントしてください。
@@ -68,7 +68,7 @@ docker run -d \
 ### マイグレーション
 
 ```bash
-docker exec alchem_iiif /app/bin/migrate
+docker exec omni_archive /app/bin/migrate
 ```
 
 ---
@@ -86,7 +86,7 @@ services:
     ports:
       - "4000:4000"
     environment:
-      DATABASE_URL: ecto://postgres:postgres@db/alchem_iiif_prod
+      DATABASE_URL: ecto://postgres:postgres@db/omni_archive_prod
       SECRET_KEY_BASE: ${SECRET_KEY_BASE}
       PHX_HOST: ${PHX_HOST:-localhost}
     volumes:
@@ -102,7 +102,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: alchem_iiif_prod
+      POSTGRES_DB: omni_archive_prod
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -164,15 +164,15 @@ MIX_ENV=prod mix release
 
 ```bash
 # 環境変数を設定
-export DATABASE_URL="ecto://user:pass@localhost/alchem_iiif_prod"
+export DATABASE_URL="ecto://user:pass@localhost/omni_archive_prod"
 export SECRET_KEY_BASE="$(mix phx.gen.secret)"
 export PHX_HOST="localhost"
 
 # マイグレーション
-_build/prod/rel/alchem_iiif/bin/migrate
+_build/prod/rel/omni_archive/bin/migrate
 
 # サーバー起動
-_build/prod/rel/alchem_iiif/bin/server
+_build/prod/rel/omni_archive/bin/server
 ```
 
 ---
@@ -192,7 +192,7 @@ mix ecto.migrate
 bin/migrate
 
 # または Elixir コード経由
-bin/alchem_iiif eval "AlchemIiif.Release.migrate()"
+bin/omni_archive eval "OmniArchive.Release.migrate()"
 ```
 
 ### ロールバック
@@ -202,7 +202,7 @@ bin/alchem_iiif eval "AlchemIiif.Release.migrate()"
 mix ecto.rollback
 
 # 本番環境
-bin/alchem_iiif eval "AlchemIiif.Release.rollback(AlchemIiif.Repo, 20260208030921)"
+bin/omni_archive eval "OmniArchive.Release.rollback(OmniArchive.Repo, 20260208030921)"
 ```
 
 ---
@@ -218,7 +218,7 @@ curl http://localhost:4000/api/health
 レスポンス例：
 
 ```json
-{"status": "ok", "app": "alchem_iiif"}
+{"status": "ok", "app": "omni_archive"}
 ```
 
 Docker の HEALTHCHECK でも使用されています。

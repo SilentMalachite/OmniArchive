@@ -1,2 +1,2 @@
 ExUnit.start()
-Ecto.Adapters.SQL.Sandbox.mode(AlchemIiif.Repo, :manual)
+Ecto.Adapters.SQL.Sandbox.mode(OmniArchive.Repo, :manual)

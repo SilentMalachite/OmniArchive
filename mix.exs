@@ -1,9 +1,9 @@
-defmodule AlchemIiif.MixProject do
+defmodule OmniArchive.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :alchem_iiif,
+      app: :omni_archive,
       version: "0.2.7",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -13,18 +13,18 @@ defmodule AlchemIiif.MixProject do
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader],
       # ExDoc 設定
-      name: "AlchemIIIF",
-      source_url: "https://github.com/SilentMalachite/AlchemIIIF",
+      name: "OmniArchive",
+      source_url: "https://github.com/SilentMalachite/OmniArchive",
       docs: [
-        main: "AlchemIiif",
+        main: "OmniArchive",
         output: "docs",
         extras: ["README.md", "ARCHITECTURE.md", "IIIF_SPEC.md"],
         groups_for_modules: [
-          検索: [AlchemIiif.Search],
-          取り込み: [~r/AlchemIiif\.Ingestion/],
-          "配信（IIIF）": [~r/AlchemIiif\.IIIF/, ~r/AlchemIiifWeb\.IIIF/],
-          パイプライン: [~r/AlchemIiif\.Pipeline/],
-          Web: [~r/AlchemIiifWeb/]
+          検索: [OmniArchive.Search],
+          取り込み: [~r/OmniArchive\.Ingestion/],
+          "配信（IIIF）": [~r/OmniArchive\.IIIF/, ~r/OmniArchiveWeb\.IIIF/],
+          パイプライン: [~r/OmniArchive\.Pipeline/],
+          Web: [~r/OmniArchiveWeb/]
         ]
       ],
       # Dialyzer 設定
@@ -39,7 +39,7 @@ defmodule AlchemIiif.MixProject do
   # Type `mix help compile.app` for more information.
   def application do
     [
-      mod: {AlchemIiif.Application, []},
+      mod: {OmniArchive.Application, []},
       extra_applications: [:logger, :runtime_tools]
     ]
   end
@@ -102,10 +102,10 @@ defmodule AlchemIiif.MixProject do
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.build": ["compile", "tailwind alchem_iiif", "esbuild alchem_iiif"],
+      "assets.build": ["compile", "tailwind omni_archive", "esbuild omni_archive"],
       "assets.deploy": [
-        "tailwind alchem_iiif --minify",
-        "esbuild alchem_iiif --minify",
+        "tailwind omni_archive --minify",
+        "esbuild omni_archive --minify",
         "phx.digest"
       ],
       precommit: ["compile --warning-as-errors", "deps.unlock --unused", "format", "test"],

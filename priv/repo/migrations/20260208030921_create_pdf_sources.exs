@@ -1,4 +1,4 @@
-defmodule AlchemIiif.Repo.Migrations.CreatePdfSources do
+defmodule OmniArchive.Repo.Migrations.CreatePdfSources do
   use Ecto.Migration
 
   def change do

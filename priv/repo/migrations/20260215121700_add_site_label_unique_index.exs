@@ -1,4 +1,4 @@
-defmodule AlchemIiif.Repo.Migrations.AddSiteLabelUniqueIndex do
+defmodule OmniArchive.Repo.Migrations.AddSiteLabelUniqueIndex do
   @moduledoc """
   ユニークインデックスを [:pdf_source_id, :label] から [:site, :label] に変更。
   同一遺跡内で同じラベルを持つレコードを DB レベルで禁止します。

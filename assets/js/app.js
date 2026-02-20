@@ -22,7 +22,7 @@ import "phoenix_html"
 // Establish Phoenix Socket and LiveView configuration.
 import { Socket } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
-import { hooks as colocatedHooks } from "phoenix-colocated/alchem_iiif"
+import { hooks as colocatedHooks } from "phoenix-colocated/omni_archive"
 import topbar from "../vendor/topbar"
 
 import ImageSelection from "./hooks/image_selection_hook"

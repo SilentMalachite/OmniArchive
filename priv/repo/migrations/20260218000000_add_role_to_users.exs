@@ -1,4 +1,4 @@
-defmodule AlchemIiif.Repo.Migrations.AddRoleToUsers do
+defmodule OmniArchive.Repo.Migrations.AddRoleToUsers do
   use Ecto.Migration
 
   def change do

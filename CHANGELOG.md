@@ -422,7 +422,7 @@
   - タイルキャッシュ機構
 
 - **検索機能**
-  - 全文検索コンテキスト (`AlchemIiif.Search`)
+  - 全文検索コンテキスト (`OmniArchive.Search`)
   - 検索用 LiveView (`SearchLive`)
   - `extracted_images` への検索フィールド追加マイグレーション
 
@@ -447,8 +447,8 @@
   - テスト用ファクトリ (`test/support/factory.ex`)
 
 - **並列処理パイプライン**
-  - リソース適応型並列処理 (`AlchemIiif.Pipeline`)
-  - CPU/メモリ自動検出・動的並列度調整 (`AlchemIiif.Pipeline.ResourceMonitor`)
+  - リソース適応型並列処理 (`OmniArchive.Pipeline`)
+  - CPU/メモリ自動検出・動的並列度調整 (`OmniArchive.Pipeline.ResourceMonitor`)
   - メモリガード（空きメモリ 20% 未満で並列度縮小）
   - PubSub リアルタイム進捗通知
 

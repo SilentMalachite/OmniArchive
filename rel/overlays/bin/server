@@ -2,4 +2,4 @@
 set -eu
 
 cd -P -- "$(dirname -- "$0")"
-PHX_SERVER=true exec ./alchem_iiif start
+PHX_SERVER=true exec ./omni_archive start

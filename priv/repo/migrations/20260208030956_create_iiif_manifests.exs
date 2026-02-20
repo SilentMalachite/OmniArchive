@@ -1,4 +1,4 @@
-defmodule AlchemIiif.Repo.Migrations.CreateIiifManifests do
+defmodule OmniArchive.Repo.Migrations.CreateIiifManifests do
   use Ecto.Migration
 
   def change do

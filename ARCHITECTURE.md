@@ -2,7 +2,7 @@
 
 ## 概要
 
-AlchemIIIF は **モジュラー・モノリス** アーキテクチャを採用した Elixir/Phoenix アプリケーションです。
+OmniArchive は **モジュラー・モノリス** アーキテクチャを採用した Elixir/Phoenix アプリケーションです。
 「取り込み (Ingestion)」「検索 (Search)」「配信 (Delivery)」を明確なモジュール境界で分離しつつ、
 単一コードベースの運用効率を維持します。
 
@@ -15,7 +15,7 @@ AlchemIIIF は **モジュラー・モノリス** アーキテクチャを採用
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                         AlchemIIIF                               │
+│                         OmniArchive                               │
 ├──────────────────┬──────────────────┬────────────────────────────┤
 │  取り込みモジュール │  検索モジュール   │       配信モジュール        │
 │  (Ingestion)     │  (Search)        │    (IIIF Delivery)        │
@@ -397,11 +397,11 @@ PdfSource 単位の Manifest では、Canvas のサイズは `geometry` の `wid
 
 | コンポーネント | パス | 役割 |
 |:---|:---|:---|
-| `Accounts` | `lib/alchem_iiif/accounts.ex` | ユーザー登録・認証・トークン管理のコンテキスト |
-| `User` | `lib/alchem_iiif/accounts/user.ex` | ユーザースキーマ（email, hashed_password） |
-| `UserToken` | `lib/alchem_iiif/accounts/user_token.ex` | セッション・メール確認トークン |
-| `UserAuth` | `lib/alchem_iiif_web/user_auth.ex` | 認証プラグ群 |
-| `Scope` | `lib/alchem_iiif/accounts/scope.ex` | 認証スコープ（`@current_scope`） |
+| `Accounts` | `lib/omni_archive/accounts.ex` | ユーザー登録・認証・トークン管理のコンテキスト |
+| `User` | `lib/omni_archive/accounts/user.ex` | ユーザースキーマ（email, hashed_password） |
+| `UserToken` | `lib/omni_archive/accounts/user_token.ex` | セッション・メール確認トークン |
+| `UserAuth` | `lib/omni_archive_web/user_auth.ex` | 認証プラグ群 |
+| `Scope` | `lib/omni_archive/accounts/scope.ex` | 認証スコープ（`@current_scope`） |
 
 ### グローバルナビゲーションバー
 

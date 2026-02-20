@@ -1,4 +1,4 @@
-# AlchemIIIF
+# OmniArchive
 
 [![Elixir](https://img.shields.io/badge/Elixir-1.15+-4B275F?logo=elixir)](https://elixir-lang.org/)
 [![Phoenix](https://img.shields.io/badge/Phoenix-1.8+-E8562A?logo=phoenix-framework)](https://www.phoenixframework.org/)
@@ -8,7 +8,7 @@
 
 > **PDF 考古学報告書を IIIF アセットに変換する Elixir/Phoenix アプリケーション**
 
-AlchemIIIF は、静的な PDF の考古学報告書を、国際的な画像相互運用フレームワーク [IIIF (International Image Interoperability Framework)](https://iiif.io/) に準拠したリッチなデジタルアセットに変換するためのツールです。
+OmniArchive は、静的な PDF の考古学報告書を、国際的な画像相互運用フレームワーク [IIIF (International Image Interoperability Framework)](https://iiif.io/) に準拠したリッチなデジタルアセットに変換するためのツールです。
 
 就労継続支援の現場で利用されることを想定し、**認知アクセシビリティ**を最優先にした UI 設計を採用しています。
 
@@ -165,8 +165,8 @@ sudo apt install elixir erlang postgresql libvips-dev poppler-utils nodejs npm
 
 ```powershell
 # 1. リポジトリをクローン
-git clone https://github.com/SilentMalac/AlchemIIIF.git
-cd AlchemIIIF
+git clone https://github.com/SilentMalac/OmniArchive.git
+cd OmniArchive
 
 # 2. 依存パッケージをインストール
 mix deps.get
@@ -186,8 +186,8 @@ mix phx.server
 
 ```bash
 # 1. リポジトリをクローン
-git clone https://github.com/SilentMalac/AlchemIIIF.git
-cd AlchemIIIF
+git clone https://github.com/SilentMalac/OmniArchive.git
+cd OmniArchive
 
 # 2. 依存パッケージをインストール
 mix setup
@@ -277,15 +277,15 @@ GET /iiif/image/{identifier}/info.json
 
 ```bash
 # イメージをビルド
-docker build -t alchem_iiif .
+docker build -t omni_archive .
 
 # コンテナを起動
 docker run -d \
   -p 4000:4000 \
-  -e DATABASE_URL="ecto://user:pass@host/alchem_iiif_prod" \
+  -e DATABASE_URL="ecto://user:pass@host/omni_archive_prod" \
   -e SECRET_KEY_BASE="$(mix phx.gen.secret)" \
   -e PHX_HOST="your-domain.com" \
-  alchem_iiif
+  omni_archive
 
 # データベースマイグレーション
 docker exec <container_id> /app/bin/migrate
@@ -331,15 +331,15 @@ MIX_ENV=prod mix release
 
 ```bash
 # 環境変数を設定
-export DATABASE_URL="ecto://user:pass@localhost/alchem_iiif_prod"
+export DATABASE_URL="ecto://user:pass@localhost/omni_archive_prod"
 export SECRET_KEY_BASE="$(mix phx.gen.secret)"
 export PHX_HOST="localhost"
 
 # データベースマイグレーション
-_build/prod/rel/alchem_iiif/bin/migrate
+_build/prod/rel/omni_archive/bin/migrate
 
 # サーバー起動
-_build/prod/rel/alchem_iiif/bin/server
+_build/prod/rel/omni_archive/bin/server
 ```
 
 ### 起動 (Windows)
@@ -348,18 +348,18 @@ Windows では `.bat` スクリプトを使用します：
 
 ```powershell
 # 環境変数を設定
-$env:DATABASE_URL = "ecto://user:pass@localhost/alchem_iiif_prod"
+$env:DATABASE_URL = "ecto://user:pass@localhost/omni_archive_prod"
 $env:SECRET_KEY_BASE = "your-secret-key-base"
 $env:PHX_HOST = "localhost"
 
 # リリースディレクトリに移動
-cd _build\prod\rel\alchem_iiif\bin
+cd _build\prod\rel\omni_archive\bin
 
 # データベースマイグレーション
-.\alchem_iiif.bat eval "AlchemIiif.Release.migrate"
+.\omni_archive.bat eval "OmniArchive.Release.migrate"
 
 # サーバー起動
-.\alchem_iiif.bat start
+.\omni_archive.bat start
 ```
 
 > [!TIP]
@@ -367,17 +367,17 @@ cd _build\prod\rel\alchem_iiif\bin
 
 > [!NOTE]
 > **Windows サービスとして登録**: OTP リリースは Windows サービスとしてインストールすることも可能です。
-> `alchem_iiif.bat install` コマンドでサービスとして登録でき、OS 起動時に自動的にサーバーが立ち上がるようになります。
-> 詳細は `alchem_iiif.bat help` を参照してください。
+> `omni_archive.bat install` コマンドでサービスとして登録でき、OS 起動時に自動的にサーバーが立ち上がるようになります。
+> 詳細は `omni_archive.bat help` を参照してください。
 
 ---
 
 ## 📁 ディレクトリ構成
 
 ```
-AlchemIIIF/
+OmniArchive/
 ├── lib/
-│   ├── alchem_iiif/
+│   ├── omni_archive/
 │   │   ├── ingestion/               # 取り込みパイプライン
 │   │   │   ├── pdf_source.ex            # PDF 管理スキーマ
 │   │   │   ├── extracted_image.ex       # 抽出画像スキーマ
@@ -399,7 +399,7 @@ AlchemIIIF/
 │   │   └── release.ex                # 本番マイグレーション
 │   ├── mix/tasks/
 │   │   └── review_summary.ex          # mix review PASS サマリー
-│   └── alchem_iiif_web/
+│   └── omni_archive_web/
 │       ├── components/
 │       │   ├── core_components.ex       # Phoenix 標準コンポーネント
 │       │   └── wizard_components.ex     # 共通ウィザードコンポーネント

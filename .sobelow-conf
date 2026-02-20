@@ -2,7 +2,7 @@
   verbose: false,
   private: false,
   skip: false,
-  router: "lib/alchem_iiif_web/router.ex",
+  router: "lib/omni_archive_web/router.ex",
   exit: "high",
   format: "txt",
   ignore: [

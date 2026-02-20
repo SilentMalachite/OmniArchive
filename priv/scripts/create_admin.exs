@@ -13,8 +13,8 @@
 #   ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=your_password_here mix run priv/scripts/create_admin.exs
 # ─────────────────────────────────────────────────
 
-alias AlchemIiif.Repo
-alias AlchemIiif.Accounts.User
+alias OmniArchive.Repo
+alias OmniArchive.Accounts.User
 
 # 環境変数またはデフォルト値からパラメータを取得
 email    = System.get_env("ADMIN_EMAIL")    || "admin@example.com"

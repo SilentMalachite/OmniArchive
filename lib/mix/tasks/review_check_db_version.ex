@@ -30,7 +30,7 @@ defmodule Mix.Tasks.Review.CheckDbVersion do
     Mix.Task.run("app.config")
     {:ok, _} = Application.ensure_all_started(:postgrex)
 
-    repo_config = Application.get_env(:alchem_iiif, AlchemIiif.Repo)
+    repo_config = Application.get_env(:omni_archive, OmniArchive.Repo)
 
     # Postgrex で直接接続（Repo を起動せずに読み取り専用クエリを実行）
     conn_opts = [

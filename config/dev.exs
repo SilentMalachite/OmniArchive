@@ -1,11 +1,11 @@
 import Config
 
 # Configure your database
-config :alchem_iiif, AlchemIiif.Repo,
+config :omni_archive, OmniArchive.Repo,
   username: System.get_env("DB_USERNAME") || "hiro",
   password: System.get_env("DB_PASSWORD") || "postgres",
   hostname: System.get_env("DB_HOST") || "localhost",
-  database: "alchem_iiif_dev",
+  database: "omni_archive_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
@@ -16,7 +16,7 @@ config :alchem_iiif, AlchemIiif.Repo,
 # The watchers configuration can be used to run external
 # watchers to your application. For example, we can use it
 # to bundle .js and .css sources.
-config :alchem_iiif, AlchemIiifWeb.Endpoint,
+config :omni_archive, OmniArchiveWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
   http: [ip: {127, 0, 0, 1}, port: String.to_integer(System.get_env("PORT") || "4000")],
@@ -25,8 +25,8 @@ config :alchem_iiif, AlchemIiifWeb.Endpoint,
   debug_errors: true,
   secret_key_base: "aBYzTRoCRTooU8B5v1b7CDMWJE3ED+vh3YjV+i5p/nt6JKmHMf1a92zWPb3IymdM",
   watchers: [
-    esbuild: {Esbuild, :install_and_run, [:alchem_iiif, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:alchem_iiif, ~w(--watch)]}
+    esbuild: {Esbuild, :install_and_run, [:omni_archive, ~w(--sourcemap=inline --watch)]},
+    tailwind: {Tailwind, :install_and_run, [:omni_archive, ~w(--watch)]}
   ]
 
 # ## SSL Support
@@ -53,18 +53,18 @@ config :alchem_iiif, AlchemIiifWeb.Endpoint,
 # different ports.
 
 # Watch static and templates for browser reloading.
-config :alchem_iiif, AlchemIiifWeb.Endpoint,
+config :omni_archive, OmniArchiveWeb.Endpoint,
   live_reload: [
     web_console_logger: true,
     patterns: [
       ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
       ~r"priv/gettext/.*(po)$",
-      ~r"lib/alchem_iiif_web/(?:controllers|live|components|router)/?.*\.(ex|heex)$"
+      ~r"lib/omni_archive_web/(?:controllers|live|components|router)/?.*\.(ex|heex)$"
     ]
   ]
 
 # Enable dev routes for dashboard and mailbox
-config :alchem_iiif, dev_routes: true
+config :omni_archive, dev_routes: true
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"

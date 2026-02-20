@@ -1,4 +1,4 @@
-defmodule AlchemIiif.Repo.Migrations.AddOwnershipToExtractedImages do
+defmodule OmniArchive.Repo.Migrations.AddOwnershipToExtractedImages do
   use Ecto.Migration
 
   def change do

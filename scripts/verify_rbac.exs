@@ -3,8 +3,8 @@
 #
 # Admin ユーザーと一般ユーザーで list_extracted_images/1 の動作差を確認します。
 
-alias AlchemIiif.Accounts
-alias AlchemIiif.Ingestion
+alias OmniArchive.Accounts
+alias OmniArchive.Ingestion
 
 IO.puts("=== RBAC 検証スクリプト ===\n")
 

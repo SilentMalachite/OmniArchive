@@ -1,4 +1,4 @@
-# AlchemIIIF Dockerfile
+# OmniArchive Dockerfile
 # マルチステージビルド: Elixir + Node.js → Debian slim + libvips + poppler-utils
 
 # ===== ビルドステージ =====
@@ -99,7 +99,7 @@ RUN mkdir -p /app/priv/static/uploads && \
     chown -R app:app /app
 
 # リリースをコピー
-COPY --from=builder --chown=app:app /app/_build/prod/rel/alchem_iiif ./
+COPY --from=builder --chown=app:app /app/_build/prod/rel/omni_archive ./
 
 USER app
 

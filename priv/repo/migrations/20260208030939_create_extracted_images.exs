@@ -1,4 +1,4 @@
-defmodule AlchemIiif.Repo.Migrations.CreateExtractedImages do
+defmodule OmniArchive.Repo.Migrations.CreateExtractedImages do
   use Ecto.Migration
 
   def change do

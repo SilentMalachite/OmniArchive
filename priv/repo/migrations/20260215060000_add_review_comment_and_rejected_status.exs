@@ -1,4 +1,4 @@
-defmodule AlchemIiif.Repo.Migrations.AddReviewCommentAndRejectedStatus do
+defmodule OmniArchive.Repo.Migrations.AddReviewCommentAndRejectedStatus do
   use Ecto.Migration
 
   def change do

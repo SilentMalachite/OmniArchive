@@ -1,4 +1,4 @@
-defmodule AlchemIiif.Repo.Migrations.AddWorkflowStatusToPdfSources do
+defmodule OmniArchive.Repo.Migrations.AddWorkflowStatusToPdfSources do
   use Ecto.Migration
 
   def change do

@@ -1,6 +1,6 @@
 # 開発参加ガイドライン (Contributing)
 
-AlchemIIIF への貢献をご検討いただきありがとうございます！
+OmniArchive への貢献をご検討いただきありがとうございます！
 
 ---
 
@@ -11,8 +11,8 @@ AlchemIIIF への貢献をご検討いただきありがとうございます！
 1. リポジトリをフォークしてクローン
 
 ```bash
-git clone https://github.com/SilentMalachite/AlchemIIIF.git
-cd AlchemIIIF
+git clone https://github.com/SilentMalachite/OmniArchive.git
+cd OmniArchive
 ```
 
 2. 依存パッケージをインストール
@@ -106,17 +106,17 @@ Pull Request を作成する際は、以下を確認してください：
 mix test
 
 # 特定のファイル
-mix test test/alchem_iiif/ingestion_test.exs
-mix test test/alchem_iiif/search_test.exs
+mix test test/omni_archive/ingestion_test.exs
+mix test test/omni_archive/search_test.exs
 
 # LiveView テスト
-mix test test/alchem_iiif_web/live/
+mix test test/omni_archive_web/live/
 
 # コントローラーテスト
-mix test test/alchem_iiif_web/controllers/
+mix test test/omni_archive_web/controllers/
 
 # 特定のテスト (行番号指定)
-mix test test/alchem_iiif/ingestion_test.exs:42
+mix test test/omni_archive/ingestion_test.exs:42
 ```
 
 ### テスト作成のガイドライン

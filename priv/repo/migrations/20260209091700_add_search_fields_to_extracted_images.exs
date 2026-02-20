@@ -1,4 +1,4 @@
-defmodule AlchemIiif.Repo.Migrations.AddSearchFieldsToExtractedImages do
+defmodule OmniArchive.Repo.Migrations.AddSearchFieldsToExtractedImages do
   @moduledoc """
   検索エンジン用のカラムを extracted_images テーブルに追加するマイグレーション。
 

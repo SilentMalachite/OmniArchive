@@ -1,8 +1,8 @@
-# AlchemIIIF Development Specification (IIIF_SPEC.md)
+# OmniArchive Development Specification (IIIF_SPEC.md)
 
 ## 1. Project Overview
 
-AlchemIIIF is a modular-monolith application built with Elixir and Phoenix. It is designed to transform static PDF archaeological reports into rich, interoperable IIIF (International Image Interoperability Framework) assets.
+OmniArchive is a modular-monolith application built with Elixir and Phoenix. It is designed to transform static PDF archaeological reports into rich, interoperable IIIF (International Image Interoperability Framework) assets.
 
 ### Core Philosophy
 - **Modular Monolith:** Decouples the "Manual Ingestion & Inspection" module from the "IIIF Delivery" module within a single codebase to ensure maintainability and clear boundaries.
@@ -90,7 +90,7 @@ To support academic research, specific archaeological metadata fields are indexe
 - **Output:** JSON-LD Manifest aggregating all `published` images under a PdfSource as Canvases.
 - **Canvas ordering:** Sorted by `page_number` ascending.
 - **Canvas dimensions:** Derived from `geometry.width` / `geometry.height` (fallback: 1000×1000).
-- **Image URL:** Absolute URL constructed from `image_path` via `AlchemIiifWeb.Endpoint.url()`.
+- **Image URL:** Absolute URL constructed from `image_path` via `OmniArchiveWeb.Endpoint.url()`.
 
 ## 7. "Manual Inspector" Workflow (Ingestion Pipeline)
 
@@ -143,7 +143,7 @@ const ImageSelection = {
 ## 10. Implementation Instructions for AI Agents (Antigravity)
 
 **System Prompt / Directive:**
-> Implement the AlchemIIIF modular monolith following this IIIF_SPEC.md exactly. 
+> Implement the OmniArchive modular monolith following this IIIF_SPEC.md exactly. 
 > 1. **Manual Ingestion Pipeline:** Build the 'Inspector' using Phoenix LiveView with a strict Wizard-style flow.
 > 2. **Accessibility Controls:** Implement the `nudge_crop` functionality using large, accessible UI buttons as specified. 
 > 3. **Persistence:** Use PostgreSQL with JSONB to store flexible metadata and crop geometry.

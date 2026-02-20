@@ -1,11 +1,11 @@
-defmodule AlchemIiif.Factory do
+defmodule OmniArchive.Factory do
   @moduledoc """
   テスト用のデータファクトリモジュール。
   各スキーマのテストデータ生成ヘルパーを提供します。
   """
-  alias AlchemIiif.IIIF.Manifest
-  alias AlchemIiif.Ingestion.{ExtractedImage, PdfSource}
-  alias AlchemIiif.Repo
+  alias OmniArchive.IIIF.Manifest
+  alias OmniArchive.Ingestion.{ExtractedImage, PdfSource}
+  alias OmniArchive.Repo
 
   # === PdfSource ファクトリ ===
 
@@ -111,12 +111,12 @@ defmodule AlchemIiif.Factory do
   @doc "テスト用ユーザーを作成・挿入（AccountsFixtures に委譲）。role 指定時は挿入後に更新。"
   def insert_user(overrides \\ %{}) do
     {role, rest} = Map.pop(overrides, :role)
-    user = AlchemIiif.AccountsFixtures.user_fixture(rest)
+    user = OmniArchive.AccountsFixtures.user_fixture(rest)
 
     if role && role != "user" do
       user
       |> Ecto.Changeset.change(%{role: role})
-      |> AlchemIiif.Repo.update!()
+      |> OmniArchive.Repo.update!()
     else
       user
     end

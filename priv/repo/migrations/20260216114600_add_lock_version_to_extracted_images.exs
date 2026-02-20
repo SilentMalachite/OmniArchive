@@ -1,4 +1,4 @@
-defmodule AlchemIiif.Repo.Migrations.AddLockVersionToExtractedImages do
+defmodule OmniArchive.Repo.Migrations.AddLockVersionToExtractedImages do
   use Ecto.Migration
 
   def change do

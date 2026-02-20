@@ -1,4 +1,4 @@
-defmodule AlchemIiif.Repo.Migrations.AddUniqueLabelToExtractedImages do
+defmodule OmniArchive.Repo.Migrations.AddUniqueLabelToExtractedImages do
   @moduledoc """
   ラベル重複防止のための部分ユニークインデックスを追加。
   同一 PDF 内で同じラベルを持つレコードを DB レベルで禁止します。

@@ -1,4 +1,4 @@
-defmodule AlchemIiif.Repo.Migrations.CreateUsersAuthTables do
+defmodule OmniArchive.Repo.Migrations.CreateUsersAuthTables do
   use Ecto.Migration
 
   def change do

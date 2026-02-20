@@ -1,0 +1,150 @@
+Running ExUnit with seed: 17220, max_cases: 20
+
+
+
+  1) test POST /users/register creates account and logs the user in (OmniArchiveWeb.UserRegistrationControllerTest)
+     test/omni_archive_web/controllers/user_registration_controller_test.exs:24
+     ** (ArgumentError) session not fetched, call fetch_session/2
+     code: assert get_session(conn, :user_token)
+     stacktrace:
+       (plug 1.19.1) lib/plug/conn.ex:1784: Plug.Conn.get_session/1
+       (plug 1.19.1) lib/plug/conn.ex:1767: Plug.Conn.get_session/3
+       test/omni_archive_web/controllers/user_registration_controller_test.exs:32: (test)
+
+
+
+  2) test GET /users/register renders registration page (OmniArchiveWeb.UserRegistrationControllerTest)
+     test/omni_archive_web/controllers/user_registration_controller_test.exs:7
+     ** (RuntimeError) expected response with status 200, got: 404, with body:
+     "Not Found"
+     code: response = html_response(conn, 200)
+     stacktrace:
+       (phoenix 1.8.3) lib/phoenix/test/conn_test.ex:373: Phoenix.ConnTest.response/2
+       (phoenix 1.8.3) lib/phoenix/test/conn_test.ex:387: Phoenix.ConnTest.html_response/2
+       test/omni_archive_web/controllers/user_registration_controller_test.exs:9: (test)
+
+
+
+  3) test GET /users/register redirects if already logged in (OmniArchiveWeb.UserRegistrationControllerTest)
+     test/omni_archive_web/controllers/user_registration_controller_test.exs:15
+     ** (RuntimeError) expected redirection with status 302, got: 404
+     code: assert redirected_to(conn) == ~p"/"
+     stacktrace:
+       (phoenix 1.8.3) lib/phoenix/test/conn_test.ex:454: Phoenix.ConnTest.redirected_to/2
+       test/omni_archive_web/controllers/user_registration_controller_test.exs:18: (test)
+
+
+
+  4) test POST /users/register render errors for invalid data (OmniArchiveWeb.UserRegistrationControllerTest)
+     test/omni_archive_web/controllers/user_registration_controller_test.exs:36
+     ** (RuntimeError) expected response with status 200, got: 404, with body:
+     "Not Found"
+     code: response = html_response(conn, 200)
+     stacktrace:
+       (phoenix 1.8.3) lib/phoenix/test/conn_test.ex:373: Phoenix.ConnTest.response/2
+       (phoenix 1.8.3) lib/phoenix/test/conn_test.ex:387: Phoenix.ConnTest.html_response/2
+       test/omni_archive_web/controllers/user_registration_controller_test.exs:42: (test)
+
+
+
+  5) test GET /users/log-in renders login page (email + password) (OmniArchiveWeb.UserSessionControllerTest)
+     test/omni_archive_web/controllers/user_session_controller_test.exs:32
+     Assertion with =~ failed
+     code:  assert response =~ ~p"/users/register"
+     left:  "<!DOCTYPE html>\n<html lang=\"ja\" data-theme=\"alchemiiif\">\n  <head>\n    <meta charset=\"utf-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n    <meta name=\"csrf-token\" content=\"fwECB0oYa1xvPQN4DDkIDhYADQlCOwdV5pVN2_2nXxa3iOb6wUlH4itf\">\n    <title data-default=\"OmniArchive\" data-suffix=\" · OmniArchive\">OmniArchive · OmniArchive</title>\n    <link phx-track-static rel=\"stylesheet\" href=\"/assets/css/app.css\">\n\n    <script defer phx-track-static type=\"text/javascript\" src=\"/assets/js/app.js\">\n    </script>\n  </head>\n  <body class=\"bg-base-100 min-h-screen\">\n    <!-- 認証ナビゲーションバー -->\n    <nav class=\"navbar bg-[#1a1a2e] text-[#e8d5a3] shadow-lg px-4 sm:px-6 lg:px-8\">\n      <div class=\"flex-1\">\n        <a href=\"/\" class=\"btn btn-ghost text-lg font-bold tracking-wide\">\n          ⚗️ OmniArchive\n        </a>\n      </div>\n      <div class=\"flex-none\">\n        <ul class=\"menu menu-horizontal px-1 gap-1 items-center\">\n\n            <li>\n              <a href=\"/users/log-in\" class=\"btn btn-sm bg-[#d4a844] text-[#1a1a2e] border-none hover:bg-[#c49a38]\">\n                ログイン\n              </a>\n            </li>\n\n        </ul>\n      </div>\n    </nav>\n    <main class=\"px-4 py-10 sm:px-6 lg:px-8\">\n  <div class=\"mx-auto max-w-2xl space-y-4\">\n    \n  <div class=\"mx-auto max-w-sm space-y-4\">\n    <div class=\"text-center mb-8\">\n      <h1 class=\"text-3xl font-bold text-[#1a1a2e]\">⚗️ ログイン</h1>\n      <p class=\"mt-2 text-base-content/60\">\n\n          管理者から招待を受けてください。\n\n      </p>\n    </div>\n\n    <div class=\"card bg-base-200 shadow-xl\">\n      <div class=\"card-body\">\n        <form action=\"/users/log-in\" method=\"post\" id=\"login_form_password\">\n  \n  <input name=\"_csrf_token\" type=\"hidden\" hidden value=\"fwECB0oYa1xvPQN4DDkIDhYADQlCOwdV5pVN2_2nXxa3iOb6wUlH4itf\">\n  \n          <div class=\"fieldset mb-2\">\n  <label>\n    <span class=\"label mb-1\">メールアドレス</span>\n    <input type=\"email\" name=\"user[email]\" id=\"login_form_password_email\" class=\"w-full input\" required autocomplete=\"email\" phx-mounted=\"[[&quot;focus&quot;,{}]]\">\n  </label>\n  \n</div>\n          <div class=\"fieldset mb-2\">\n  <label>\n    <span class=\"label mb-1\">パスワード</span>\n    <input type=\"password\" name=\"user[password]\" id=\"login_form_password_password\" class=\"w-full input\" required autocomplete=\"current-password\">\n  </label>\n  \n</div>\n          <button class=\"btn bg-[#d4a844] text-[#1a1a2e] border-none hover:bg-[#c49a38] w-full mt-4\" name=\"user[remember_me]\" value=\"true\">\n  \n            ログイン（次回から自動ログイン） <span aria-hidden=\"true\">→</span>\n          \n</button>\n          <button class=\"btn btn-ghost w-full mt-2 text-base-content/60\">\n  \n            今回のみログイン\n          \n</button>\n        \n</form>\n      </div>\n    </div>\n  </div>\n\n  </div>\n</main>\n\n<div id=\"flash-group\" aria-live=\"polite\">\n  \n  \n\n  <div id=\"client-error\" phx-click=\"[[&quot;push&quot;,{&quot;value&quot;:{&quot;key&quot;:&quot;error&quot;},&quot;event&quot;:&quot;lv:clear-flash&quot;}],[&quot;hide&quot;,{&quot;time&quot;:200,&quot;to&quot;:&quot;#client-error&quot;,&quot;transition&quot;:[[&quot;transition-all&quot;,&quot;ease-in&quot;,&quot;duration-200&quot;],[&quot;opacity-100&quot;,&quot;translate-y-0&quot;,&quot;sm:scale-100&quot;],[&quot;opacity-0&quot;,&quot;translate-y-4&quot;,&quot;sm:translate-y-0&quot;,&quot;sm:scale-95&quot;]]}]]\" role=\"alert\" class=\"toast toast-top toast-end z-50\" hidden phx-connected=\"[[&quot;hide&quot;,{&quot;time&quot;:200,&quot;to&quot;:&quot;#client-error&quot;,&quot;transition&quot;:[[&quot;transition-all&quot;,&quot;ease-in&quot;,&quot;duration-200&quot;],[&quot;opacity-100&quot;,&quot;translate-y-0&quot;,&quot;sm:scale-100&quot;],[&quot;opacity-0&quot;,&quot;translate-y-4&quot;,&quot;sm:translate-y-0&quot;,&quot;sm:scale-95&quot;]]}],[&quot;set_attr&quot;,{&quot;attr&quot;:[&quot;hidden&quot;,&quot;&quot;]}]]\" phx-disconnected=\"[[&quot;show&quot;,{&quot;time&quot;:300,&quot;to&quot;:&quot;.phx-client-error #client-error&quot;,&quot;transition&quot;:[[&quot;transition-all&quot;,&quot;ease-out&quot;,&quot;duration-300&quot;],[&quot;opacity-0&quot;,&quot;translate-y-4&quot;,&quot;sm:tran" <> ...
+     right: "/users/register"
+     stacktrace:
+       test/omni_archive_web/controllers/user_session_controller_test.exs:36: (test)
+
+
+
+  6) test GET /users/log-in renders login page (OmniArchiveWeb.UserSessionControllerTest)
+     test/omni_archive_web/controllers/user_session_controller_test.exs:11
+     Assertion with =~ failed
+     code:  assert response =~ ~p"/users/register"
+     left:  "<!DOCTYPE html>\n<html lang=\"ja\" data-theme=\"alchemiiif\">\n  <head>\n    <meta charset=\"utf-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n    <meta name=\"csrf-token\" content=\"FAAtLlA7DQQJFRAnGAwdDhALPikMJQMUCybqdpdwK8zlryHfvmygUT1K\">\n    <title data-default=\"OmniArchive\" data-suffix=\" · OmniArchive\">OmniArchive · OmniArchive</title>\n    <link phx-track-static rel=\"stylesheet\" href=\"/assets/css/app.css\">\n\n    <script defer phx-track-static type=\"text/javascript\" src=\"/assets/js/app.js\">\n    </script>\n  </head>\n  <body class=\"bg-base-100 min-h-screen\">\n    <!-- 認証ナビゲーションバー -->\n    <nav class=\"navbar bg-[#1a1a2e] text-[#e8d5a3] shadow-lg px-4 sm:px-6 lg:px-8\">\n      <div class=\"flex-1\">\n        <a href=\"/\" class=\"btn btn-ghost text-lg font-bold tracking-wide\">\n          ⚗️ OmniArchive\n        </a>\n      </div>\n      <div class=\"flex-none\">\n        <ul class=\"menu menu-horizontal px-1 gap-1 items-center\">\n\n            <li>\n              <a href=\"/users/log-in\" class=\"btn btn-sm bg-[#d4a844] text-[#1a1a2e] border-none hover:bg-[#c49a38]\">\n                ログイン\n              </a>\n            </li>\n\n        </ul>\n      </div>\n    </nav>\n    <main class=\"px-4 py-10 sm:px-6 lg:px-8\">\n  <div class=\"mx-auto max-w-2xl space-y-4\">\n    \n  <div class=\"mx-auto max-w-sm space-y-4\">\n    <div class=\"text-center mb-8\">\n      <h1 class=\"text-3xl font-bold text-[#1a1a2e]\">⚗️ ログイン</h1>\n      <p class=\"mt-2 text-base-content/60\">\n\n          管理者から招待を受けてください。\n\n      </p>\n    </div>\n\n    <div class=\"card bg-base-200 shadow-xl\">\n      <div class=\"card-body\">\n        <form action=\"/users/log-in\" method=\"post\" id=\"login_form_password\">\n  \n  <input name=\"_csrf_token\" type=\"hidden\" hidden value=\"FAAtLlA7DQQJFRAnGAwdDhALPikMJQMUCybqdpdwK8zlryHfvmygUT1K\">\n  \n          <div class=\"fieldset mb-2\">\n  <label>\n    <span class=\"label mb-1\">メールアドレス</span>\n    <input type=\"email\" name=\"user[email]\" id=\"login_form_password_email\" class=\"w-full input\" required autocomplete=\"email\" phx-mounted=\"[[&quot;focus&quot;,{}]]\">\n  </label>\n  \n</div>\n          <div class=\"fieldset mb-2\">\n  <label>\n    <span class=\"label mb-1\">パスワード</span>\n    <input type=\"password\" name=\"user[password]\" id=\"login_form_password_password\" class=\"w-full input\" required autocomplete=\"current-password\">\n  </label>\n  \n</div>\n          <button class=\"btn bg-[#d4a844] text-[#1a1a2e] border-none hover:bg-[#c49a38] w-full mt-4\" name=\"user[remember_me]\" value=\"true\">\n  \n            ログイン（次回から自動ログイン） <span aria-hidden=\"true\">→</span>\n          \n</button>\n          <button class=\"btn btn-ghost w-full mt-2 text-base-content/60\">\n  \n            今回のみログイン\n          \n</button>\n        \n</form>\n      </div>\n    </div>\n  </div>\n\n  </div>\n</main>\n\n<div id=\"flash-group\" aria-live=\"polite\">\n  \n  \n\n  <div id=\"client-error\" phx-click=\"[[&quot;push&quot;,{&quot;value&quot;:{&quot;key&quot;:&quot;error&quot;},&quot;event&quot;:&quot;lv:clear-flash&quot;}],[&quot;hide&quot;,{&quot;time&quot;:200,&quot;to&quot;:&quot;#client-error&quot;,&quot;transition&quot;:[[&quot;transition-all&quot;,&quot;ease-in&quot;,&quot;duration-200&quot;],[&quot;opacity-100&quot;,&quot;translate-y-0&quot;,&quot;sm:scale-100&quot;],[&quot;opacity-0&quot;,&quot;translate-y-4&quot;,&quot;sm:translate-y-0&quot;,&quot;sm:scale-95&quot;]]}]]\" role=\"alert\" class=\"toast toast-top toast-end z-50\" hidden phx-connected=\"[[&quot;hide&quot;,{&quot;time&quot;:200,&quot;to&quot;:&quot;#client-error&quot;,&quot;transition&quot;:[[&quot;transition-all&quot;,&quot;ease-in&quot;,&quot;duration-200&quot;],[&quot;opacity-100&quot;,&quot;translate-y-0&quot;,&quot;sm:scale-100&quot;],[&quot;opacity-0&quot;,&quot;translate-y-4&quot;,&quot;sm:translate-y-0&quot;,&quot;sm:scale-95&quot;]]}],[&quot;set_attr&quot;,{&quot;attr&quot;:[&quot;hidden&quot;,&quot;&quot;]}]]\" phx-disconnected=\"[[&quot;show&quot;,{&quot;time&quot;:300,&quot;to&quot;:&quot;.phx-client-error #client-error&quot;,&quot;transition&quot;:[[&quot;transition-all&quot;,&quot;ease-out&quot;,&quot;duration-300&quot;],[&quot;opacity-0&quot;,&quot;translate-y-4&quot;,&quot;sm:tran" <> ...
+     right: "/users/register"
+     stacktrace:
+       test/omni_archive_web/controllers/user_session_controller_test.exs:15: (test)
+
+05:24:03.274 [error] GenServer #PID<0.449.0> terminating
+** (FunctionClauseError) no function clause matching in OmniArchiveWeb.Admin.ReviewLive.handle_event/3
+    (omni_archive 0.2.7) lib/omni_archive_web/live/admin/review_live.ex:66: OmniArchiveWeb.Admin.ReviewLive.handle_event("update_reject_note", %{"note" => "メタデータを修正してください"}, #Phoenix.LiveView.Socket<id: "phx-GJYOIiHYXH-UKAAm", endpoint: OmniArchiveWeb.Endpoint, view: OmniArchiveWeb.Admin.ReviewLive, parent_pid: nil, root_pid: #PID<0.449.0>, router: OmniArchiveWeb.Router, assigns: %{__changed__: %{}, page_title: "Admin Review Dashboard", current_path: "/admin/review", flash: %{}, current_user: #OmniArchive.Accounts.User<__meta__: #Ecto.Schema.Metadata<:loaded, "users">, id: 174, email: "user-576460752303423225@example.com", confirmed_at: ~U[2026-02-20 20:24:03Z], authenticated_at: ~U[2026-02-20 20:24:03Z], role: "admin", inserted_at: ~U[2026-02-20 20:24:03Z], updated_at: ~U[2026-02-20 20:24:03Z], ...>, live_action: :index, selected_image: nil, reject_note: "", pending_images: [%{image: %OmniArchive.Ingestion.ExtractedImage{__meta__: #Ecto.Schema.Metadata<:loaded, "extracted_images">, id: 200, page_number: 1, image_path: "priv/static/uploads/pages/test/page-001.png", geometry: %{"height" => 300, "width" => 200, "x" => 10, "y" => 20}, caption: "第1図 テスト土器", label: "fig-19-1", ptif_path: "/path/to/reject.tif", site: "テスト市遺跡", period: "縄文時代", artifact_type: "土器", status: "pending_review", review_comment: nil, lock_version: 2, pdf_source_id: 212, pdf_source: %OmniArchive.Ingestion.PdfSource{__meta__: #Ecto.Schema.Metadata<:loaded, "pdf_sources">, id: 212, filename: "test_report_166.pdf", page_count: 10, status: "ready", workflow_status: "wip", return_message: nil, deleted_at: nil, user_id: nil, user: #Ecto.Association.NotLoaded<association :user is not loaded>, extracted_images: #Ecto.Association.NotLoaded<association :extracted_images is not loaded>, image_count: 0, owner_email: nil, inserted_at: ~U[2026-02-20 20:24:03Z], updated_at: ~U[2026-02-20 20:24:03Z]}, iiif_manifest: nil, owner_id: nil, owner: #Ecto.Association.NotLoaded<association :owner is not loaded>, worker_id: nil, worker: #Ecto.Association.NotLoaded<association :worker is not loaded>, inserted_at: ~U[2026-02-20 20:24:03Z], updated_at: ~U[2026-02-20 20:24:03Z]}, validation: {:ok, :valid}}], selected_image_dims: {0, 0}, show_reject_modal: true, reject_target_id: "200", dims_map: %{200 => {0, 0}}, pending_count: 1, fading_ids: MapSet.new([])}, transport_pid: #PID<0.447.0>, sticky?: nil, ...>)
+    (phoenix_live_view 1.1.22) lib/phoenix_live_view/channel.ex:530: anonymous fn/3 in Phoenix.LiveView.Channel.view_handle_event/3
+    (telemetry 1.3.0) /Users/hiro/Projetct/GitHub/OmniArchive/deps/telemetry/src/telemetry.erl:324: :telemetry.span/3
+    (phoenix_live_view 1.1.22) lib/phoenix_live_view/channel.ex:260: Phoenix.LiveView.Channel.handle_info/2
+    (stdlib 7.2) gen_server.erl:2434: :gen_server.try_handle_info/3
+    (stdlib 7.2) gen_server.erl:2420: :gen_server.handle_msg/3
+    (stdlib 7.2) proc_lib.erl:333: :proc_lib.init_p_do_apply/3
+Process Label: {Phoenix.LiveView, OmniArchiveWeb.Admin.ReviewLive, "lv:phx-GJYOIiHYXH-UKAAm"}
+Last message: %Phoenix.Socket.Message{topic: "lv:phx-GJYOIiHYXH-UKAAm", event: "event", payload: %{"event" => "update_reject_note", "type" => "click", "value" => %{"note" => "メタデータを修正してください"}}, ref: "2", join_ref: 0}
+05:24:03.291 [error] GenServer #PID<0.446.0> terminating
+** (FunctionClauseError) no function clause matching in OmniArchiveWeb.Admin.ReviewLive.handle_event/3
+    (omni_archive 0.2.7) lib/omni_archive_web/live/admin/review_live.ex:66: OmniArchiveWeb.Admin.ReviewLive.handle_event("update_reject_note", %{"note" => "メタデータを修正してください"}, #Phoenix.LiveView.Socket<id: "phx-GJYOIiHYXH-UKAAm", endpoint: OmniArchiveWeb.Endpoint, view: OmniArchiveWeb.Admin.ReviewLive, parent_pid: nil, root_pid: #PID<0.449.0>, router: OmniArchiveWeb.Router, assigns: %{__changed__: %{}, page_title: "Admin Review Dashboard", current_path: "/admin/review", flash: %{}, current_user: #OmniArchive.Accounts.User<__meta__: #Ecto.Schema.Metadata<:loaded, "users">, id: 174, email: "user-576460752303423225@example.com", confirmed_at: ~U[2026-02-20 20:24:03Z], authenticated_at: ~U[2026-02-20 20:24:03Z], role: "admin", inserted_at: ~U[2026-02-20 20:24:03Z], updated_at: ~U[2026-02-20 20:24:03Z], ...>, live_action: :index, selected_image: nil, reject_note: "", pending_images: [%{image: %OmniArchive.Ingestion.ExtractedImage{__meta__: #Ecto.Schema.Metadata<:loaded, "extracted_images">, id: 200, page_number: 1, image_path: "priv/static/uploads/pages/test/page-001.png", geometry: %{"height" => 300, "width" => 200, "x" => 10, "y" => 20}, caption: "第1図 テスト土器", label: "fig-19-1", ptif_path: "/path/to/reject.tif", site: "テスト市遺跡", period: "縄文時代", artifact_type: "土器", status: "pending_review", review_comment: nil, lock_version: 2, pdf_source_id: 212, pdf_source: %OmniArchive.Ingestion.PdfSource{__meta__: #Ecto.Schema.Metadata<:loaded, "pdf_sources">, id: 212, filename: "test_report_166.pdf", page_count: 10, status: "ready", workflow_status: "wip", return_message: nil, deleted_at: nil, user_id: nil, user: #Ecto.Association.NotLoaded<association :user is not loaded>, extracted_images: #Ecto.Association.NotLoaded<association :extracted_images is not loaded>, image_count: 0, owner_email: nil, inserted_at: ~U[2026-02-20 20:24:03Z], updated_at: ~U[2026-02-20 20:24:03Z]}, iiif_manifest: nil, owner_id: nil, owner: #Ecto.Association.NotLoaded<association :owner is not loaded>, worker_id: nil, worker: #Ecto.Association.NotLoaded<association :worker is not loaded>, inserted_at: ~U[2026-02-20 20:24:03Z], updated_at: ~U[2026-02-20 20:24:03Z]}, validation: {:ok, :valid}}], selected_image_dims: {0, 0}, show_reject_modal: true, reject_target_id: "200", dims_map: %{200 => {0, 0}}, pending_count: 1, fading_ids: MapSet.new([])}, transport_pid: #PID<0.447.0>, sticky?: nil, ...>)
+    (phoenix_live_view 1.1.22) lib/phoenix_live_view/channel.ex:530: anonymous fn/3 in Phoenix.LiveView.Channel.view_handle_event/3
+    (telemetry 1.3.0) /Users/hiro/Projetct/GitHub/OmniArchive/deps/telemetry/src/telemetry.erl:324: :telemetry.span/3
+    (phoenix_live_view 1.1.22) lib/phoenix_live_view/channel.ex:260: Phoenix.LiveView.Channel.handle_info/2
+    (stdlib 7.2) gen_server.erl:2434: :gen_server.try_handle_info/3
+    (stdlib 7.2) gen_server.erl:2420: :gen_server.handle_msg/3
+    (stdlib 7.2) proc_lib.erl:333: :proc_lib.init_p_do_apply/3
+Last message: {:EXIT, #PID<0.414.0>, {:function_clause, [{OmniArchiveWeb.Admin.ReviewLive, :handle_event, ["update_reject_note", %{"note" => "メタデータを修正してください"}, #Phoenix.LiveView.Socket<id: "phx-GJYOIiHYXH-UKAAm", endpoint: OmniArchiveWeb.Endpoint, view: OmniArchiveWeb.Admin.ReviewLive, parent_pid: nil, root_pid: #PID<0.449.0>, router: OmniArchiveWeb.Router, assigns: %{__changed__: %{}, page_title: "Admin Review Dashboard", current_path: "/admin/review", flash: %{}, current_user: #OmniArchive.Accounts.User<__meta__: #Ecto.Schema.Metadata<:loaded, "users">, id: 174, email: "user-576460752303423225@example.com", confirmed_at: ~U[2026-02-20 20:24:03Z], authenticated_at: ~U[2026-02-20 20:24:03Z], role: "admin", inserted_at: ~U[2026-02-20 20:24:03Z], updated_at: ~U[2026-02-20 20:24:03Z], ...>, live_action: :index, selected_image: nil, reject_note: "", pending_images: [%{image: %OmniArchive.Ingestion.ExtractedImage{__meta__: #Ecto.Schema.Metadata<:loaded, "extracted_images">, id: 200, page_number: 1, image_path: "priv/static/uploads/pages/test/page-001.png", geometry: %{"height" => 300, "width" => 200, "x" => 10, "y" => 20}, caption: "第1図 テスト土器", label: "fig-19-1", ptif_path: "/path/to/reject.tif", site: "テスト市遺跡", period: "縄文時代", artifact_type: "土器", status: "pending_review", review_comment: nil, lock_version: 2, pdf_source_id: 212, pdf_source: %OmniArchive.Ingestion.PdfSource{__meta__: #Ecto.Schema.Metadata<:loaded, "pdf_sources">, id: 212, filename: "test_report_166.pdf", page_count: 10, status: "ready", workflow_status: "wip", return_message: nil, deleted_at: nil, user_id: nil, user: #Ecto.Association.NotLoaded<association :user is not loaded>, extracted_images: #Ecto.Association.NotLoaded<association :extracted_images is not loaded>, image_count: 0, owner_email: nil, inserted_at: ~U[2026-02-20 20:24:03Z], updated_at: ~U[2026-02-20 20:24:03Z]}, iiif_manifest: nil, owner_id: nil, owner: #Ecto.Association.NotLoaded<association :owner is not loaded>, worker_id: nil, worker: #Ecto.Association.NotLoaded<association :worker is not loaded>, inserted_at: ~U[2026-02-20 20:24:03Z], updated_at: ~U[2026-02-20 20:24:03Z]}, validation: {:ok, :valid}}], selected_image_dims: {0, 0}, show_reject_modal: true, reject_target_id: "200", dims_map: %{200 => {0, 0}}, pending_count: 1, fading_ids: MapSet.new([])}, transport_pid: #PID<0.447.0>, sticky?: nil, ...>], [file: ~c"lib/omni_archive_web/live/admin/review_live.ex", line: 66]}, {Phoenix.LiveView.Channel, :"-view_handle_event/3-fun-0-", 3, [file: ~c"lib/phoenix_live_view/channel.ex", line: 530]}, {:telemetry, :span, 3, [file: ~c"/Users/hiro/Projetct/GitHub/OmniArchive/deps/telemetry/src/telemetry.erl", line: 324]}, {Phoenix.LiveView.Channel, :handle_info, 2, [file: ~c"lib/phoenix_live_view/channel.ex", line: 260]}, {:gen_server, :try_handle_info, 3, [file: ~c"gen_server.erl", line: 2434]}, {:gen_server, :handle_msg, 3, [file: ~c"gen_server.erl", line: 2420]}, {:proc_lib, :init_p_do_apply, 3, [file: ~c"proc_lib.erl", line: 333]}]}}
+
+
+  7) test reject イベント（Note 付き差し戻し） 差し戻しモーダルを開いて実行する (OmniArchiveWeb.Admin.ReviewLiveTest)
+     test/omni_archive_web/live/admin/admin_review_live_test.exs:187
+     ** (EXIT from #PID<0.414.0>) an exception was raised:
+
+          ** (FunctionClauseError) no function clause matching in OmniArchiveWeb.Admin.ReviewLive.handle_event/3
+
+          The following arguments were given to OmniArchiveWeb.Admin.ReviewLive.handle_event/3:
+
+              # 1
+              "update_reject_note"
+
+              # 2
+              %{"note" => "メタデータを修正してください"}
+
+              # 3
+              #Phoenix.LiveView.Socket<id: "phx-GJYOIiHYXH-UKAAm", endpoint: OmniArchiveWeb.Endpoint, view: OmniArchiveWeb.Admin.ReviewLive, parent_pid: nil, root_pid: #PID<0.449.0>, router: OmniArchiveWeb.Router, assigns: %{__changed__: %{}, page_title: "Admin Review Dashboard", current_path: "/admin/review", flash: %{}, current_user: #OmniArchive.Accounts.User<__meta__: #Ecto.Schema.Metadata<:loaded, "users">, id: 174, email: "user-576460752303423225@example.com", confirmed_at: ~U[2026-02-20 20:24:03Z], authenticated_at: ~U[2026-02-20 20:24:03Z], role: "admin", inserted_at: ~U[2026-02-20 20:24:03Z], updated_at: ~U[2026-02-20 20:24:03Z], ...>, live_action: :index, selected_image: nil, reject_note: "", pending_images: [%{image: %OmniArchive.Ingestion.ExtractedImage{__meta__: #Ecto.Schema.Metadata<:loaded, "extracted_images">, id: 200, page_number: 1, image_path: "priv/static/uploads/pages/test/page-001.png", geometry: %{"height" => 300, "width" => 200, "x" => 10, "y" => 20}, caption: "第1図 テスト土器", label: "fig-19-1", ptif_path: "/path/to/reject.tif", site: "テスト市遺跡", period: "縄文時代", artifact_type: "土器", status: "pending_review", review_comment: nil, lock_version: 2, pdf_source_id: 212, pdf_source: %OmniArchive.Ingestion.PdfSource{__meta__: #Ecto.Schema.Metadata<:loaded, "pdf_sources">, id: 212, filename: "test_report_166.pdf", page_count: 10, status: "ready", workflow_status: "wip", return_message: nil, deleted_at: nil, user_id: nil, user: #Ecto.Association.NotLoaded<association :user is not loaded>, extracted_images: #Ecto.Association.NotLoaded<association :extracted_images is not loaded>, image_count: 0, owner_email: nil, inserted_at: ~U[2026-02-20 20:24:03Z], updated_at: ~U[2026-02-20 20:24:03Z]}, iiif_manifest: nil, owner_id: nil, owner: #Ecto.Association.NotLoaded<association :owner is not loaded>, worker_id: nil, worker: #Ecto.Association.NotLoaded<association :worker is not loaded>, inserted_at: ~U[2026-02-20 20:24:03Z], updated_at: ~U[2026-02-20 20:24:03Z]}, validation: {:ok, :valid}}], selected_image_dims: {0, 0}, show_reject_modal: true, reject_target_id: "200", dims_map: %{200 => {0, 0}}, pending_count: 1, fading_ids: MapSet.new([])}, transport_pid: #PID<0.447.0>, sticky?: nil, ...>
+
+          Attempted function clauses (showing 8 out of 8):
+
+              def handle_event(-"select_image"-, -%{"id" => id}-, socket)
+              def handle_event(-"delete"-, -%{"id" => id}-, socket)
+              def handle_event(-"close_inspector"-, _params, socket)
+              def handle_event(-"approve"-, -%{"id" => id}-, socket)
+              def handle_event(-"open_reject_modal"-, -%{"id" => id}-, socket)
+              def handle_event(-"close_reject_modal"-, _params, socket)
+              def handle_event("update_reject_note", -%{"reject_note" => %{"note" => note}}-, socket)
+              def handle_event(-"confirm_reject"-, _params, socket)
+
+          stacktrace:
+            (omni_archive 0.2.7) lib/omni_archive_web/live/admin/review_live.ex:66: OmniArchiveWeb.Admin.ReviewLive.handle_event/3
+            (phoenix_live_view 1.1.22) lib/phoenix_live_view/channel.ex:530: anonymous fn/3 in Phoenix.LiveView.Channel.view_handle_event/3
+            (telemetry 1.3.0) /Users/hiro/Projetct/GitHub/OmniArchive/deps/telemetry/src/telemetry.erl:324: :telemetry.span/3
+            (phoenix_live_view 1.1.22) lib/phoenix_live_view/channel.ex:260: Phoenix.LiveView.Channel.handle_info/2
+            (stdlib 7.2) gen_server.erl:2434: :gen_server.try_handle_info/3
+            (stdlib 7.2) gen_server.erl:2420: :gen_server.handle_msg/3
+            (stdlib 7.2) proc_lib.erl:333: :proc_lib.init_p_do_apply/3
+
+
+
+
+  8) test security: uploads are isolated between users User A のアップロードファイルが User B に見えないこと (OmniArchiveWeb.InspectorLive.UploadTest)
+     test/omni_archive_web/live/inspector_live/upload_test.exs:16
+     ** (ArgumentError) expected selector "#upload-form" to return a single element, but got none within: 
+
+     <div id="phx-GJYOIimmhPvPHBNB" data-phx-main="" data-phx-session="SFMyNTY.g2gDaAJhBnQAAAAIdwJpZG0AAAAUcGh4LUdKWU9JaW1taFB2UEhCTkJ3B3Nlc3Npb250AAAAAHcGcm91dGVydxxFbGl4aXIuT21uaUFyY2hpdmVXZWIuUm91dGVydwpwYXJlbnRfcGlkdwNuaWx3BHZpZXd3I0VsaXhpci5PbW5pQXJjaGl2ZVdlYi5MYWJMaXZlLkluZGV4dwhyb290X3BpZHcDbmlsdwlyb290X3ZpZXd3I0VsaXhpci5PbW5pQXJjaGl2ZVdlYi5MYWJMaXZlLkluZGV4dxFsaXZlX3Nlc3Npb25fbmFtZXcRYXV0aGVudGljYXRlZF9sYWJuBgDwR7l8nAFiAAFRgA.k7Ra_iJ3q01tEi93ZDGy6nREv-Ci_3VkSsb42JmWKSU" data-phx-static="SFMyNTY.g2gDaAJhBnQAAAADdwJpZG0AAAAUcGh4LUdKWU9JaW1taFB2UEhCTkJ3BWZsYXNodAAAAAB3CmFzc2lnbl9uZXdsAAAAAXcMY3VycmVudF91c2Vyam4GAPBHuXycAWIAAVGA.Dce5-2-bWxzCTwGsG9Hbx5QtvgAqbKFq3AuIhAMryKI"><div class="lab-container"><div class="lab-header"><h1 class="lab-title">📁 プロジェクト一覧</h1><a href="/lab/upload" data-phx-link="redirect" data-phx-link-state="push" class="btn-primary">
+           📤 新規アップロード
+         </a></div><div class="lab-empty-state"><span class="lab-empty-icon">📭</span><p class="lab-empty-text">プロジェクトがまだありません。</p><p class="lab-empty-hint">PDFをアップロードして最初のプロジェクトを作成しましょう。</p><a href="/lab/upload" data-phx-link="redirect" data-phx-link-state="push" class="btn-primary btn-large">
+             📤 PDFをアップロード
+           </a></div></div></div>
+     code: file_input(view_a, "#upload-form", :pdf, [
+     stacktrace:
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/test/live_view_test.ex:1311: anonymous fn/1 in Phoenix.LiveViewTest.find_cid!/2
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/test/live_view_test.ex:1273: Phoenix.LiveViewTest.__file_input__/5
+       test/omni_archive_web/live/inspector_live/upload_test.exs:30: (test)
+
+
+Finished in 0.2 seconds (0.2s async, 0.02s sync)
+8 tests, 8 failures

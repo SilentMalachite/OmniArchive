@@ -2,4 +2,4 @@
 set -eu
 
 cd -P -- "$(dirname -- "$0")"
-exec ./alchem_iiif eval AlchemIiif.Release.migrate
+exec ./omni_archive eval OmniArchive.Release.migrate

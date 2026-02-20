@@ -1,10 +1,10 @@
-/* AlchemIIIF メインスタイルシート */
+/* OmniArchive メインスタイルシート */
 /* Tailwind CSS v4 + DaisyUI v5 */
 @import "tailwindcss";
 @import "./inspector.css";
 @import "./admin-review.css";
 @import "./gallery.css";
 @import "./lab.css";
-@source "../../lib/alchem_iiif_web";
-@source "../../lib/alchem_iiif_web/**/*.{ex,heex}";
+@source "../../lib/omni_archive_web";
+@source "../../lib/omni_archive_web/**/*.{ex,heex}";
 @plugin "daisyui";

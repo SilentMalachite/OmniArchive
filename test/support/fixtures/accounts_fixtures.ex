@@ -1,13 +1,13 @@
-defmodule AlchemIiif.AccountsFixtures do
+defmodule OmniArchive.AccountsFixtures do
   @moduledoc """
   This module defines test helpers for creating
-  entities via the `AlchemIiif.Accounts` context.
+  entities via the `OmniArchive.Accounts` context.
   """
 
   import Ecto.Query
 
-  alias AlchemIiif.Accounts
-  alias AlchemIiif.Accounts.Scope
+  alias OmniArchive.Accounts
+  alias OmniArchive.Accounts.Scope
 
   def unique_user_email, do: "user#{System.unique_integer()}@example.com"
   def valid_user_password, do: "hello world!"
@@ -33,8 +33,8 @@ defmodule AlchemIiif.AccountsFixtures do
 
     # Magic Link フローの代わりに直接 confirmed_at を設定
     user
-    |> AlchemIiif.Accounts.User.confirm_changeset()
-    |> AlchemIiif.Repo.update!()
+    |> OmniArchive.Accounts.User.confirm_changeset()
+    |> OmniArchive.Repo.update!()
   end
 
   def user_scope_fixture do
@@ -60,7 +60,7 @@ defmodule AlchemIiif.AccountsFixtures do
   end
 
   def override_token_authenticated_at(token, authenticated_at) when is_binary(token) do
-    AlchemIiif.Repo.update_all(
+    OmniArchive.Repo.update_all(
       from(t in Accounts.UserToken,
         where: t.token == ^token
       ),
@@ -71,7 +71,7 @@ defmodule AlchemIiif.AccountsFixtures do
   def offset_user_token(token, amount_to_add, unit) do
     dt = DateTime.add(DateTime.utc_now(:second), amount_to_add, unit)
 
-    AlchemIiif.Repo.update_all(
+    OmniArchive.Repo.update_all(
       from(ut in Accounts.UserToken, where: ut.token == ^token),
       set: [inserted_at: dt, authenticated_at: dt]
     )
@@ -83,6 +83,6 @@ defmodule AlchemIiif.AccountsFixtures do
 
     user
     |> Ecto.Changeset.change(%{role: "admin"})
-    |> AlchemIiif.Repo.update!()
+    |> OmniArchive.Repo.update!()
   end
 end
