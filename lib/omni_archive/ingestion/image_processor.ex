@@ -6,7 +6,7 @@ defmodule OmniArchive.Ingestion.ImageProcessor do
   ## なぜこの設計か
 
   - **libvips (Vix) を採用**: ImageMagick と異なり、libvips はストリーミング処理で
-    画像全体をメモリに展開しません。これにより、大容量の考古学資料画像（数十MB）
+    画像全体をメモリに展開しません。これにより、大容量の資料画像（数十MB）
     でもメモリ使用量を低く抑えられます。BEAM VM との共存に適しています。
   - **PTIF (Pyramid TIFF)**: IIIF Image API に最適化されたフォーマットです。
     複数解像度のピラミッド構造を持つため、任意のズームレベルのタイルを

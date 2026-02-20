@@ -6,9 +6,9 @@
 [![IIIF](https://img.shields.io/badge/IIIF-v3.0-2873AB)](https://iiif.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-> **PDF 考古学報告書を IIIF アセットに変換する Elixir/Phoenix アプリケーション**
+> **PDFファイルを IIIF アセットに変換する Elixir/Phoenix アプリケーション**
 
-OmniArchive は、静的な PDF の考古学報告書を、国際的な画像相互運用フレームワーク [IIIF (International Image Interoperability Framework)](https://iiif.io/) に準拠したリッチなデジタルアセットに変換するためのツールです。
+OmniArchive は、静的な PDFファイル を、国際的な画像相互運用フレームワーク [IIIF (International Image Interoperability Framework)](https://iiif.io/) に準拠したリッチなデジタルアセットに変換するためのツールです。
 
 就労継続支援の現場で利用されることを想定し、**認知アクセシビリティ**を最優先にした UI 設計を採用しています。
 
@@ -212,7 +212,7 @@ mix phx.server
 
 ### 1. PDF をアップロード
 
-`/lab` にアクセスし、考古学報告書の PDF ファイルをアップロードします。
+`/lab` にアクセスし、PDF ファイルをアップロードします。
 アップロードされた PDF は自動的に 300 DPI の PNG 画像に変換されます。
 
 ### 2. ページを選択

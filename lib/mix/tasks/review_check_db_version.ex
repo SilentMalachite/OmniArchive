@@ -7,7 +7,7 @@ defmodule Mix.Tasks.Review.CheckDbVersion do
 
   ## なぜ PostgreSQL 15+ が必要か
 
-  - 考古学メタデータの JSONB 最適化（VCI 122）
+  - メタデータの JSONB 最適化（VCI 122）
   - MERGE ステートメントのサポート
   - 高度な JSON パス式の改善
 

@@ -8,7 +8,7 @@ defmodule OmniArchive.Pipeline do
   ## なぜこの設計か
 
   - **Task.async_stream**: GenStage や Broadway と比較して、バッチ処理には
-    Task.async_stream がシンプルで適しています。考古学資料のバッチサイズは
+    Task.async_stream がシンプルで適しています。資料のバッチサイズは
     通常数十〜数百件のため、バックプレッシャー制御よりも簡潔さを優先しました。
   - **PubSub リアルタイム進捗**: PTIF 生成は1件あたり数秒〜数十秒かかるため、
     ユーザーに「処理が進んでいる」フィードバックを返すことが認知的に重要です。

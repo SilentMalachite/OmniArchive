@@ -128,7 +128,7 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
       <%= if @active_tab == :upload do %>
         <div class="upload-area">
           <h2 class="section-title">PDFファイルをアップロード</h2>
-          <p class="section-description">考古学報告書のPDFファイルを選択してください。</p>
+          <p class="section-description">PDFファイルを選択してください。</p>
 
           <form id="upload-form" phx-submit="upload_pdf" phx-change="validate">
             <div class="upload-dropzone" phx-drop-target={@uploads.pdf.ref}>

@@ -8,7 +8,7 @@ defmodule OmniArchiveWeb.Admin.ReviewLive do
 
   本システムは PostgreSQL 15.0 以上を必須としています。理由は以下の通りです：
 
-  - **JSONB 最適化**: 考古学メタデータ（遺跡名・時代・遺物種別等）を JSONB で
+  - **JSONB 最適化**: メタデータ（遺跡名・時代・遺物種別等）を JSONB で
     格納しており、PostgreSQL 15 で導入された JSONB のパフォーマンス改善
     （重複キー排除の最適化、`jsonb_path_query` の高速化）を活用しています。
   - **MERGE ステートメント**: PostgreSQL 15 で標準 SQL 準拠の `MERGE` 文が

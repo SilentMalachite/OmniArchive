@@ -241,7 +241,7 @@ IIIF クライアント (Mirador, Universal Viewer 等)
   },
   "summary": {
     "en": ["Archaeological report figure"],
-    "ja": ["考古学報告書の図版"]
+    "ja": ["資料の図版"]
   }
 }
 ```

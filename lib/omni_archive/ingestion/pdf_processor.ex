@@ -9,7 +9,7 @@ defmodule OmniArchive.Ingestion.PdfProcessor do
   - **pdftoppm を採用**: Poppler スイートの一部であり、フォント埋め込みや
     日本語レンダリングに優れています。ImageMagick の `convert` コマンドと
     比較して、PDF 処理に特化しており出力品質が安定しています。
-  - **300 DPI**: 考古学資料の画像では細部の確認が重要です。72 DPI では
+  - **300 DPI**: 資料の画像では細部の確認が重要です。72 DPI では
     テキストが不鮮明になり、600 DPI はファイルサイズが過大になるため、
     300 DPI を品質とサイズのバランス点として選択しています。
   """
