@@ -1,0 +1,200 @@
+Running ExUnit with seed: 378453, max_cases: 20
+
+..06:35:52.768 [error] GenServer #PID<0.401.0> terminating
+** (Ecto.CastError) expected params to be a map with atoms or string keys, got a map with mixed keys: %{:label => "fig-578-1", :status => "pending_review", :period => "縄文時代", :caption => "第1図 テスト土器", :site => "テスト市遺跡", :artifact_type => "土器", :custom_metadata => %{}, :custom_metadata_list => [], "custom_metadata" => %{}}
+    (ecto 3.13.5) lib/ecto/changeset.ex:1005: anonymous fn/3 in Ecto.Changeset.convert_params/1
+    (stdlib 7.2) maps.erl:894: :maps.fold_1/4
+    (ecto 3.13.5) lib/ecto/changeset.ex:1001: Ecto.Changeset.convert_params/1
+    (ecto 3.13.5) lib/ecto/changeset.ex:816: Ecto.Changeset.cast/6
+    (omni_archive 0.2.7) lib/omni_archive/ingestion/extracted_image.ex:60: OmniArchive.Ingestion.ExtractedImage.changeset/2
+    (omni_archive 0.2.7) lib/omni_archive/ingestion.ex:338: OmniArchive.Ingestion.update_extracted_image/2
+    (omni_archive 0.2.7) lib/omni_archive_web/live/inspector_live/label.ex:312: OmniArchiveWeb.InspectorLive.Label.do_save/2
+    (phoenix_live_view 1.1.22) lib/phoenix_live_view/channel.ex:530: anonymous fn/3 in Phoenix.LiveView.Channel.view_handle_event/3
+    (telemetry 1.3.0) /Users/hiro/Projetct/GitHub/OmniArchive/deps/telemetry/src/telemetry.erl:324: :telemetry.span/3
+    (phoenix_live_view 1.1.22) lib/phoenix_live_view/channel.ex:260: Phoenix.LiveView.Channel.handle_info/2
+    (stdlib 7.2) gen_server.erl:2434: :gen_server.try_handle_info/3
+    (stdlib 7.2) gen_server.erl:2420: :gen_server.handle_msg/3
+    (stdlib 7.2) proc_lib.erl:333: :proc_lib.init_p_do_apply/3
+Process Label: {Phoenix.LiveView, OmniArchiveWeb.InspectorLive.Label, "lv:phx-GJYSDYjdGIgsYgKB"}
+Last message: %Phoenix.Socket.Message{topic: "lv:phx-GJYSDYjdGIgsYgKB", event: "event", payload: %{"event" => "save", "type" => "click", "value" => %{"action" => "finish"}}, ref: "1", join_ref: 0}
+06:35:52.776 [error] GenServer #PID<0.399.0> terminating
+** (Ecto.CastError) expected params to be a map with atoms or string keys, got a map with mixed keys: %{:label => "fig-578-1", :status => "pending_review", :period => "縄文時代", :caption => "第1図 テスト土器", :site => "テスト市遺跡", :artifact_type => "土器", :custom_metadata => %{}, :custom_metadata_list => [], "custom_metadata" => %{}}
+    (ecto 3.13.5) lib/ecto/changeset.ex:1005: anonymous fn/3 in Ecto.Changeset.convert_params/1
+    (stdlib 7.2) maps.erl:894: :maps.fold_1/4
+    (ecto 3.13.5) lib/ecto/changeset.ex:1001: Ecto.Changeset.convert_params/1
+    (ecto 3.13.5) lib/ecto/changeset.ex:816: Ecto.Changeset.cast/6
+    (omni_archive 0.2.7) lib/omni_archive/ingestion/extracted_image.ex:60: OmniArchive.Ingestion.ExtractedImage.changeset/2
+    (omni_archive 0.2.7) lib/omni_archive/ingestion.ex:338: OmniArchive.Ingestion.update_extracted_image/2
+    (omni_archive 0.2.7) lib/omni_archive_web/live/inspector_live/label.ex:312: OmniArchiveWeb.InspectorLive.Label.do_save/2
+    (phoenix_live_view 1.1.22) lib/phoenix_live_view/channel.ex:530: anonymous fn/3 in Phoenix.LiveView.Channel.view_handle_event/3
+    (telemetry 1.3.0) /Users/hiro/Projetct/GitHub/OmniArchive/deps/telemetry/src/telemetry.erl:324: :telemetry.span/3
+    (phoenix_live_view 1.1.22) lib/phoenix_live_view/channel.ex:260: Phoenix.LiveView.Channel.handle_info/2
+    (stdlib 7.2) gen_server.erl:2434: :gen_server.try_handle_info/3
+    (stdlib 7.2) gen_server.erl:2420: :gen_server.handle_msg/3
+    (stdlib 7.2) proc_lib.erl:333: :proc_lib.init_p_do_apply/3
+Last message: {:EXIT, #PID<0.396.0>, {%Ecto.CastError{message: "expected params to be a map with atoms or string keys, got a map with mixed keys: %{:label => \"fig-578-1\", :status => \"pending_review\", :period => \"縄文時代\", :caption => \"第1図 テスト土器\", :site => \"テスト市遺跡\", :artifact_type => \"土器\", :custom_metadata => %{}, :custom_metadata_list => [], \"custom_metadata\" => %{}}", type: :map, value: %{:label => "fig-578-1", :status => "pending_review", :period => "縄文時代", :caption => "第1図 テスト土器", :site => "テスト市遺跡", :artifact_type => "土器", :custom_metadata => %{}, :custom_metadata_list => [], "custom_metadata" => %{}}}, [{Ecto.Changeset, :"-convert_params/1-fun-0-", 3, [file: ~c"lib/ecto/changeset.ex", line: 1005]}, {:maps, :fold_1, 4, [file: ~c"maps.erl", line: 894]}, {Ecto.Changeset, :convert_params, 1, [file: ~c"lib/ecto/changeset.ex", line: 1001]}, {Ecto.Changeset, :cast, 6, [file: ~c"lib/ecto/changeset.ex", line: 816]}, {OmniArchive.Ingestion.ExtractedImage, :changeset, 2, [file: ~c"lib/omni_archive/ingestion/extracted_image.ex", line: 60]}, {OmniArchive.Ingestion, :update_extracted_image, 2, [file: ~c"lib/omni_archive/ingestion.ex", line: 338]}, {OmniArchiveWeb.InspectorLive.Label, :do_save, 2, [file: ~c"lib/omni_archive_web/live/inspector_live/label.ex", line: 312]}, {Phoenix.LiveView.Channel, :"-view_handle_event/3-fun-0-", 3, [file: ~c"lib/phoenix_live_view/channel.ex", line: 530]}, {:telemetry, :span, 3, [file: ~c"/Users/hiro/Projetct/GitHub/OmniArchive/deps/telemetry/src/telemetry.erl", line: 324]}, {Phoenix.LiveView.Channel, :handle_info, 2, [file: ~c"lib/phoenix_live_view/channel.ex", line: 260]}, {:gen_server, :try_handle_info, 3, [file: ~c"gen_server.erl", line: 2434]}, {:gen_server, :handle_msg, 3, [file: ~c"gen_server.erl", ...]}, ...]}}
+
+
+  1) test ナビゲーション save finish で Lab ダッシュボードに遷移する (OmniArchiveWeb.InspectorLive.LabelTest)
+     test/omni_archive_web/live/inspector_live/label_test.exs:119
+     ** (EXIT from #PID<0.396.0>) an exception was raised:
+         ** (Ecto.CastError) expected params to be a map with atoms or string keys, got a map with mixed keys: %{:label => "fig-578-1", :status => "pending_review", :period => "縄文時代", :caption => "第1図 テスト土器", :site => "テスト市遺跡", :artifact_type => "土器", :custom_metadata => %{}, :custom_metadata_list => [], "custom_metadata" => %{}}
+             (ecto 3.13.5) lib/ecto/changeset.ex:1005: anonymous fn/3 in Ecto.Changeset.convert_params/1
+             (stdlib 7.2) maps.erl:894: :maps.fold_1/4
+             (ecto 3.13.5) lib/ecto/changeset.ex:1001: Ecto.Changeset.convert_params/1
+             (ecto 3.13.5) lib/ecto/changeset.ex:816: Ecto.Changeset.cast/6
+             (omni_archive 0.2.7) lib/omni_archive/ingestion/extracted_image.ex:60: OmniArchive.Ingestion.ExtractedImage.changeset/2
+             (omni_archive 0.2.7) lib/omni_archive/ingestion.ex:338: OmniArchive.Ingestion.update_extracted_image/2
+             (omni_archive 0.2.7) lib/omni_archive_web/live/inspector_live/label.ex:312: OmniArchiveWeb.InspectorLive.Label.do_save/2
+             (phoenix_live_view 1.1.22) lib/phoenix_live_view/channel.ex:530: anonymous fn/3 in Phoenix.LiveView.Channel.view_handle_event/3
+             (telemetry 1.3.0) /Users/hiro/Projetct/GitHub/OmniArchive/deps/telemetry/src/telemetry.erl:324: :telemetry.span/3
+             (phoenix_live_view 1.1.22) lib/phoenix_live_view/channel.ex:260: Phoenix.LiveView.Channel.handle_info/2
+             (stdlib 7.2) gen_server.erl:2434: :gen_server.try_handle_info/3
+             (stdlib 7.2) gen_server.erl:2420: :gen_server.handle_msg/3
+             (stdlib 7.2) proc_lib.erl:333: :proc_lib.init_p_do_apply/3
+
+.06:35:52.808 [error] Postgrex.Protocol (#PID<0.326.0> ("db_conn_13")) disconnected: ** (DBConnection.ConnectionError) owner #PID<0.404.0> exited
+
+Client #PID<0.409.0> (Task.Supervised) is still using a connection from owner at location:
+
+    (erts 16.2) :erlang.port_command/3
+    (erts 16.2) :prim_inet.send/4
+    (postgrex 0.22.0) lib/postgrex/protocol.ex:3359: Postgrex.Protocol.do_send/3
+    (postgrex 0.22.0) lib/postgrex/protocol.ex:2957: Postgrex.Protocol.handle_transaction/3
+    (ecto_sql 3.13.4) lib/ecto/adapters/sql/sandbox.ex:412: Ecto.Adapters.SQL.Sandbox.Connection.proxy/3
+    (db_connection 2.9.0) lib/db_connection/holder.ex:356: DBConnection.Holder.holder_apply/4
+    (db_connection 2.9.0) lib/db_connection.ex:1851: DBConnection.run_rollback/3
+    (db_connection 2.9.0) lib/db_connection.ex:1646: DBConnection.checkin/4
+    (db_connection 2.9.0) lib/db_connection.ex:1843: DBConnection.rollback/3
+    (db_connection 2.9.0) lib/db_connection.ex:1753: DBConnection.run_transaction/4
+    (omni_archive 0.2.7) lib/omni_archive/ingestion.ex:339: OmniArchive.Ingestion.update_extracted_image/2
+    (omni_archive 0.2.7) lib/omni_archive_web/live/inspector_live/label.ex:235: anonymous fn/4 in OmniArchiveWeb.InspectorLive.Label.auto_save_field/3
+    (elixir 1.19.5) lib/task/supervised.ex:105: Task.Supervised.invoke_mfa/2
+
+The connection itself was checked out by #PID<0.409.0> at location:
+
+    (omni_archive 0.2.7) lib/omni_archive/ingestion.ex:339: OmniArchive.Ingestion.update_extracted_image/2
+    (omni_archive 0.2.7) lib/omni_archive_web/live/inspector_live/label.ex:235: anonymous fn/4 in OmniArchiveWeb.InspectorLive.Label.auto_save_field/3
+    (elixir 1.19.5) lib/task/supervised.ex:105: Task.Supervised.invoke_mfa/2
+
+
+......06:35:52.892 [error] Postgrex.Protocol (#PID<0.315.0> ("db_conn_2")) disconnected: ** (DBConnection.ConnectionError) owner #PID<0.448.0> exited
+
+Client #PID<0.453.0> (Task.Supervised) is still using a connection from owner at location:
+
+    (erts 16.2) :prim_inet.recv0/3
+    (postgrex 0.22.0) lib/postgrex/protocol.ex:3272: Postgrex.Protocol.msg_recv/4
+    (postgrex 0.22.0) lib/postgrex/protocol.ex:2274: Postgrex.Protocol.recv_bind/3
+    (postgrex 0.22.0) lib/postgrex/protocol.ex:2166: Postgrex.Protocol.bind_execute/4
+    (ecto_sql 3.13.4) lib/ecto/adapters/sql/sandbox.ex:412: Ecto.Adapters.SQL.Sandbox.Connection.proxy/3
+    (db_connection 2.9.0) lib/db_connection/holder.ex:356: DBConnection.Holder.holder_apply/4
+    (db_connection 2.9.0) lib/db_connection.ex:1539: DBConnection.run_execute/5
+    (db_connection 2.9.0) lib/db_connection.ex:1573: DBConnection.run/4
+    (db_connection 2.9.0) lib/db_connection.ex:791: DBConnection.parsed_prepare_execute/5
+    (db_connection 2.9.0) lib/db_connection.ex:783: DBConnection.prepare_execute/4
+    (postgrex 0.22.0) lib/postgrex.ex:298: Postgrex.query/4
+    (ecto_sql 3.13.4) lib/ecto/adapters/sql.ex:1181: Ecto.Adapters.SQL.struct/10
+    (ecto 3.13.5) lib/ecto/repo/schema.ex:1000: Ecto.Repo.Schema.apply/4
+    (ecto 3.13.5) lib/ecto/repo/schema.ex:594: anonymous fn/15 in Ecto.Repo.Schema.do_update/4
+    (ecto 3.13.5) lib/ecto/repo/schema.ex:1285: anonymous fn/3 in Ecto.Repo.Schema.wrap_in_transaction/6
+    (ecto_sql 3.13.4) lib/ecto/adapters/sql.ex:1473: anonymous fn/3 in Ecto.Adapters.SQL.checkout_or_transaction/4
+    (db_connection 2.9.0) lib/db_connection.ex:1747: DBConnection.run_transaction/4
+    (omni_archive 0.2.7) lib/omni_archive/ingestion.ex:339: OmniArchive.Ingestion.update_extracted_image/2
+    (omni_archive 0.2.7) lib/omni_archive_web/live/inspector_live/label.ex:235: anonymous fn/4 in OmniArchiveWeb.InspectorLive.Label.auto_save_field/3
+    (elixir 1.19.5) lib/task/supervised.ex:105: Task.Supervised.invoke_mfa/2
+
+The connection itself was checked out by #PID<0.453.0> at location:
+
+    (omni_archive 0.2.7) lib/omni_archive/ingestion.ex:339: OmniArchive.Ingestion.update_extracted_image/2
+    (omni_archive 0.2.7) lib/omni_archive_web/live/inspector_live/label.ex:235: anonymous fn/4 in OmniArchiveWeb.InspectorLive.Label.auto_save_field/3
+    (elixir 1.19.5) lib/task/supervised.ex:105: Task.Supervised.invoke_mfa/2
+
+
+..06:35:52.922 [error] GenServer #PID<0.474.0> terminating
+** (Ecto.CastError) expected params to be a map with atoms or string keys, got a map with mixed keys: %{:label => "fig-35-1", :status => "pending_review", :period => "縄文時代", :caption => "第1図 テスト土器", :site => "テスト市遺跡", :artifact_type => "土器", :custom_metadata => %{}, :custom_metadata_list => [], "custom_metadata" => %{}}
+    (ecto 3.13.5) lib/ecto/changeset.ex:1005: anonymous fn/3 in Ecto.Changeset.convert_params/1
+    (stdlib 7.2) maps.erl:894: :maps.fold_1/4
+    (ecto 3.13.5) lib/ecto/changeset.ex:1001: Ecto.Changeset.convert_params/1
+    (ecto 3.13.5) lib/ecto/changeset.ex:816: Ecto.Changeset.cast/6
+    (omni_archive 0.2.7) lib/omni_archive/ingestion/extracted_image.ex:60: OmniArchive.Ingestion.ExtractedImage.changeset/2
+    (omni_archive 0.2.7) lib/omni_archive/ingestion.ex:338: OmniArchive.Ingestion.update_extracted_image/2
+    (omni_archive 0.2.7) lib/omni_archive_web/live/inspector_live/label.ex:312: OmniArchiveWeb.InspectorLive.Label.do_save/2
+    (phoenix_live_view 1.1.22) lib/phoenix_live_view/channel.ex:530: anonymous fn/3 in Phoenix.LiveView.Channel.view_handle_event/3
+    (telemetry 1.3.0) /Users/hiro/Projetct/GitHub/OmniArchive/deps/telemetry/src/telemetry.erl:324: :telemetry.span/3
+    (phoenix_live_view 1.1.22) lib/phoenix_live_view/channel.ex:260: Phoenix.LiveView.Channel.handle_info/2
+    (stdlib 7.2) gen_server.erl:2434: :gen_server.try_handle_info/3
+    (stdlib 7.2) gen_server.erl:2420: :gen_server.handle_msg/3
+    (stdlib 7.2) proc_lib.erl:333: :proc_lib.init_p_do_apply/3
+Process Label: {Phoenix.LiveView, OmniArchiveWeb.InspectorLive.Label, "lv:phx-GJYSDZKCQInF7ABi"}
+Last message: %Phoenix.Socket.Message{topic: "lv:phx-GJYSDZKCQInF7ABi", event: "event", payload: %{"event" => "save", "type" => "click", "value" => %{"action" => "continue"}}, ref: "1", join_ref: 0}
+06:35:52.924 [error] GenServer #PID<0.472.0> terminating
+** (Ecto.CastError) expected params to be a map with atoms or string keys, got a map with mixed keys: %{:label => "fig-35-1", :status => "pending_review", :period => "縄文時代", :caption => "第1図 テスト土器", :site => "テスト市遺跡", :artifact_type => "土器", :custom_metadata => %{}, :custom_metadata_list => [], "custom_metadata" => %{}}
+    (ecto 3.13.5) lib/ecto/changeset.ex:1005: anonymous fn/3 in Ecto.Changeset.convert_params/1
+    (stdlib 7.2) maps.erl:894: :maps.fold_1/4
+    (ecto 3.13.5) lib/ecto/changeset.ex:1001: Ecto.Changeset.convert_params/1
+    (ecto 3.13.5) lib/ecto/changeset.ex:816: Ecto.Changeset.cast/6
+    (omni_archive 0.2.7) lib/omni_archive/ingestion/extracted_image.ex:60: OmniArchive.Ingestion.ExtractedImage.changeset/2
+    (omni_archive 0.2.7) lib/omni_archive/ingestion.ex:338: OmniArchive.Ingestion.update_extracted_image/2
+    (omni_archive 0.2.7) lib/omni_archive_web/live/inspector_live/label.ex:312: OmniArchiveWeb.InspectorLive.Label.do_save/2
+    (phoenix_live_view 1.1.22) lib/phoenix_live_view/channel.ex:530: anonymous fn/3 in Phoenix.LiveView.Channel.view_handle_event/3
+    (telemetry 1.3.0) /Users/hiro/Projetct/GitHub/OmniArchive/deps/telemetry/src/telemetry.erl:324: :telemetry.span/3
+    (phoenix_live_view 1.1.22) lib/phoenix_live_view/channel.ex:260: Phoenix.LiveView.Channel.handle_info/2
+    (stdlib 7.2) gen_server.erl:2434: :gen_server.try_handle_info/3
+    (stdlib 7.2) gen_server.erl:2420: :gen_server.handle_msg/3
+    (stdlib 7.2) proc_lib.erl:333: :proc_lib.init_p_do_apply/3
+Last message: {:EXIT, #PID<0.469.0>, {%Ecto.CastError{message: "expected params to be a map with atoms or string keys, got a map with mixed keys: %{:label => \"fig-35-1\", :status => \"pending_review\", :period => \"縄文時代\", :caption => \"第1図 テスト土器\", :site => \"テスト市遺跡\", :artifact_type => \"土器\", :custom_metadata => %{}, :custom_metadata_list => [], \"custom_metadata\" => %{}}", type: :map, value: %{:label => "fig-35-1", :status => "pending_review", :period => "縄文時代", :caption => "第1図 テスト土器", :site => "テスト市遺跡", :artifact_type => "土器", :custom_metadata => %{}, :custom_metadata_list => [], "custom_metadata" => %{}}}, [{Ecto.Changeset, :"-convert_params/1-fun-0-", 3, [file: ~c"lib/ecto/changeset.ex", line: 1005]}, {:maps, :fold_1, 4, [file: ~c"maps.erl", line: 894]}, {Ecto.Changeset, :convert_params, 1, [file: ~c"lib/ecto/changeset.ex", line: 1001]}, {Ecto.Changeset, :cast, 6, [file: ~c"lib/ecto/changeset.ex", line: 816]}, {OmniArchive.Ingestion.ExtractedImage, :changeset, 2, [file: ~c"lib/omni_archive/ingestion/extracted_image.ex", line: 60]}, {OmniArchive.Ingestion, :update_extracted_image, 2, [file: ~c"lib/omni_archive/ingestion.ex", line: 338]}, {OmniArchiveWeb.InspectorLive.Label, :do_save, 2, [file: ~c"lib/omni_archive_web/live/inspector_live/label.ex", line: 312]}, {Phoenix.LiveView.Channel, :"-view_handle_event/3-fun-0-", 3, [file: ~c"lib/phoenix_live_view/channel.ex", line: 530]}, {:telemetry, :span, 3, [file: ~c"/Users/hiro/Projetct/GitHub/OmniArchive/deps/telemetry/src/telemetry.erl", line: 324]}, {Phoenix.LiveView.Channel, :handle_info, 2, [file: ~c"lib/phoenix_live_view/channel.ex", line: 260]}, {:gen_server, :try_handle_info, 3, [file: ~c"gen_server.erl", line: 2434]}, {:gen_server, :handle_msg, 3, [file: ~c"gen_server.erl", ...]}, ...]}}
+
+
+  2) test ナビゲーション save continue で Browse 画面に遷移し status が pending_review になる (OmniArchiveWeb.InspectorLive.LabelTest)
+     test/omni_archive_web/live/inspector_live/label_test.exs:104
+     ** (EXIT from #PID<0.469.0>) an exception was raised:
+         ** (Ecto.CastError) expected params to be a map with atoms or string keys, got a map with mixed keys: %{:label => "fig-35-1", :status => "pending_review", :period => "縄文時代", :caption => "第1図 テスト土器", :site => "テスト市遺跡", :artifact_type => "土器", :custom_metadata => %{}, :custom_metadata_list => [], "custom_metadata" => %{}}
+             (ecto 3.13.5) lib/ecto/changeset.ex:1005: anonymous fn/3 in Ecto.Changeset.convert_params/1
+             (stdlib 7.2) maps.erl:894: :maps.fold_1/4
+             (ecto 3.13.5) lib/ecto/changeset.ex:1001: Ecto.Changeset.convert_params/1
+             (ecto 3.13.5) lib/ecto/changeset.ex:816: Ecto.Changeset.cast/6
+             (omni_archive 0.2.7) lib/omni_archive/ingestion/extracted_image.ex:60: OmniArchive.Ingestion.ExtractedImage.changeset/2
+             (omni_archive 0.2.7) lib/omni_archive/ingestion.ex:338: OmniArchive.Ingestion.update_extracted_image/2
+             (omni_archive 0.2.7) lib/omni_archive_web/live/inspector_live/label.ex:312: OmniArchiveWeb.InspectorLive.Label.do_save/2
+             (phoenix_live_view 1.1.22) lib/phoenix_live_view/channel.ex:530: anonymous fn/3 in Phoenix.LiveView.Channel.view_handle_event/3
+             (telemetry 1.3.0) /Users/hiro/Projetct/GitHub/OmniArchive/deps/telemetry/src/telemetry.erl:324: :telemetry.span/3
+             (phoenix_live_view 1.1.22) lib/phoenix_live_view/channel.ex:260: Phoenix.LiveView.Channel.handle_info/2
+             (stdlib 7.2) gen_server.erl:2434: :gen_server.try_handle_info/3
+             (stdlib 7.2) gen_server.erl:2420: :gen_server.handle_msg/3
+             (stdlib 7.2) proc_lib.erl:333: :proc_lib.init_p_do_apply/3
+
+.06:35:52.937 [error] Postgrex.Protocol (#PID<0.324.0> ("db_conn_11")) disconnected: ** (DBConnection.ConnectionError) owner #PID<0.477.0> exited
+
+Client #PID<0.482.0> (Task.Supervised) is still using a connection from owner at location:
+
+    (erts 16.2) :prim_inet.recv0/3
+    (postgrex 0.22.0) lib/postgrex/protocol.ex:3272: Postgrex.Protocol.msg_recv/4
+    (postgrex 0.22.0) lib/postgrex/protocol.ex:2989: Postgrex.Protocol.recv_close/3
+    (postgrex 0.22.0) lib/postgrex/protocol.ex:1511: Postgrex.Protocol.close_parse_describe_flush/4
+    (postgrex 0.22.0) lib/postgrex/protocol.ex:398: Postgrex.Protocol.handle_prepare/3
+    (ecto_sql 3.13.4) lib/ecto/adapters/sql/sandbox.ex:412: Ecto.Adapters.SQL.Sandbox.Connection.proxy/3
+    (db_connection 2.9.0) lib/db_connection/holder.ex:356: DBConnection.Holder.holder_apply/4
+    (db_connection 2.9.0) lib/db_connection.ex:1524: DBConnection.prepare/4
+    (db_connection 2.9.0) lib/db_connection.ex:1517: DBConnection.run_prepare/4
+    (db_connection 2.9.0) lib/db_connection.ex:1529: DBConnection.run_prepare_execute/5
+    (db_connection 2.9.0) lib/db_connection.ex:1573: DBConnection.run/4
+    (db_connection 2.9.0) lib/db_connection.ex:791: DBConnection.parsed_prepare_execute/5
+    (db_connection 2.9.0) lib/db_connection.ex:783: DBConnection.prepare_execute/4
+    (postgrex 0.22.0) lib/postgrex.ex:298: Postgrex.query/4
+    (ecto_sql 3.13.4) lib/ecto/adapters/sql.ex:1181: Ecto.Adapters.SQL.struct/10
+    (ecto 3.13.5) lib/ecto/repo/schema.ex:1000: Ecto.Repo.Schema.apply/4
+    (ecto 3.13.5) lib/ecto/repo/schema.ex:594: anonymous fn/15 in Ecto.Repo.Schema.do_update/4
+    (ecto 3.13.5) lib/ecto/repo/schema.ex:1285: anonymous fn/3 in Ecto.Repo.Schema.wrap_in_transaction/6
+    (ecto_sql 3.13.4) lib/ecto/adapters/sql.ex:1473: anonymous fn/3 in Ecto.Adapters.SQL.checkout_or_transaction/4
+    (db_connection 2.9.0) lib/db_connection.ex:1747: DBConnection.run_transaction/4
+
+The connection itself was checked out by #PID<0.482.0> (Task.Supervised) at location:
+
+    (omni_archive 0.2.7) lib/omni_archive/ingestion.ex:339: OmniArchive.Ingestion.update_extracted_image/2
+    (omni_archive 0.2.7) lib/omni_archive_web/live/inspector_live/label.ex:235: anonymous fn/4 in OmniArchiveWeb.InspectorLive.Label.auto_save_field/3
+    (elixir 1.19.5) lib/task/supervised.ex:105: Task.Supervised.invoke_mfa/2
+
+
+.
+Finished in 0.5 seconds (0.00s async, 0.5s sync)
+15 tests, 2 failures

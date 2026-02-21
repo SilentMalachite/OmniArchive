@@ -328,14 +328,8 @@ defmodule OmniArchiveWeb.Admin.ReviewLive do
                   <div class="review-card-body">
                     <h3 class="review-card-title">{item.image.label || "名称未設定"}</h3>
                     <div class="review-card-meta">
-                      <%= if item.image.site do %>
-                        <span class="meta-tag">📍 {item.image.site}</span>
-                      <% end %>
                       <%= if item.image.page_number do %>
                         <span class="meta-tag">📄 P.{item.image.page_number}</span>
-                      <% end %>
-                      <%= if item.image.period do %>
-                        <span class="meta-tag">⏳ {item.image.period}</span>
                       <% end %>
                     </div>
                   </div>
@@ -431,20 +425,7 @@ defmodule OmniArchiveWeb.Admin.ReviewLive do
                 <span class="inspector-detail-label">キャプション</span>
                 <span class="inspector-detail-value">{@selected_image.image.caption || "—"}</span>
               </div>
-              <div class="inspector-detail-item">
-                <span class="inspector-detail-label">遺跡名</span>
-                <span class="inspector-detail-value">{@selected_image.image.site || "—"}</span>
-              </div>
-              <div class="inspector-detail-item">
-                <span class="inspector-detail-label">時代</span>
-                <span class="inspector-detail-value">{@selected_image.image.period || "—"}</span>
-              </div>
-              <div class="inspector-detail-item">
-                <span class="inspector-detail-label">遺物種別</span>
-                <span class="inspector-detail-value">
-                  {@selected_image.image.artifact_type || "—"}
-                </span>
-              </div>
+
               <div class="inspector-detail-item">
                 <span class="inspector-detail-label">ページ番号</span>
                 <span class="inspector-detail-value">P.{@selected_image.image.page_number}</span>

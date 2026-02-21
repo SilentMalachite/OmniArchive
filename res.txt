@@ -1,0 +1,226 @@
+Running ExUnit with seed: 628708, max_cases: 20
+
+................****......................................................................................
+
+  1) test reject イベント 画像を差し戻す (OmniArchiveWeb.ApprovalLiveTest)
+     test/omni_archive_web/live/approval_live_test.exs:68
+     ** (KeyError) key :site not found in:
+
+         %OmniArchive.Ingestion.ExtractedImage{
+           __meta__: #Ecto.Schema.Metadata<:loaded, "extracted_images">,
+           id: 2122,
+           page_number: 1,
+           image_path: "priv/static/uploads/pages/test/page-001.png",
+           geometry: %{"height" => 300, "width" => 200, "x" => 10, "y" => 20},
+           caption: "第1図 テスト土器",
+           label: "fig-33-1",
+           ptif_path: "/path/to/pending.tif",
+           status: "pending_review",
+           custom_metadata: %{},
+           review_comment: nil,
+           lock_version: 2,
+           pdf_source_id: 2303,
+           pdf_source: %OmniArchive.Ingestion.PdfSource{
+             __meta__: #Ecto.Schema.Metadata<:loaded, "pdf_sources">,
+             id: 2303,
+             filename: "test_report_5410.pdf",
+             page_count: 10,
+             status: "ready",
+             workflow_status: "wip",
+             return_message: nil,
+             deleted_at: nil,
+             user_id: nil,
+             user: #Ecto.Association.NotLoaded<association :user is not loaded>,
+             extracted_images: #Ecto.Association.NotLoaded<association :extracted_images is not loaded>,
+             image_count: 0,
+             owner_email: nil,
+             inserted_at: ~U[2026-02-20 23:37:45Z],
+             updated_at: ~U[2026-02-20 23:37:45Z]
+           },
+           iiif_manifest: nil,
+           owner_id: nil,
+           owner: #Ecto.Association.NotLoaded<association :owner is not loaded>,
+           worker_id: nil,
+           worker: #Ecto.Association.NotLoaded<association :worker is not loaded>,
+           inserted_at: ~U[2026-02-20 23:37:45Z],
+           updated_at: ~U[2026-02-20 23:37:45Z]
+         }
+
+     stacktrace:
+       (omni_archive 0.2.7) lib/omni_archive_web/live/approval_live.ex:113: anonymous fn/5 in OmniArchiveWeb.ApprovalLive.render/1
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:729: Phoenix.LiveView.Diff.process_keyed/5
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:665: anonymous fn/6 in Phoenix.LiveView.Diff.traverse_keyed/8
+       (elixir 1.19.5) lib/enum.ex:2520: Enum."-reduce/3-lists^foldl/2-0-"/3
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:646: Phoenix.LiveView.Diff.traverse_keyed/8
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:529: Phoenix.LiveView.Diff.traverse/6
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:609: anonymous fn/3 in Phoenix.LiveView.Diff.traverse_dynamic/6
+       (elixir 1.19.5) lib/enum.ex:2520: Enum."-reduce/3-lists^foldl/2-0-"/3
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:419: Phoenix.LiveView.Diff.traverse/6
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:609: anonymous fn/3 in Phoenix.LiveView.Diff.traverse_dynamic/6
+       (elixir 1.19.5) lib/enum.ex:2520: Enum."-reduce/3-lists^foldl/2-0-"/3
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:419: Phoenix.LiveView.Diff.traverse/6
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:146: Phoenix.LiveView.Diff.render/4
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/static.ex:291: Phoenix.LiveView.Static.to_rendered_content_tag/4
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/static.ex:171: Phoenix.LiveView.Static.do_render/4
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/controller.ex:39: Phoenix.LiveView.Controller.live_render/3
+       (phoenix 1.8.3) lib/phoenix/router.ex:416: Phoenix.Router.__call__/5
+       (omni_archive 0.2.7) lib/omni_archive_web/endpoint.ex:1: OmniArchiveWeb.Endpoint.plug_builder_call/2
+       (omni_archive 0.2.7) lib/omni_archive_web/endpoint.ex:1: OmniArchiveWeb.Endpoint.call/2
+       (phoenix 1.8.3) lib/phoenix/test/conn_test.ex:225: Phoenix.ConnTest.dispatch/5
+
+.................
+
+  2) test approve イベント 画像を承認して公開する (OmniArchiveWeb.ApprovalLiveTest)
+     test/omni_archive_web/live/approval_live_test.exs:49
+     ** (KeyError) key :site not found in:
+
+         %OmniArchive.Ingestion.ExtractedImage{
+           __meta__: #Ecto.Schema.Metadata<:loaded, "extracted_images">,
+           id: 2168,
+           page_number: 1,
+           image_path: "priv/static/uploads/pages/test/page-001.png",
+           geometry: %{"height" => 300, "width" => 200, "x" => 10, "y" => 20},
+           caption: "第1図 テスト土器",
+           label: "fig-32-1",
+           ptif_path: "/path/to/pending.tif",
+           status: "pending_review",
+           custom_metadata: %{},
+           review_comment: nil,
+           lock_version: 2,
+           pdf_source_id: 2342,
+           pdf_source: %OmniArchive.Ingestion.PdfSource{
+             __meta__: #Ecto.Schema.Metadata<:loaded, "pdf_sources">,
+             id: 2342,
+             filename: "test_report_6370.pdf",
+             page_count: 10,
+             status: "ready",
+             workflow_status: "wip",
+             return_message: nil,
+             deleted_at: nil,
+             user_id: nil,
+             user: #Ecto.Association.NotLoaded<association :user is not loaded>,
+             extracted_images: #Ecto.Association.NotLoaded<association :extracted_images is not loaded>,
+             image_count: 0,
+             owner_email: nil,
+             inserted_at: ~U[2026-02-20 23:37:46Z],
+             updated_at: ~U[2026-02-20 23:37:46Z]
+           },
+           iiif_manifest: nil,
+           owner_id: nil,
+           owner: #Ecto.Association.NotLoaded<association :owner is not loaded>,
+           worker_id: nil,
+           worker: #Ecto.Association.NotLoaded<association :worker is not loaded>,
+           inserted_at: ~U[2026-02-20 23:37:46Z],
+           updated_at: ~U[2026-02-20 23:37:46Z]
+         }
+
+     stacktrace:
+       (omni_archive 0.2.7) lib/omni_archive_web/live/approval_live.ex:113: anonymous fn/5 in OmniArchiveWeb.ApprovalLive.render/1
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:729: Phoenix.LiveView.Diff.process_keyed/5
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:665: anonymous fn/6 in Phoenix.LiveView.Diff.traverse_keyed/8
+       (elixir 1.19.5) lib/enum.ex:2520: Enum."-reduce/3-lists^foldl/2-0-"/3
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:646: Phoenix.LiveView.Diff.traverse_keyed/8
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:529: Phoenix.LiveView.Diff.traverse/6
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:609: anonymous fn/3 in Phoenix.LiveView.Diff.traverse_dynamic/6
+       (elixir 1.19.5) lib/enum.ex:2520: Enum."-reduce/3-lists^foldl/2-0-"/3
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:419: Phoenix.LiveView.Diff.traverse/6
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:609: anonymous fn/3 in Phoenix.LiveView.Diff.traverse_dynamic/6
+       (elixir 1.19.5) lib/enum.ex:2520: Enum."-reduce/3-lists^foldl/2-0-"/3
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:419: Phoenix.LiveView.Diff.traverse/6
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:146: Phoenix.LiveView.Diff.render/4
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/static.ex:291: Phoenix.LiveView.Static.to_rendered_content_tag/4
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/static.ex:171: Phoenix.LiveView.Static.do_render/4
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/controller.ex:39: Phoenix.LiveView.Controller.live_render/3
+       (phoenix 1.8.3) lib/phoenix/router.ex:416: Phoenix.Router.__call__/5
+       (omni_archive 0.2.7) lib/omni_archive_web/endpoint.ex:1: OmniArchiveWeb.Endpoint.plug_builder_call/2
+       (omni_archive 0.2.7) lib/omni_archive_web/endpoint.ex:1: OmniArchiveWeb.Endpoint.call/2
+       (phoenix 1.8.3) lib/phoenix/test/conn_test.ex:225: Phoenix.ConnTest.dispatch/5
+
+.....
+
+  3) test mount/3 レビュー待ちの画像が表示される (OmniArchiveWeb.ApprovalLiveTest)
+     test/omni_archive_web/live/approval_live_test.exs:16
+     ** (KeyError) key :site not found in:
+
+         %OmniArchive.Ingestion.ExtractedImage{
+           __meta__: #Ecto.Schema.Metadata<:loaded, "extracted_images">,
+           id: 2177,
+           page_number: 1,
+           image_path: "priv/static/uploads/pages/test/page-001.png",
+           geometry: %{"height" => 300, "width" => 200, "x" => 10, "y" => 20},
+           caption: "第1図 テスト土器",
+           label: "fig-30-1",
+           ptif_path: "/path/to/pending.tif",
+           status: "pending_review",
+           custom_metadata: %{},
+           review_comment: nil,
+           lock_version: 2,
+           pdf_source_id: 2351,
+           pdf_source: %OmniArchive.Ingestion.PdfSource{
+             __meta__: #Ecto.Schema.Metadata<:loaded, "pdf_sources">,
+             id: 2351,
+             filename: "test_report_1033.pdf",
+             page_count: 10,
+             status: "ready",
+             workflow_status: "wip",
+             return_message: nil,
+             deleted_at: nil,
+             user_id: nil,
+             user: #Ecto.Association.NotLoaded<association :user is not loaded>,
+             extracted_images: #Ecto.Association.NotLoaded<association :extracted_images is not loaded>,
+             image_count: 0,
+             owner_email: nil,
+             inserted_at: ~U[2026-02-20 23:37:46Z],
+             updated_at: ~U[2026-02-20 23:37:46Z]
+           },
+           iiif_manifest: nil,
+           owner_id: nil,
+           owner: #Ecto.Association.NotLoaded<association :owner is not loaded>,
+           worker_id: nil,
+           worker: #Ecto.Association.NotLoaded<association :worker is not loaded>,
+           inserted_at: ~U[2026-02-20 23:37:46Z],
+           updated_at: ~U[2026-02-20 23:37:46Z]
+         }
+
+     stacktrace:
+       (omni_archive 0.2.7) lib/omni_archive_web/live/approval_live.ex:113: anonymous fn/5 in OmniArchiveWeb.ApprovalLive.render/1
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:729: Phoenix.LiveView.Diff.process_keyed/5
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:665: anonymous fn/6 in Phoenix.LiveView.Diff.traverse_keyed/8
+       (elixir 1.19.5) lib/enum.ex:2520: Enum."-reduce/3-lists^foldl/2-0-"/3
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:646: Phoenix.LiveView.Diff.traverse_keyed/8
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:529: Phoenix.LiveView.Diff.traverse/6
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:609: anonymous fn/3 in Phoenix.LiveView.Diff.traverse_dynamic/6
+       (elixir 1.19.5) lib/enum.ex:2520: Enum."-reduce/3-lists^foldl/2-0-"/3
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:419: Phoenix.LiveView.Diff.traverse/6
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:609: anonymous fn/3 in Phoenix.LiveView.Diff.traverse_dynamic/6
+       (elixir 1.19.5) lib/enum.ex:2520: Enum."-reduce/3-lists^foldl/2-0-"/3
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:419: Phoenix.LiveView.Diff.traverse/6
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/diff.ex:146: Phoenix.LiveView.Diff.render/4
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/static.ex:291: Phoenix.LiveView.Static.to_rendered_content_tag/4
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/static.ex:171: Phoenix.LiveView.Static.do_render/4
+       (phoenix_live_view 1.1.22) lib/phoenix_live_view/controller.ex:39: Phoenix.LiveView.Controller.live_render/3
+       (phoenix 1.8.3) lib/phoenix/router.ex:416: Phoenix.Router.__call__/5
+       (omni_archive 0.2.7) lib/omni_archive_web/endpoint.ex:1: OmniArchiveWeb.Endpoint.plug_builder_call/2
+       (omni_archive 0.2.7) lib/omni_archive_web/endpoint.ex:1: OmniArchiveWeb.Endpoint.call/2
+       (phoenix 1.8.3) lib/phoenix/test/conn_test.ex:225: Phoenix.ConnTest.dispatch/5
+
+......................................................................................................08:37:46.324 [error] [PdfProcessor] Command failed with exit code 1: I/O Error: Couldn't open file '/nonexistent/test.pdf': No such file or directory.
+
+........08:37:46.339 [error] [PdfProcessor] Command failed with exit code 1: I/O Error: Couldn't open file '/nonexistent/test.pdf': No such file or directory.
+
+.08:37:46.340 [error] Task #PID<0.1654.0> started from #PID<0.1651.0> terminating
+** (Ecto.StaleEntryError) attempted to update a stale struct:
+
+%OmniArchive.Ingestion.PdfSource{__meta__: #Ecto.Schema.Metadata<:loaded, "pdf_sources">, id: 2454, filename: "test_report_3815.pdf", page_count: 10, status: "uploading", workflow_status: "wip", return_message: nil, deleted_at: nil, user_id: nil, user: #Ecto.Association.NotLoaded<association :user is not loaded>, extracted_images: #Ecto.Association.NotLoaded<association :extracted_images is not loaded>, image_count: 0, owner_email: nil, inserted_at: ~U[2026-02-20 23:37:46Z], updated_at: ~U[2026-02-20 23:37:46Z]}
+
+This typically happens when the struct no longer exists in the database or a database trigger/rule has forbidden the action. If stale entries are expected, you may use `:stale_error_field` to convert this into a changeset error, or set `:allow_stale` to true if you would like stale operations to be considered a success (such as a stale deletion)
+
+    (ecto 3.13.5) lib/ecto/repo/schema.ex:1023: Ecto.Repo.Schema.apply/4
+    (ecto 3.13.5) lib/ecto/repo/schema.ex:594: anonymous fn/15 in Ecto.Repo.Schema.do_update/4
+    (omni_archive 0.2.7) lib/omni_archive/pipeline/pipeline.ex:139: OmniArchive.Pipeline.run_pdf_extraction/4
+    (elixir 1.19.5) lib/task/supervised.ex:105: Task.Supervised.invoke_mfa/2
+Function: #Function<7.39430441/0 in OmniArchive.PipelineTest."test run_pdf_extraction/3 PDF 抽出開始時にパイプライン開始イベントをブロードキャストする"/1>
+    Args: []
+.......................................................................
+Finished in 1.0 seconds (0.6s async, 0.4s sync)
+313 tests, 3 failures, 4 skipped

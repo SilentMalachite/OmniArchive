@@ -49,9 +49,6 @@ defmodule OmniArchive.Factory do
         geometry: %{"x" => 10, "y" => 20, "width" => 200, "height" => 300},
         caption: "第1図 テスト土器",
         label: "fig-#{System.unique_integer([:positive])}-1",
-        site: "テスト市遺跡",
-        period: "縄文時代",
-        artifact_type: "土器",
         status: "draft"
       },
       overrides

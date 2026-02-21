@@ -71,21 +71,6 @@ defmodule OmniArchive.Ingestion.ExtractedImageTest do
              }
     end
 
-    test "検索用メタデータフィールドが保存される" do
-      pdf_source = insert_pdf_source()
-
-      attrs = %{
-        pdf_source_id: pdf_source.id,
-        page_number: 1,
-        site: "吉野ヶ里町遺跡",
-        period: "弥生時代",
-        artifact_type: "銅鐸"
-      }
-
-      changeset = ExtractedImage.changeset(%ExtractedImage{}, attrs)
-      assert changeset.valid?
-    end
-
     # --- label フォーマットバリデーション ---
 
     test "有効な label 形式 (fig-数字-数字) を受け入れる" do
@@ -120,34 +105,6 @@ defmodule OmniArchive.Ingestion.ExtractedImageTest do
     test "label が nil の場合はフォーマット検証をスキップする" do
       pdf_source = insert_pdf_source()
       attrs = %{pdf_source_id: pdf_source.id, page_number: 1}
-      changeset = ExtractedImage.changeset(%ExtractedImage{}, attrs)
-      assert changeset.valid?
-    end
-
-    # --- 市町村バリデーション ---
-
-    test "有効な site（市町村を含む）を受け入れる" do
-      pdf_source = insert_pdf_source()
-
-      for site <- ["新潟市中野遺跡", "吉野ヶ里町遺跡", "飛鳥村遺跡"] do
-        attrs = %{pdf_source_id: pdf_source.id, page_number: 1, site: site}
-        changeset = ExtractedImage.changeset(%ExtractedImage{}, attrs)
-        assert changeset.valid?, "site: #{site} は valid であるべき"
-      end
-    end
-
-    test "市町村を含まない site を拒否する" do
-      pdf_source = insert_pdf_source()
-      attrs = %{pdf_source_id: pdf_source.id, page_number: 1, site: "テスト遺跡"}
-      changeset = ExtractedImage.changeset(%ExtractedImage{}, attrs)
-      refute changeset.valid?
-      assert %{site: [msg]} = errors_on(changeset)
-      assert msg =~ "市町村名"
-    end
-
-    test "site が空文字の場合は市町村検証をスキップする" do
-      pdf_source = insert_pdf_source()
-      attrs = %{pdf_source_id: pdf_source.id, page_number: 1, site: ""}
       changeset = ExtractedImage.changeset(%ExtractedImage{}, attrs)
       assert changeset.valid?
     end

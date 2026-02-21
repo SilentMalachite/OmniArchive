@@ -342,30 +342,6 @@ defmodule OmniArchive.Ingestion do
       {:error, :stale}
   end
 
-  @doc "同一遺跡内で同じラベルを持つレコードを検索（自分自身を除く）"
-  def find_duplicate_label(site, label, exclude_id \\ nil)
-
-  def find_duplicate_label(site, label, _exclude_id)
-      when is_nil(site) or site == "" or is_nil(label) or label == "",
-      do: nil
-
-  def find_duplicate_label(site, label, exclude_id) do
-    query =
-      from(e in ExtractedImage,
-        where: e.site == ^site,
-        where: e.label == ^label,
-        where: e.status != "deleted",
-        limit: 1
-      )
-
-    query =
-      if exclude_id,
-        do: from(e in query, where: e.id != ^exclude_id),
-        else: query
-
-    Repo.one(query)
-  end
-
   # === ステータス遷移 ===
 
   @doc "レビュー提出 (draft → pending_review)"

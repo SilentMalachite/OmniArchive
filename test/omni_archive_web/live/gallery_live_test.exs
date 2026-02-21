@@ -76,39 +76,6 @@ defmodule OmniArchiveWeb.GalleryLiveTest do
     end
   end
 
-  describe "toggle_filter イベント" do
-    test "フィルターチップスが動作する", %{conn: conn} do
-      insert_extracted_image(%{
-        ptif_path: "/path/to/test.tif",
-        status: "published",
-        site: "ギャラリー市遺跡"
-      })
-
-      {:ok, view, _html} = live(conn, ~p"/gallery")
-
-      html = render_click(view, "toggle_filter", %{"type" => "site", "value" => "ギャラリー市遺跡"})
-      assert html =~ "件の図版" or html =~ "結果なし"
-    end
-  end
-
-  describe "clear_filters イベント" do
-    test "フィルタークリアが動作する", %{conn: conn} do
-      insert_extracted_image(%{
-        ptif_path: "/path/to/test.tif",
-        status: "published",
-        site: "テスト市遺跡"
-      })
-
-      {:ok, view, _html} = live(conn, ~p"/gallery")
-
-      # フィルターを有効化してからクリア
-      render_click(view, "toggle_filter", %{"type" => "site", "value" => "テスト市遺跡"})
-      html = render_click(view, "clear_filters", %{})
-
-      assert html =~ "件の図版" or html =~ "結果なし"
-    end
-  end
-
   describe "select_image / close_modal イベント" do
     test "カードクリックでモーダルが表示される", %{conn: conn} do
       image =

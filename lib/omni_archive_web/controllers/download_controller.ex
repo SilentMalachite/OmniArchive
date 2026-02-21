@@ -64,9 +64,9 @@ defmodule OmniArchiveWeb.DownloadController do
   end
 
   # セマンティックファイル名の生成
-  # パターン: {遺跡名}_{ラベル}_{遺物種別}.jpg
+  # パターン: {ラベル}.jpg
   defp build_filename(image) do
-    [image.site, image.label, image.artifact_type]
+    [image.label]
     |> Enum.reject(&is_nil/1)
     |> Enum.reject(&(String.trim(&1) == ""))
     |> Enum.map(&sanitize_segment/1)

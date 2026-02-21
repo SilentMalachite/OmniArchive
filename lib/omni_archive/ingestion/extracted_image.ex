@@ -29,10 +29,7 @@ defmodule OmniArchive.Ingestion.ExtractedImage do
     field :label, :string
     # 生成された PTIF のパス
     field :ptif_path, :string
-    # 検索用メタデータ（遺跡名、時代、遺物種別）
-    field :site, :string
-    field :period, :string
-    field :artifact_type, :string
+
     # ステータス (draft / pending_review / rejected / published)
     field :status, :string, default: "draft"
     # 動的メタデータ (Key-Value) — JSONB
@@ -65,9 +62,6 @@ defmodule OmniArchive.Ingestion.ExtractedImage do
       :caption,
       :label,
       :ptif_path,
-      :site,
-      :period,
-      :artifact_type,
       :custom_metadata,
       :status,
       :review_comment,
@@ -78,13 +72,8 @@ defmodule OmniArchive.Ingestion.ExtractedImage do
     |> validate_required([:pdf_source_id, :page_number])
     |> validate_inclusion(:status, ~w(draft pending_review rejected published deleted))
     |> validate_label_format()
-    |> validate_municipality(:site)
     |> foreign_key_constraint(:pdf_source_id)
     |> optimistic_lock(:lock_version)
-    |> unique_constraint([:site, :label],
-      name: :extracted_images_site_label_unique,
-      message: "この遺跡でそのラベルは既に登録されています"
-    )
   end
 
   # --- カスタムバリデーション ---
@@ -97,21 +86,6 @@ defmodule OmniArchive.Ingestion.ExtractedImage do
       validate_format(changeset, :label, ~r/^fig-\d+-\d+$/,
         message: "形式は 'fig-番号-番号' にしてください（例: fig-1-1）"
       )
-    else
-      changeset
-    end
-  end
-
-  # 市町村チェック: 値が入力済みの場合のみ適用
-  defp validate_municipality(changeset, field) do
-    value = get_field(changeset, field)
-
-    if value && value != "" do
-      if String.contains?(value, ["市", "町", "村"]) do
-        changeset
-      else
-        add_error(changeset, field, "市町村名（市・町・村）を含めてください（例: 新潟市中野遺跡）")
-      end
     else
       changeset
     end

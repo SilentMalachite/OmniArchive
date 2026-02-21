@@ -39,12 +39,8 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
      |> assign(:has_crop, extracted_image.geometry != nil)
      |> assign(:caption, extracted_image.caption || "")
      |> assign(:label, extracted_image.label || "")
-     |> assign(:site, extracted_image.site || "")
-     |> assign(:period, extracted_image.period || "")
-     |> assign(:artifact_type, extracted_image.artifact_type || "")
      |> assign(:metadata_list, map_to_list(extracted_image.custom_metadata))
      |> assign(:undo_stack, [])
-     |> assign(:duplicate_record, check_duplicate_label(extracted_image))
      |> assign(:validation_errors, %{})
      |> assign(:save_state, :idle)
      |> assign(
@@ -125,27 +121,6 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
       |> assign(:undo_stack, undo_stack)
       |> auto_save_field(field, value)
 
-    # インラインバリデーション
-    socket = run_inline_validation(socket, field, value)
-
-    # label または site 変更時は重複チェックを実行
-    socket =
-      if field in ["label", "site"] do
-        site = if field == "site", do: value, else: socket.assigns.site
-        label = if field == "label", do: value, else: socket.assigns.label
-
-        duplicate =
-          Ingestion.find_duplicate_label(
-            site,
-            label,
-            socket.assigns.extracted_image.id
-          )
-
-        assign(socket, :duplicate_record, duplicate)
-      else
-        socket
-      end
-
     {:noreply, socket}
   end
 
@@ -157,9 +132,6 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
          socket
          |> assign(:caption, previous.caption)
          |> assign(:label, previous.label)
-         |> assign(:site, previous.site)
-         |> assign(:period, previous.period)
-         |> assign(:artifact_type, previous.artifact_type)
          |> assign(:metadata_list, previous.custom_metadata_list)
          |> assign(:undo_stack, rest)
          |> auto_save_all(previous)}
@@ -171,27 +143,7 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
 
   @impl true
   def handle_event("save", %{"action" => action}, socket) do
-    # "finish" 時に重複ラベルがあればブロック
-    if action == "finish" && socket.assigns.duplicate_record do
-      {:noreply, put_flash(socket, :error, "⚠️ 重複ラベルがあります。ラベルを変更するか、既存レコードを更新してください。")}
-    else
-      do_save(socket, action)
-    end
-  end
-
-  @impl true
-  def handle_event("merge_existing", _params, socket) do
-    # 重複レコードの編集画面にナビゲート
-    case socket.assigns.duplicate_record do
-      nil ->
-        {:noreply, put_flash(socket, :info, "重複レコードはありません")}
-
-      dup ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "既存レコード ##{dup.id} を編集します")
-         |> push_navigate(to: ~p"/lab/label/#{dup.id}")}
-    end
+    do_save(socket, action)
   end
 
   @impl true
@@ -219,9 +171,6 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
     %{
       caption: socket.assigns.caption,
       label: socket.assigns.label,
-      site: socket.assigns.site,
-      period: socket.assigns.period,
-      artifact_type: socket.assigns.artifact_type,
       custom_metadata_list: socket.assigns.metadata_list
     }
   end
@@ -275,9 +224,6 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
     base_attrs = %{
       caption: socket.assigns.caption,
       label: socket.assigns.label,
-      site: socket.assigns.site,
-      period: socket.assigns.period,
-      artifact_type: socket.assigns.artifact_type,
       custom_metadata_list: socket.assigns.metadata_list
     }
 
@@ -352,15 +298,6 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
     end
   end
 
-  # 初期表示時の重複チェック
-  defp check_duplicate_label(extracted_image) do
-    Ingestion.find_duplicate_label(
-      extracted_image.site,
-      extracted_image.label,
-      extracted_image.id
-    )
-  end
-
   # インラインバリデーション（入力時にエラーメッセージを表示）
   defp run_inline_validation(socket, field, value) do
     errors = socket.assigns.validation_errors
@@ -372,13 +309,6 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
             Map.put(errors, :label, "形式は 'fig-番号-番号' にしてください（例: fig-1-1）")
           else
             Map.delete(errors, :label)
-          end
-
-        "site" ->
-          if value != "" and not String.contains?(value, ["市", "町", "村"]) do
-            Map.put(errors, :site, "市町村名（市・町・村）を含めてください（例: 新潟市中野遺跡）")
-          else
-            Map.delete(errors, :site)
           end
 
         _ ->
@@ -491,7 +421,7 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
             <input
               type="text"
               id="label-input"
-              class={["form-input form-input-large", @duplicate_record && "input-error"]}
+              class="form-input form-input-large"
               value={@label}
               phx-blur="update_field"
               phx-value-field="label"
@@ -504,83 +434,6 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
             <%= if @validation_errors[:label] do %>
               <p class="field-error-text">⚠️ {@validation_errors[:label]}</p>
             <% end %>
-
-            <%!-- 重複検出警告 --%>
-            <%= if @duplicate_record do %>
-              <div class="duplicate-warning">
-                <p class="duplicate-error-text">
-                  ⚠️ この遺跡でそのラベルは既に登録されています
-                </p>
-                <div class="duplicate-card">
-                  <div class="duplicate-card-info">
-                    <span class="duplicate-card-label">重複先:</span>
-                    <span class="duplicate-card-id">
-                      ID: #{@duplicate_record.id}
-                    </span>
-                    <span class="duplicate-card-caption">
-                      {@duplicate_record.caption || "（キャプションなし）"}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    class="btn-merge"
-                    phx-click="merge_existing"
-                    aria-label="既存レコードを編集"
-                  >
-                    📝 既存レコードを更新
-                  </button>
-                </div>
-              </div>
-            <% end %>
-          </div>
-
-          <div class="form-group">
-            <label for="site-input" class="form-label">📍 遺跡名（任意）</label>
-            <input
-              type="text"
-              id="site-input"
-              class={["form-input form-input-large", @validation_errors[:site] && "input-error"]}
-              value={@site}
-              phx-blur="update_field"
-              phx-value-field="site"
-              phx-value-value={@site}
-              placeholder="例: 新潟市中野遺跡"
-              name="site"
-            />
-            <%!-- 遺跡名エラー --%>
-            <%= if @validation_errors[:site] do %>
-              <p class="field-error-text">⚠️ {@validation_errors[:site]}</p>
-            <% end %>
-          </div>
-
-          <div class="form-group">
-            <label for="period-input" class="form-label">⏳ 時代（任意）</label>
-            <input
-              type="text"
-              id="period-input"
-              class="form-input form-input-large"
-              value={@period}
-              phx-blur="update_field"
-              phx-value-field="period"
-              phx-value-value={@period}
-              placeholder="例: 縄文時代"
-              name="period"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="artifact-type-input" class="form-label">🏺 遺物種別（任意）</label>
-            <input
-              type="text"
-              id="artifact-type-input"
-              class="form-input form-input-large"
-              value={@artifact_type}
-              phx-blur="update_field"
-              phx-value-field="artifact_type"
-              phx-value-value={@artifact_type}
-              placeholder="例: 土器"
-              name="artifact_type"
-            />
           </div>
 
           <div class="metadata-custom-section" style="margin-top: 2rem;">

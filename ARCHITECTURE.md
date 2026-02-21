@@ -124,7 +124,7 @@ ImageSelection Hook ──── D-Pad による手動クロップ (/lab/crop/:p
     │          ★ ここで初めて ExtractedImage レコードを INSERT。
     ▼
 メタデータ入力フォーム (/lab/label/:image_id)
-    │  Step 4: caption, label, site, period, artifact_type を手入力。
+    │  Step 4: caption と label を手入力。
     │          さらに任意のメタデータを追加できる**動的カスタムフィールド**も利用可能。
     │          保存完了後、自動的に PTIF 生成ジョブを自動 dispatch。
     │          geometry nil の場合は保存をブロック。
@@ -189,13 +189,13 @@ IIIF クライアント (Mirador, Universal Viewer 等)
 └──────────────────┘       │ lock_version           │
                            │ owner_id(FK → users)   │
 ┌──────────────┐           │ worker_id(FK → users)  │
-│    users     │           │ site                   │
-├──────────────┤           │ period                 │
-│ id           │ ◄─────────│ artifact_type          │
+│    users     │           │ custom_metadata (JSONB)│
+├──────────────┤           │ inserted_at            │
+│ id           │ ◄─────────│ updated_at             │
 │ custom_metadata (JSONB)│
-│ email        │   N:1     │ inserted_at            │
-│ hashed_pw    │           │ updated_at             │
-│ confirmed_at │           └────────────────────────┘
+│ email        │   N:1     └────────────────────────┘
+│ hashed_pw    │           
+│ confirmed_at │           
 │ inserted_at  │
 │ updated_at   │
 └──────────────┘
@@ -267,11 +267,8 @@ IIIF クライアント (Mirador, Universal Viewer 等)
 データの品質を保証するため、アプリケーションレベルおよびデータベースレベルで厳格なバリデーションを実施しています。
 
 1.  **厳格な入力バリデーション**:
-    *   **ラベル形式**: `fig-番号-番号` 形式（例: `fig-1-1`）を強制。
-    *   **自治体名チェック**: `site`（遺跡名）には必ず市町村名（「市」「町」「村」）を含める必要があります。
-2.  **ユニーク制約**:
-    *   `[:site, :label]` の複合ユニークインデックスにより、同一遺跡内でのラベル重複をデータベースレベルで阻止します。
-3.  **ファイルバージョニング**:
+    *   **ラベル形式**: `fig-番号-番号` 形式（例: `fig-1-1`）を強制し、資料内の整理番号としての形式を維持します。
+2.  **ファイルバージョニング**:
     *   アップロードされたファイル名には `filename-{timestamp}.ext` 形式でタイムスタンプを付与。
     *   ブラウザキャッシュの衝突（ゴースト画像問題）を防止し、同名ファイルの安全な再アップロードを保証します。
 4.  **楽観的ロック (Optimistic Locking)**:

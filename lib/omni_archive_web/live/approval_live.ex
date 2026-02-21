@@ -109,17 +109,7 @@ defmodule OmniArchiveWeb.ApprovalLive do
                 <%= if image.caption do %>
                   <p class="approval-card-caption">{image.caption}</p>
                 <% end %>
-                <div class="approval-card-meta">
-                  <%= if image.site do %>
-                    <span class="meta-tag">📍 {image.site}</span>
-                  <% end %>
-                  <%= if image.period do %>
-                    <span class="meta-tag">⏳ {image.period}</span>
-                  <% end %>
-                  <%= if image.artifact_type do %>
-                    <span class="meta-tag">🏺 {image.artifact_type}</span>
-                  <% end %>
-                </div>
+                <div class="approval-card-meta"></div>
               </div>
 
               <%!-- アクションボタン --%>

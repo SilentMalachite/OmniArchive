@@ -25,10 +25,7 @@ defmodule OmniArchive.Search do
 
   ## 引数
     - query_text: 検索テキスト（キャプション・ラベルで FTS）
-    - filters: フィルター条件のマップ
-      - "site" => 遺跡名
-      - "period" => 時代
-      - "artifact_type" => 遺物種別
+    - filters: フィルター条件のマップ（現在は使用されていません。将来の動的メタデータ対応用）
 
   ## 戻り値
     - 検索結果の ExtractedImage リスト（iiif_manifest をプリロード）
@@ -60,13 +57,12 @@ defmodule OmniArchive.Search do
 
   @doc """
   利用可能なフィルターオプションを取得します。
-  各フィルターの DISTINCT 値をリストで返します。
   """
   def list_filter_options do
     %{
-      sites: list_distinct_values(:site),
-      periods: list_distinct_values(:period),
-      artifact_types: list_distinct_values(:artifact_type)
+      sites: [],
+      periods: [],
+      artifact_types: []
     }
   end
 
@@ -112,46 +108,13 @@ defmodule OmniArchive.Search do
         ^sanitized
       ) or
         ilike(e.label, ^"%#{sanitized}%") or
-        ilike(e.caption, ^"%#{sanitized}%") or
-        ilike(e.site, ^"%#{sanitized}%")
+        ilike(e.caption, ^"%#{sanitized}%")
     )
   end
 
   # フィルターの適用
-  defp apply_filters(query, filters) when is_map(filters) do
+  defp apply_filters(query, _filters) do
     query
-    |> maybe_filter(:site, filters["site"])
-    |> maybe_filter(:period, filters["period"])
-    |> maybe_filter(:artifact_type, filters["artifact_type"])
-  end
-
-  defp apply_filters(query, _), do: query
-
-  # 個別フィルターの適用
-  defp maybe_filter(query, _field, nil), do: query
-  defp maybe_filter(query, _field, ""), do: query
-
-  defp maybe_filter(query, :site, value) do
-    where(query, [e], e.site == ^value)
-  end
-
-  defp maybe_filter(query, :period, value) do
-    where(query, [e], e.period == ^value)
-  end
-
-  defp maybe_filter(query, :artifact_type, value) do
-    where(query, [e], e.artifact_type == ^value)
-  end
-
-  # DISTINCT 値の取得
-  defp list_distinct_values(field) do
-    ExtractedImage
-    |> where([e], not is_nil(field(e, ^field)))
-    |> where([e], field(e, ^field) != "")
-    |> select([e], field(e, ^field))
-    |> distinct(true)
-    |> order_by([e], asc: field(e, ^field))
-    |> Repo.all()
   end
 
   # 検索テキストのサニタイズ（SQLインジェクション防止）

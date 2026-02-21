@@ -17,9 +17,6 @@ defmodule OmniArchiveWeb.GalleryLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    # 利用可能なフィルターオプションを取得
-    filter_options = Search.list_filter_options()
-
     # 公開済み画像のみ表示
     results = Search.search_published_images()
     match_count = Search.count_published_results()
@@ -30,7 +27,6 @@ defmodule OmniArchiveWeb.GalleryLive do
      |> assign(:page_title, "ギャラリー")
      |> assign(:query, "")
      |> assign(:filters, %{})
-     |> assign(:filter_options, filter_options)
      |> assign(:results, results)
      |> assign(:match_count, match_count)
      |> assign(:dims_map, dims_map)
@@ -158,10 +154,9 @@ defmodule OmniArchiveWeb.GalleryLive do
       <div class="search-bar">
         <span class="search-icon">🔍</span>
         <input
-          type="search"
           id="gallery-search-input"
           class="search-input"
-          placeholder="キャプション、ラベル、遺跡名で検索..."
+          placeholder="キャプション、ラベルで検索..."
           value={@query}
           phx-keyup="search"
           phx-value-query={@query}
@@ -169,86 +164,6 @@ defmodule OmniArchiveWeb.GalleryLive do
           name="query"
           autocomplete="off"
         />
-      </div>
-
-      <%!-- フィルターチップス --%>
-      <div class="filter-section">
-        <%= if has_any_filters?(@filter_options) do %>
-          <%!-- 遺跡名フィルター --%>
-          <%= if @filter_options.sites != [] do %>
-            <div class="filter-group">
-              <span class="filter-group-label">📍 遺跡名</span>
-              <div class="filter-chips">
-                <%= for site <- @filter_options.sites do %>
-                  <button
-                    type="button"
-                    class={"filter-chip #{if @filters["site"] == site, do: "active", else: ""}"}
-                    phx-click="toggle_filter"
-                    phx-value-type="site"
-                    phx-value-value={site}
-                    aria-pressed={@filters["site"] == site}
-                  >
-                    {site}
-                  </button>
-                <% end %>
-              </div>
-            </div>
-          <% end %>
-
-          <%!-- 時代フィルター --%>
-          <%= if @filter_options.periods != [] do %>
-            <div class="filter-group">
-              <span class="filter-group-label">⏳ 時代</span>
-              <div class="filter-chips">
-                <%= for period <- @filter_options.periods do %>
-                  <button
-                    type="button"
-                    class={"filter-chip #{if @filters["period"] == period, do: "active", else: ""}"}
-                    phx-click="toggle_filter"
-                    phx-value-type="period"
-                    phx-value-value={period}
-                    aria-pressed={@filters["period"] == period}
-                  >
-                    {period}
-                  </button>
-                <% end %>
-              </div>
-            </div>
-          <% end %>
-
-          <%!-- 遺物種別フィルター --%>
-          <%= if @filter_options.artifact_types != [] do %>
-            <div class="filter-group">
-              <span class="filter-group-label">🏺 遺物種別</span>
-              <div class="filter-chips">
-                <%= for artifact_type <- @filter_options.artifact_types do %>
-                  <button
-                    type="button"
-                    class={"filter-chip #{if @filters["artifact_type"] == artifact_type, do: "active", else: ""}"}
-                    phx-click="toggle_filter"
-                    phx-value-type="artifact_type"
-                    phx-value-value={artifact_type}
-                    aria-pressed={@filters["artifact_type"] == artifact_type}
-                  >
-                    {artifact_type}
-                  </button>
-                <% end %>
-              </div>
-            </div>
-          <% end %>
-
-          <%!-- フィルタークリア --%>
-          <%= if @filters != %{} do %>
-            <button
-              type="button"
-              class="btn-secondary btn-large"
-              phx-click="clear_filters"
-              style="margin-top: 1rem;"
-            >
-              ✕ フィルターをクリア
-            </button>
-          <% end %>
-        <% end %>
       </div>
 
       <%!-- 検索結果 --%>
@@ -319,17 +234,7 @@ defmodule OmniArchiveWeb.GalleryLive do
                   <%= if image.caption do %>
                     <p class="result-card-caption">{image.caption}</p>
                   <% end %>
-                  <div class="result-card-meta">
-                    <%= if image.site do %>
-                      <span class="meta-tag">📍 {image.site}</span>
-                    <% end %>
-                    <%= if image.period do %>
-                      <span class="meta-tag">⏳ {image.period}</span>
-                    <% end %>
-                    <%= if image.artifact_type do %>
-                      <span class="meta-tag">🏺 {image.artifact_type}</span>
-                    <% end %>
-                  </div>
+                  <div class="result-card-meta"></div>
                 </div>
               </div>
               <%!-- ダウンロードボタン --%>
@@ -401,13 +306,6 @@ defmodule OmniArchiveWeb.GalleryLive do
   end
 
   # --- プライベート関数 ---
-
-  # フィルターオプションが存在するかチェック
-  defp has_any_filters?(filter_options) do
-    filter_options.sites != [] ||
-      filter_options.periods != [] ||
-      filter_options.artifact_types != []
-  end
 
   # 結果件数のテキスト
   defp result_text(0), do: "結果なし"
