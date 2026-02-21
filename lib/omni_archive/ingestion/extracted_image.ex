@@ -72,11 +72,46 @@ defmodule OmniArchive.Ingestion.ExtractedImage do
     |> validate_required([:pdf_source_id, :page_number])
     |> validate_inclusion(:status, ~w(draft pending_review rejected published deleted))
     |> validate_label_format()
+    |> validate_custom_metadata()
     |> foreign_key_constraint(:pdf_source_id)
     |> optimistic_lock(:lock_version)
   end
 
   # --- カスタムバリデーション ---
+
+  # 動的メタデータの制限チェック (DoS/XSS対策の多層防御)
+  defp validate_custom_metadata(changeset) do
+    metadata = get_change(changeset, :custom_metadata)
+
+    if metadata do
+      # サイズチェック
+      changeset =
+        if map_size(metadata) > 50 do
+          add_error(changeset, :custom_metadata, "メタデータのペアは最大50個までです")
+        else
+          changeset
+        end
+
+      # キーと値の長さチェック
+      has_long_key = Enum.any?(metadata, fn {k, _v} -> String.length(k) > 100 end)
+      has_long_val = Enum.any?(metadata, fn {_k, v} -> String.length(to_string(v)) > 2000 end)
+
+      changeset =
+        if has_long_key do
+          add_error(changeset, :custom_metadata, "各キーは100文字以内にする必要があります")
+        else
+          changeset
+        end
+
+      if has_long_val do
+        add_error(changeset, :custom_metadata, "各値は2000文字以内にする必要があります")
+      else
+        changeset
+      end
+    else
+      changeset
+    end
+  end
 
   # ラベル形式チェック: 値が入力済みの場合のみ適用
   defp validate_label_format(changeset) do
@@ -126,7 +161,8 @@ defmodule OmniArchive.Ingestion.ExtractedImage do
         |> Enum.into(%{}, fn data ->
           key = Map.get(data, "key", Map.get(data, :key, ""))
           val = Map.get(data, "value", Map.get(data, :value, ""))
-          {String.trim(to_string(key)), to_string(val)}
+          # XSS/DoS対策: キーと値の両方の前後の空白を削除してサニタイズ
+          {String.trim(to_string(key)), String.trim(to_string(val))}
         end)
 
       if has_str_key do
