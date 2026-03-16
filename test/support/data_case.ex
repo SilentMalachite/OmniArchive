@@ -24,6 +24,7 @@ defmodule OmniArchive.DataCase do
       import Ecto.Changeset
       import Ecto.Query
       import OmniArchive.DataCase
+      import OmniArchive.DomainProfileTestHelper
     end
   end
 

@@ -28,6 +28,7 @@ defmodule OmniArchiveWeb.ConnCase do
       import Plug.Conn
       import Phoenix.ConnTest
       import OmniArchiveWeb.ConnCase
+      import OmniArchive.DomainProfileTestHelper
     end
   end
 

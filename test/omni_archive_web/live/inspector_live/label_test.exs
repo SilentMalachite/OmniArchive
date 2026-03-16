@@ -9,6 +9,7 @@ defmodule OmniArchiveWeb.InspectorLive.LabelTest do
   use OmniArchiveWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
+  alias OmniArchive.DomainProfiles.GeneralArchive
   alias OmniArchive.Repo
   import OmniArchive.Factory
 
@@ -388,6 +389,80 @@ defmodule OmniArchiveWeb.InspectorLive.LabelTest do
                view |> element(".btn-merge") |> render_click()
 
       assert path =~ "/lab/label/#{existing.id}"
+    end
+  end
+
+  describe "GeneralArchive profile" do
+    setup do
+      put_domain_profile(GeneralArchive)
+      :ok
+    end
+
+    test "metadata-only fields の入力欄が描画される", %{conn: conn, user: user} do
+      image = create_user_image(user, %{label: "photo-001"})
+
+      {:ok, view, html} = live(conn, ~p"/lab/label/#{image.id}")
+
+      assert html =~ "🗂️ コレクション"
+      assert has_element?(view, "#collection-input")
+      assert has_element?(view, "#item_type-input")
+      assert has_element?(view, "#date_note-input")
+    end
+
+    test "metadata-only fields の値を優先して表示する", %{conn: conn, user: user} do
+      image =
+        create_user_image(user, %{
+          label: "photo-002",
+          site: "旧値",
+          metadata: %{
+            "collection" => "広報写真アーカイブ",
+            "item_type" => "写真",
+            "date_note" => "1960年代"
+          }
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/lab/label/#{image.id}")
+
+      assert html =~ "広報写真アーカイブ"
+      assert html =~ "写真"
+      assert html =~ "1960年代"
+    end
+
+    test "duplicate label が collection + label で検出される", %{conn: conn, user: user} do
+      pdf_source = insert_pdf_source(%{user_id: user.id})
+
+      _existing =
+        insert_extracted_image(%{
+          pdf_source_id: pdf_source.id,
+          label: "photo-001",
+          metadata: %{"collection" => "広報写真アーカイブ"},
+          caption: "既存の資料"
+        })
+
+      current =
+        insert_extracted_image(%{
+          pdf_source_id: pdf_source.id,
+          label: nil,
+          page_number: 2,
+          metadata: %{"collection" => "広報写真アーカイブ"}
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/lab/label/#{current.id}")
+
+      view
+      |> element("form")
+      |> render_change(%{
+        "_target" => ["label"],
+        "label" => "photo-001",
+        "caption" => "",
+        "collection" => "広報写真アーカイブ",
+        "item_type" => "",
+        "date_note" => ""
+      })
+
+      html = render(view)
+      assert html =~ "このコレクションでそのラベルは既に登録されています"
+      assert html =~ "既存レコードを更新"
     end
   end
 end

@@ -15,4 +15,9 @@ defmodule OmniArchive.DomainProfilesTest do
              %{field: :artifact_type, param: "artifact_type", label: "🏺 遺物種別"}
            ]
   end
+
+  test "duplicate identity defaults to archaeology" do
+    assert DomainProfiles.profile_key() == "archaeology"
+    assert DomainProfiles.duplicate_scope_field() == :site
+  end
 end

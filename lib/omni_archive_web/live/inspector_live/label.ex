@@ -92,17 +92,10 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
         do: run_inline_validation(socket, target, Map.get(params, target, "")),
         else: socket
 
-    # label/site 変更時は重複チェック
+    # label/duplicate scope 変更時は重複チェック
     socket =
       if target in ["label", duplicate_scope_field()] do
-        duplicate =
-          Ingestion.find_duplicate_label(
-            metadata_value(socket, duplicate_scope_field()),
-            socket.assigns.label,
-            socket.assigns.extracted_image.id
-          )
-
-        assign(socket, :duplicate_record, duplicate)
+        assign(socket, :duplicate_record, check_duplicate_label(socket))
       else
         socket
       end
@@ -149,17 +142,10 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
     # インラインバリデーション
     socket = run_inline_validation(socket, field, value)
 
-    # label/site 変更時は重複チェック
+    # label/duplicate scope 変更時は重複チェック
     socket =
       if field in ["label", duplicate_scope_field()] do
-        duplicate =
-          Ingestion.find_duplicate_label(
-            metadata_value(socket, duplicate_scope_field()),
-            socket.assigns.label,
-            socket.assigns.extracted_image.id
-          )
-
-        assign(socket, :duplicate_record, duplicate)
+        assign(socket, :duplicate_record, check_duplicate_label(socket))
       else
         socket
       end
@@ -416,15 +402,15 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
   end
 
   # 初期表示時の重複チェック
+  defp check_duplicate_label(%{assigns: _assigns} = socket) do
+    Ingestion.find_duplicate_extracted_image(socket.assigns.extracted_image, %{
+      label: socket.assigns.label,
+      metadata: socket.assigns.metadata_values
+    })
+  end
+
   defp check_duplicate_label(extracted_image) do
-    Ingestion.find_duplicate_label(
-      ExtractedImageMetadata.read(
-        extracted_image,
-        DomainMetadataValidation.duplicate_scope_field()
-      ),
-      extracted_image.label,
-      extracted_image.id
-    )
+    Ingestion.find_duplicate_extracted_image(extracted_image)
   end
 
   # インラインバリデーション（入力時にエラーメッセージを表示）
@@ -580,8 +566,8 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
         <%!-- メタデータ入力フォーム（phx-change でリアルタイムバリデーション） --%>
         <form phx-change="validate_metadata" class="metadata-form">
           <div class="form-group">
-            <label for="caption-input" class="form-label">📝 キャプション（図の説明）</label>
             <% caption_field = metadata_field(:caption) %>
+            <label for="caption-input" class="form-label">{caption_field.label}</label>
             <input
               type="text"
               id="caption-input"

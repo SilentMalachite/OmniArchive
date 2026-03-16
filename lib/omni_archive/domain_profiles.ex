@@ -6,10 +6,14 @@ defmodule OmniArchive.DomainProfiles do
   alias OmniArchive.DomainProfiles.Archaeology
 
   @default_profile Archaeology
-  @current_profile Application.compile_env(:omni_archive, :domain_profile, @default_profile)
+  @compile_time_default_profile Application.compile_env(
+                                  :omni_archive,
+                                  :domain_profile,
+                                  @default_profile
+                                )
 
   def current do
-    @current_profile
+    Application.get_env(:omni_archive, :domain_profile, @compile_time_default_profile)
   end
 
   def metadata_fields do
@@ -39,5 +43,21 @@ defmodule OmniArchive.DomainProfiles do
 
   def ui_text(path) when is_list(path) do
     get_in(ui_texts(), path) || raise ArgumentError, "unknown UI text path: #{inspect(path)}"
+  end
+
+  def duplicate_identity do
+    current().duplicate_identity()
+  end
+
+  def profile_key do
+    duplicate_identity().profile_key
+  end
+
+  def duplicate_scope_field do
+    duplicate_identity().scope_field
+  end
+
+  def duplicate_label_error do
+    duplicate_identity().duplicate_label_error
   end
 end

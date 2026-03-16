@@ -1,8 +1,10 @@
 defmodule OmniArchiveWeb.SearchLiveTest do
-  use OmniArchiveWeb.ConnCase, async: true
+  use OmniArchiveWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   import OmniArchive.Factory
+  alias OmniArchive.DomainProfiles
+  alias OmniArchive.DomainProfiles.GeneralArchive
   alias OmniArchive.Repo
 
   setup :register_and_log_in_user
@@ -143,6 +145,50 @@ defmodule OmniArchiveWeb.SearchLiveTest do
       html = render_click(view, "clear_filters", %{})
 
       assert html =~ "件の図版" or html =~ "結果なし"
+    end
+  end
+
+  describe "GeneralArchive 表示" do
+    setup do
+      put_domain_profile(GeneralArchive)
+      :ok
+    end
+
+    test "placeholder と facet が GeneralArchive 定義に切り替わる", %{conn: conn} do
+      insert_extracted_image(%{
+        ptif_path: "/path/to/general-live.tif",
+        label: "photo-001",
+        metadata: %{
+          "collection" => "広報写真アーカイブ",
+          "item_type" => "写真",
+          "date_note" => "1960年代"
+        }
+      })
+
+      {:ok, _view, html} = live(conn, ~p"/lab/search")
+
+      assert html =~ DomainProfiles.ui_text([:search, :placeholder])
+      assert html =~ "🗂️ コレクション"
+      assert html =~ "📁 資料種別"
+      assert html =~ "📅 年代メモ"
+    end
+
+    test "metadata-only field の値が結果カードに表示される", %{conn: conn} do
+      insert_extracted_image(%{
+        ptif_path: "/path/to/general-live-card.tif",
+        label: "photo-002",
+        metadata: %{
+          "collection" => "広報写真アーカイブ",
+          "item_type" => "ポスター",
+          "date_note" => "1972年ごろ"
+        }
+      })
+
+      {:ok, _view, html} = live(conn, ~p"/lab/search")
+
+      assert html =~ "広報写真アーカイブ"
+      assert html =~ "ポスター"
+      assert html =~ "1972年ごろ"
     end
   end
 end

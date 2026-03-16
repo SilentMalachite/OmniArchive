@@ -35,12 +35,11 @@ defmodule OmniArchive.DomainMetadataValidation do
   end
 
   def duplicate_scope_field do
-    DomainProfiles.validation_rules()
-    |> Map.get(:duplicate_scope_field, :site)
+    DomainProfiles.duplicate_scope_field()
   end
 
   def duplicate_label_error do
-    DomainProfiles.validation_rules().duplicate_label_error
+    DomainProfiles.duplicate_label_error()
   end
 
   defp validate_changeset_field(changeset, field) do

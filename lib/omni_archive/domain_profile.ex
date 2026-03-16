@@ -20,4 +20,10 @@ defmodule OmniArchive.DomainProfile do
   @callback validation_rules() :: map()
   @callback search_facets() :: [search_facet()]
   @callback ui_texts() :: map()
+  @callback duplicate_identity() :: %{
+              required(:profile_key) => String.t(),
+              required(:scope_field) => atom(),
+              optional(:label_field) => atom(),
+              optional(:duplicate_label_error) => String.t()
+            }
 end

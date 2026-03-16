@@ -218,6 +218,9 @@ defmodule OmniArchiveWeb.SearchLive do
   defp metadata_icon(:site), do: "📍"
   defp metadata_icon(:period), do: "⏳"
   defp metadata_icon(:artifact_type), do: "🏺"
+  defp metadata_icon(:collection), do: "🗂️"
+  defp metadata_icon(:item_type), do: "📁"
+  defp metadata_icon(:date_note), do: "📅"
   defp metadata_icon(_field), do: "•"
 
   # Manifest URL の生成

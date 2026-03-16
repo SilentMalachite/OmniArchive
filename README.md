@@ -52,6 +52,13 @@ OmniArchive は、静的な PDF を、国際的な画像相互運用フレーム
 - **全文検索**: キャプションの PostgreSQL FTS (tsvector + GIN インデックス)
 - **ファセット検索**: active profile で定義されたメタデータ項目によるフィルタリング
 
+利用可能な profile:
+- `OmniArchive.DomainProfiles.Archaeology` (デフォルト)
+- `OmniArchive.DomainProfiles.GeneralArchive`
+
+切り替え方法:
+- `config/config.exs` の `config :omni_archive, domain_profile: ...` で active profile を指定します
+
 ### ♿ 認知アクセシビリティ
 
 - **ギャラリー & 管理画面テーマ**: 「新潟インディゴ＆ハーベストゴールド」— Deep Sea Indigo (#1A2C42) 背景 + Harvest Gold (#E6B422) アクセント、Mist Grey (#E0E0E0) テキストでコントラスト比約 10.4:1（WCAG AAA 準拠）。公開ギャラリーに加え、管理者レビュー画面にも適用されています。

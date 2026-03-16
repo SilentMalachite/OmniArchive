@@ -1,11 +1,33 @@
 import Config
 
+db_username =
+  System.get_env("DB_USERNAME") ||
+    System.get_env("PGUSER") ||
+    System.get_env("USER") ||
+    "postgres"
+
+db_password =
+  System.get_env("DB_PASSWORD") ||
+    System.get_env("PGPASSWORD") ||
+    ""
+
+db_hostname =
+  System.get_env("DB_HOST") ||
+    System.get_env("PGHOST") ||
+    "localhost"
+
+db_port =
+  System.get_env("DB_PORT") ||
+    System.get_env("PGPORT") ||
+    "5432"
+
 # Configure your database
 config :omni_archive, OmniArchive.Repo,
-  username: System.get_env("DB_USERNAME") || "hiro",
-  password: System.get_env("DB_PASSWORD") || "postgres",
-  hostname: System.get_env("DB_HOST") || "localhost",
-  database: "omni_archive_dev",
+  username: db_username,
+  password: db_password,
+  hostname: db_hostname,
+  port: String.to_integer(db_port),
+  database: System.get_env("DB_DATABASE") || System.get_env("PGDATABASE") || "omni_archive_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10

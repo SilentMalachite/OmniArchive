@@ -17,6 +17,7 @@ defmodule OmniArchive.Ingestion do
 
   alias Ecto.Multi
   alias OmniArchive.Accounts.User
+  alias OmniArchive.DuplicateIdentity
   alias OmniArchive.Iiif.Manifest
   alias OmniArchive.Ingestion.{ExtractedImage, ImageProcessor, PdfSource}
   alias OmniArchive.Repo
@@ -353,7 +354,10 @@ defmodule OmniArchive.Ingestion do
 
     rows =
       Enum.map(attrs_list, fn attrs ->
+        dedupe_fingerprint = DuplicateIdentity.fingerprint_for_record(%ExtractedImage{}, attrs)
+
         attrs
+        |> Map.put(:dedupe_fingerprint, dedupe_fingerprint)
         |> Map.put(:inserted_at, now)
         |> Map.put(:updated_at, now)
         |> Map.put_new(:status, "draft")
@@ -373,28 +377,11 @@ defmodule OmniArchive.Ingestion do
       {:error, :stale}
   end
 
-  @doc "同一遺跡内で同じラベルを持つレコードを検索（自分自身を除く）"
-  def find_duplicate_label(site, label, exclude_id \\ nil)
-
-  def find_duplicate_label(site, label, _exclude_id)
-      when is_nil(site) or site == "" or is_nil(label) or label == "",
-      do: nil
-
-  def find_duplicate_label(site, label, exclude_id) do
-    query =
-      from(e in ExtractedImage,
-        where: e.site == ^site,
-        where: e.label == ^label,
-        where: e.status != "deleted",
-        limit: 1
-      )
-
-    query =
-      if exclude_id,
-        do: from(e in query, where: e.id != ^exclude_id),
-        else: query
-
-    Repo.one(query)
+  @doc "active profile の duplicate identity に一致するレコードを検索（自分自身を除く）"
+  def find_duplicate_extracted_image(%ExtractedImage{} = image, attrs \\ %{}) do
+    exclude_id = image.id
+    fingerprint = DuplicateIdentity.fingerprint_for_record(image, attrs)
+    find_duplicate_by_fingerprint(fingerprint, exclude_id)
   end
 
   # === ステータス遷移 ===
@@ -681,5 +668,25 @@ defmodule OmniArchive.Ingestion do
   # PTIFF 生成モジュールの取得（テスト時はモック差し替え可能）
   defp ptiff_generator do
     Application.get_env(:omni_archive, :ptiff_generator, OmniArchive.Iiif.PtiffGenerator)
+  end
+
+  defp find_duplicate_by_fingerprint(nil, _exclude_id), do: nil
+
+  defp find_duplicate_by_fingerprint(fingerprint, exclude_id) do
+    query =
+      from(e in ExtractedImage,
+        where: e.dedupe_fingerprint == ^fingerprint,
+        where: e.status != "deleted",
+        limit: 1
+      )
+
+    query =
+      if exclude_id do
+        from(e in query, where: e.id != ^exclude_id)
+      else
+        query
+      end
+
+    Repo.one(query)
   end
 end

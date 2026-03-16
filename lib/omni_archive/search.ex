@@ -139,13 +139,7 @@ defmodule OmniArchive.Search do
   defp maybe_filter(query, _field, ""), do: query
 
   defp maybe_filter(query, field_name, value) do
-    metadata_key = Atom.to_string(field_name)
-
-    where(
-      query,
-      [e],
-      fragment("COALESCE(?->>?, ?)", e.metadata, ^metadata_key, field(e, ^field_name)) == ^value
-    )
+    where(query, ^field_equals_dynamic(field_name, value))
   end
 
   # DISTINCT 値の取得
@@ -165,18 +159,8 @@ defmodule OmniArchive.Search do
 
   defp list_distinct_fragment_values(field_name, metadata_key) do
     ExtractedImage
-    |> where(
-      [e],
-      not is_nil(fragment("COALESCE(?->>?, ?)", e.metadata, ^metadata_key, field(e, ^field_name)))
-    )
-    |> where(
-      [e],
-      fragment("COALESCE(?->>?, ?)", e.metadata, ^metadata_key, field(e, ^field_name)) != ""
-    )
-    |> select(
-      [e],
-      fragment("COALESCE(?->>?, ?)", e.metadata, ^metadata_key, field(e, ^field_name))
-    )
+    |> where(^field_present_dynamic(field_name, metadata_key))
+    |> select(^field_value_dynamic(field_name, metadata_key))
     |> distinct(true)
     |> Repo.all()
     |> Enum.sort()
@@ -192,11 +176,33 @@ defmodule OmniArchive.Search do
       dynamic(
         [e],
         ^acc or
-          ilike(
-            fragment("COALESCE(?->>?, ?)", e.metadata, ^metadata_key, field(e, ^metadata_field)),
-            ^pattern
-          )
+          ilike(^field_value_dynamic(metadata_field, metadata_key), ^pattern)
       )
     end)
+  end
+
+  defp field_equals_dynamic(field_name, value) do
+    metadata_key = Atom.to_string(field_name)
+
+    dynamic([e], ^field_value_dynamic(field_name, metadata_key) == ^value)
+  end
+
+  defp field_present_dynamic(field_name, metadata_key) do
+    dynamic(
+      [e],
+      not is_nil(^field_value_dynamic(field_name, metadata_key)) and
+        ^field_value_dynamic(field_name, metadata_key) != ""
+    )
+  end
+
+  defp field_value_dynamic(field_name, metadata_key) do
+    if ExtractedImageMetadata.schema_field?(field_name) do
+      dynamic(
+        [e],
+        fragment("COALESCE(?->>?, ?)", e.metadata, ^metadata_key, field(e, ^field_name))
+      )
+    else
+      dynamic([e], fragment("?->>?", e.metadata, ^metadata_key))
+    end
   end
 end

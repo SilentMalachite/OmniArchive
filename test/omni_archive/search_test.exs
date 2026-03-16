@@ -1,6 +1,7 @@
 defmodule OmniArchive.SearchTest do
-  use OmniArchive.DataCase, async: true
+  use OmniArchive.DataCase, async: false
 
+  alias OmniArchive.DomainProfiles.GeneralArchive
   alias OmniArchive.Repo
   alias OmniArchive.Search
   import OmniArchive.Factory
@@ -259,6 +260,78 @@ defmodule OmniArchive.SearchTest do
 
       count = Search.count_results("", %{"period" => "弥生時代"})
       assert count == 1
+    end
+  end
+
+  describe "GeneralArchive metadata-only fields" do
+    setup do
+      put_domain_profile(GeneralArchive)
+      :ok
+    end
+
+    test "metadata-only field で検索と filter options が動く" do
+      image =
+        insert_extracted_image(%{
+          caption: "市史写真",
+          label: "photo-001",
+          ptif_path: "/path/to/general.tif",
+          site: "旧サイト値",
+          metadata: %{
+            "collection" => "広報写真アーカイブ",
+            "item_type" => "写真",
+            "date_note" => "1960年代"
+          }
+        })
+
+      assert Enum.any?(Search.search_images("広報写真", %{}), &(&1.id == image.id))
+
+      assert Enum.any?(
+               Search.search_images("", %{"collection" => "広報写真アーカイブ"}),
+               &(&1.id == image.id)
+             )
+
+      assert Enum.any?(Search.search_images("", %{"item_type" => "写真"}), &(&1.id == image.id))
+      assert Enum.any?(Search.search_images("", %{"date_note" => "1960年代"}), &(&1.id == image.id))
+
+      options = Search.list_filter_options()
+      assert options.collection == ["広報写真アーカイブ"]
+      assert options.item_type == ["写真"]
+      assert options.date_note == ["1960年代"]
+    end
+
+    test "metadata-only field を使って count_results/2 できる" do
+      insert_extracted_image(%{
+        caption: "館報",
+        label: "doc-2024-05",
+        ptif_path: "/path/to/general-count.tif",
+        metadata: %{
+          "collection" => "市史資料",
+          "item_type" => "冊子",
+          "date_note" => "2024年5月"
+        }
+      })
+
+      assert Search.count_results("", %{"collection" => "市史資料"}) == 1
+    end
+
+    test "duplicate label が collection + label で検出される" do
+      existing =
+        insert_extracted_image(%{
+          label: "photo-001",
+          metadata: %{"collection" => "広報写真アーカイブ"},
+          ptif_path: "/path/to/duplicate-general.tif"
+        })
+
+      duplicate =
+        OmniArchive.Ingestion.find_duplicate_extracted_image(
+          %OmniArchive.Ingestion.ExtractedImage{},
+          %{
+            label: "photo-001",
+            metadata: %{"collection" => "広報写真アーカイブ"}
+          }
+        )
+
+      assert duplicate.id == existing.id
     end
   end
 end

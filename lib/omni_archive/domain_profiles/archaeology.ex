@@ -90,4 +90,14 @@ defmodule OmniArchive.DomainProfiles.Archaeology do
       }
     }
   end
+
+  @impl true
+  def duplicate_identity do
+    %{
+      profile_key: "archaeology",
+      scope_field: :site,
+      label_field: :label,
+      duplicate_label_error: "この遺跡でそのラベルは既に登録されています"
+    }
+  end
 end

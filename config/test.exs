@@ -1,5 +1,26 @@
 import Config
 
+db_username =
+  System.get_env("DB_USERNAME") ||
+    System.get_env("PGUSER") ||
+    System.get_env("USER") ||
+    "postgres"
+
+db_password =
+  System.get_env("DB_PASSWORD") ||
+    System.get_env("PGPASSWORD") ||
+    ""
+
+db_hostname =
+  System.get_env("DB_HOST") ||
+    System.get_env("PGHOST") ||
+    "localhost"
+
+db_port =
+  System.get_env("DB_PORT") ||
+    System.get_env("PGPORT") ||
+    "5432"
+
 # Only in tests, remove the complexity from the password hashing algorithm
 config :bcrypt_elixir, :log_rounds, 1
 
@@ -9,10 +30,14 @@ config :bcrypt_elixir, :log_rounds, 1
 # to provide built-in test partitioning in CI environment.
 # Run `mix help test` for more information.
 config :omni_archive, OmniArchive.Repo,
-  username: System.get_env("DB_USERNAME") || "hiro",
-  password: System.get_env("DB_PASSWORD") || "postgres",
-  hostname: System.get_env("DB_HOST") || "localhost",
-  database: "omni_archive_test#{System.get_env("MIX_TEST_PARTITION")}",
+  username: db_username,
+  password: db_password,
+  hostname: db_hostname,
+  port: String.to_integer(db_port),
+  database:
+    System.get_env("DB_TEST_DATABASE") ||
+      System.get_env("DB_DATABASE") ||
+      "omni_archive_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2
 

@@ -17,6 +17,7 @@ defmodule OmniArchive.Ingestion.ExtractedImage do
   import Ecto.Changeset
 
   alias OmniArchive.DomainMetadataValidation
+  alias OmniArchive.DuplicateIdentity
   alias OmniArchive.Ingestion.ExtractedImageMetadata
 
   schema "extracted_images" do
@@ -34,6 +35,8 @@ defmodule OmniArchive.Ingestion.ExtractedImage do
     field :ptif_path, :string
     # 可変メタデータ（移行期間は archaeology 旧カラムと dual-write）
     field :metadata, :map, default: %{}
+    # profile 駆動の重複判定 fingerprint
+    field :dedupe_fingerprint, :string
     # 検索用メタデータ（遺跡名、時代、遺物種別）
     field :site, :string
     field :period, :string
@@ -81,10 +84,11 @@ defmodule OmniArchive.Ingestion.ExtractedImage do
     |> validate_required([:pdf_source_id, :page_number])
     |> validate_inclusion(:status, ~w(draft pending_review rejected published deleted))
     |> DomainMetadataValidation.validate_changeset()
+    |> DuplicateIdentity.put_dedupe_fingerprint()
     |> foreign_key_constraint(:pdf_source_id)
     |> optimistic_lock(:lock_version)
-    |> unique_constraint([:site, :label],
-      name: :extracted_images_site_label_unique,
+    |> unique_constraint(:dedupe_fingerprint,
+      name: :extracted_images_dedupe_fingerprint_unique,
       message: DomainMetadataValidation.duplicate_label_error()
     )
   end

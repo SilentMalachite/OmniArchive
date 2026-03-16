@@ -18,6 +18,11 @@ defmodule OmniArchive.Ingestion.ExtractedImageMetadata do
     Enum.map(metadata_fields(), & &1.field)
   end
 
+  @doc "Ecto schema 上に存在するフィールドか判定"
+  def schema_field?(field) when is_atom(field) do
+    field in ExtractedImage.__schema__(:fields)
+  end
+
   @doc "metadata 優先、旧カラム fallback で値を取得"
   def read(%ExtractedImage{} = image, field) when is_atom(field) do
     metadata = normalize_metadata_map(image.metadata)
@@ -26,9 +31,18 @@ defmodule OmniArchive.Ingestion.ExtractedImageMetadata do
     if Map.has_key?(metadata, key) do
       Map.get(metadata, key)
     else
-      Map.get(image, field)
+      read_legacy_field(image, field)
     end
   end
+
+  def read(%ExtractedImage{} = image, field) when is_binary(field) do
+    image
+    |> read(String.to_existing_atom(field))
+  rescue
+    ArgumentError -> nil
+  end
+
+  def read(_image, _field), do: nil
 
   @doc "metadata 優先で profile 対象フィールドをマップ化"
   def read_map(%ExtractedImage{} = image) do
@@ -59,12 +73,7 @@ defmodule OmniArchive.Ingestion.ExtractedImageMetadata do
       end
 
     Enum.reduce(metadata_field_names(), attrs, fn field, acc ->
-      key = Atom.to_string(field)
-
-      case Map.fetch(merged_metadata, key) do
-        {:ok, value} -> Map.put(acc, field, value)
-        :error -> acc
-      end
+      maybe_put_legacy_attr(acc, field, merged_metadata)
     end)
   end
 
@@ -118,5 +127,26 @@ defmodule OmniArchive.Ingestion.ExtractedImageMetadata do
 
   defp has_attr?(attrs, field) do
     Map.has_key?(attrs, field) or Map.has_key?(attrs, Atom.to_string(field))
+  end
+
+  defp read_legacy_field(image, field) do
+    if schema_field?(field) do
+      Map.get(image, field)
+    else
+      nil
+    end
+  end
+
+  defp maybe_put_legacy_attr(attrs, field, merged_metadata) do
+    key = Atom.to_string(field)
+
+    if schema_field?(field) do
+      case Map.fetch(merged_metadata, key) do
+        {:ok, value} -> Map.put(attrs, field, value)
+        :error -> attrs
+      end
+    else
+      attrs
+    end
   end
 end
