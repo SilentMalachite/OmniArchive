@@ -1,0 +1,720 @@
+/* ====================================================
+   Admin Review Dashboard — Niigata Indigo & Harvest Gold
+   ====================================================
+   公開ギャラリーと統一されたダークテーマ。
+   承認ワークフロー向けに高コントラスト色を使用。
+*/
+
+/* --- カラー変数 --- */
+:root {
+  --admin-bg: #1A2C42;
+  /* Deep Indigo */
+  --admin-bg-light: #22354D;
+  /* カード背景 */
+  --admin-bg-dark: #152336;
+  /* Inspector 背景 */
+  --admin-text: #E0E0E0;
+  /* Mist Grey */
+  --admin-text-muted: #A0AEC0;
+  /* 補助テキスト */
+  --admin-border: #2A4060;
+  /* 標準ボーダー */
+  --admin-pending: #DAA520;
+  /* Harvest Gold — Pending */
+  --admin-approved: #2E7D32;
+  /* Green — Approved */
+  --admin-approve-btn: #2E7D32;
+  /* APPROVE ボタン */
+  --admin-reject-btn: #C62828;
+  /* REJECT ボタン */
+  --admin-gold: #E6B422;
+  /* Harvest Gold アクセント */
+}
+
+/* --- コンテナ --- */
+.admin-review-container {
+  min-height: 100vh;
+  background: var(--admin-bg);
+  color: var(--admin-text);
+  padding: 2rem 1.5rem 3rem;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+/* --- ヘッダー --- */
+.admin-review-header {
+  max-width: 1200px;
+  margin: 0 auto 2rem;
+  text-align: center;
+}
+
+.admin-review-header .section-title {
+  color: var(--admin-text);
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+}
+
+.admin-review-header .section-description {
+  color: var(--admin-text-muted);
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* 統計バッジ */
+.review-stats {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.stats-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  border-radius: 9999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.stats-badge-pending {
+  background: rgba(218, 165, 32, 0.15);
+  color: var(--admin-pending);
+  border: 1px solid rgba(218, 165, 32, 0.3);
+}
+
+/* --- メインレイアウト (グリッド + インスペクター) --- */
+.review-layout {
+  display: flex;
+  gap: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  transition: all 0.3s ease;
+}
+
+.review-layout.inspector-open .review-grid-area {
+  flex: 1;
+  min-width: 0;
+}
+
+.review-grid-area {
+  flex: 1;
+}
+
+/* --- カードグリッド --- */
+/* .review-grid styling moved to inline Tailwind classes */
+
+/* --- アーティファクトカード --- */
+.review-card {
+  background: var(--admin-bg-light);
+  border: 2px solid transparent;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.3s ease;
+  will-change: transform;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* Pending 状態のカード（デフォルト） */
+.review-card.status-pending {
+  border-color: transparent;
+}
+
+/* Approved 状態のカード（将来拡張用） */
+.review-card.status-approved {
+  border-color: transparent;
+}
+
+.review-card:hover {
+  border-color: var(--admin-gold);
+}
+
+.review-card.selected {
+  border-color: var(--admin-gold);
+  box-shadow: 0 0 0 3px rgba(230, 180, 34, 0.3);
+}
+
+/* フェードアウトアニメーション */
+.review-card.card-fade-out {
+  opacity: 0;
+  transform: scale(0.95) translateY(-10px);
+  transition: all 0.5s ease;
+}
+
+/* --- Validation Badge --- */
+.validation-badge-container {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 10;
+}
+
+.validation-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  backdrop-filter: blur(8px);
+}
+
+.badge-valid {
+  background: rgba(46, 125, 50, 0.85);
+  color: #e8f5e9;
+  border: 1px solid rgba(46, 125, 50, 0.5);
+}
+
+.badge-warning {
+  background: rgba(218, 165, 32, 0.85);
+  color: #1A2C42;
+  border: 1px solid rgba(218, 165, 32, 0.5);
+}
+
+/* --- カード画像 --- */
+.review-card-image-container {
+  width: 100%;
+  overflow: hidden;
+  background: var(--admin-bg-dark);
+}
+
+.review-card-image {
+  width: 100%;
+  height: auto;
+}
+
+/* --- カードボディ --- */
+.review-card-body {
+  padding: 1rem;
+}
+
+.review-card-title {
+  color: var(--admin-text);
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+
+.review-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.meta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem 0.6rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: var(--admin-text-muted);
+}
+
+/* --- カードアクションボタン --- */
+.review-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem 1rem;
+  margin-top: auto;
+}
+
+/* APPROVE ボタン — Vivid Green */
+.btn-approve {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 60px;
+  min-width: 60px;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(145deg, #388E3C, var(--admin-approve-btn));
+  color: #fff;
+  border: 2px solid var(--admin-approve-btn);
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(46, 125, 50, 0.3);
+}
+
+.btn-approve:hover {
+  background: linear-gradient(145deg, #43A047, #388E3C);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(46, 125, 50, 0.45);
+}
+
+.btn-approve:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 1px 4px rgba(46, 125, 50, 0.3);
+}
+
+.btn-approve:focus-visible {
+  outline: 3px solid var(--admin-approve-btn);
+  outline-offset: 2px;
+}
+
+/* REJECT ボタン — Vivid Red */
+.btn-reject {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 60px;
+  min-width: 60px;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(145deg, #E53935, var(--admin-reject-btn));
+  color: #fff;
+  border: 2px solid var(--admin-reject-btn);
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(198, 40, 40, 0.3);
+}
+
+.btn-reject:hover {
+  background: linear-gradient(145deg, #EF5350, #E53935);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(198, 40, 40, 0.45);
+}
+
+.btn-reject:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 1px 4px rgba(198, 40, 40, 0.3);
+}
+
+.btn-reject:focus-visible {
+  outline: 3px solid var(--admin-reject-btn);
+  outline-offset: 2px;
+}
+
+/* --- Danger Zone（削除ボタン分離エリア） --- */
+.danger-zone {
+  padding: 0.5rem 1rem 0.75rem;
+  border-top: 1px dashed rgba(220, 38, 38, 0.25);
+}
+
+.inspector-danger-zone {
+  padding: 0.75rem 1.25rem;
+  border-top: 1px dashed rgba(220, 38, 38, 0.25);
+}
+
+/* DELETE ボタン — Ghost/Outline Red（Reject との差別化） */
+.btn-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  color: #DC2626;
+  border: 1.5px solid rgba(220, 38, 38, 0.35);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-delete:hover {
+  color: #991B1B;
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.6);
+}
+
+.btn-delete:active {
+  transform: scale(0.97);
+  background: rgba(220, 38, 38, 0.12);
+}
+
+.btn-delete:focus-visible {
+  outline: 3px solid #DC2626;
+  outline-offset: 2px;
+}
+
+/* --- 大ボタン共通 --- */
+.btn-large {
+  min-height: 60px;
+  min-width: 60px;
+  font-size: 1rem;
+}
+
+/* セカンダリボタン（フッター向け） */
+.admin-review-container .btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 60px;
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  color: var(--admin-text);
+  border: 2px solid var(--admin-border);
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.admin-review-container .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--admin-gold);
+  color: var(--admin-gold);
+  transform: translateY(-1px);
+}
+
+/* --- 「結果なし」表示 --- */
+.admin-review-container .no-results {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.no-results-icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 1rem;
+}
+
+/* === Inspector サイドパネル === */
+.review-inspector {
+  width: 420px;
+  flex-shrink: 0;
+  background: var(--admin-bg-dark);
+  border: 1px solid var(--admin-border);
+  border-radius: 16px;
+  overflow-y: auto;
+  max-height: calc(100vh - 4rem);
+  position: sticky;
+  top: 2rem;
+  animation: slide-in 0.3s ease;
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Inspector ヘッダー */
+.inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.inspector-title {
+  color: var(--admin-gold);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.inspector-close-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  color: var(--admin-text-muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.inspector-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--admin-text);
+  border-color: var(--admin-gold);
+}
+
+/* Inspector 画像 — ダーク背景で画像がポップアウト */
+.inspector-image-container {
+  padding: 0.75rem;
+  background: #0D1B2A;
+  margin: 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.inspector-full-image {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  display: block;
+}
+
+/* Inspector 詳細情報 */
+.inspector-details {
+  padding: 1rem 1.25rem;
+}
+
+.inspector-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.inspector-detail-item:last-child {
+  border-bottom: none;
+}
+
+.inspector-detail-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--admin-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.inspector-detail-value {
+  color: var(--admin-text);
+  font-size: 0.95rem;
+  word-break: break-all;
+}
+
+.inspector-path {
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.8rem;
+  color: var(--admin-text-muted);
+}
+
+/* Inspector バリデーション */
+.inspector-validation {
+  padding: 0.75rem 1.25rem;
+}
+
+.validation-detail {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 10px;
+}
+
+.validation-detail.valid {
+  background: rgba(46, 125, 50, 0.1);
+  border: 1px solid rgba(46, 125, 50, 0.2);
+  color: #81C784;
+}
+
+.validation-detail.warning {
+  background: rgba(218, 165, 32, 0.1);
+  border: 1px solid rgba(218, 165, 32, 0.2);
+  color: var(--admin-pending);
+}
+
+.validation-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.validation-issues {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+  font-size: 0.85rem;
+}
+
+.validation-issues li {
+  margin-bottom: 0.25rem;
+}
+
+/* Inspector アクション */
+.inspector-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--admin-border);
+}
+
+.inspector-action-btn {
+  flex: 1;
+}
+
+/* === 差し戻しモーダル === */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 27, 42, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: fade-in 0.2s ease;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  background: var(--admin-bg-light);
+  border: 1px solid var(--admin-border);
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: modal-pop 0.25s ease;
+}
+
+@keyframes modal-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-title {
+  color: var(--admin-text);
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.modal-description {
+  color: var(--admin-text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+/* テキストエリア */
+.reject-note-textarea {
+  width: 100%;
+  background: var(--admin-bg-dark);
+  color: var(--admin-text);
+  border: 2px solid var(--admin-border);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  resize: vertical;
+  min-height: 100px;
+  transition: border-color 0.2s ease;
+  font-family: inherit;
+}
+
+.reject-note-textarea::placeholder {
+  color: var(--admin-text-muted);
+  opacity: 0.6;
+}
+
+.reject-note-textarea:focus {
+  outline: none;
+  border-color: var(--admin-gold);
+  box-shadow: 0 0 0 3px rgba(230, 180, 34, 0.15);
+}
+
+/* モーダルアクション */
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.modal-actions .btn-secondary {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  color: var(--admin-text);
+  border: 2px solid var(--admin-border);
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.modal-actions .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--admin-text-muted);
+}
+
+/* === フッターナビゲーション === */
+.admin-review-footer {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  max-width: 1200px;
+  margin: 3rem auto 0;
+  padding-top: 2rem;
+  border-top: 1px solid var(--admin-border);
+}
+
+/* === レスポンシブ対応 === */
+@media (max-width: 768px) {
+  .admin-review-container {
+    padding: 1rem;
+  }
+
+  .review-layout {
+    flex-direction: column;
+  }
+
+  .review-layout.inspector-open .review-grid-area {
+    flex: auto;
+  }
+
+  .review-inspector {
+    width: 100%;
+    position: static;
+    max-height: none;
+    border-radius: 16px;
+    order: -1;
+  }
+
+  /* .review-grid media query moved to inline Tailwind */
+
+  .admin-review-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modal-content {
+    width: 95%;
+    padding: 1.5rem;
+  }
+}

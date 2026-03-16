@@ -1,0 +1,81 @@
+# OmniArchive CI パイプライン
+# push (main) および pull_request で自動実行される品質ゲート
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  MIX_ENV: test
+  ELIXIR_VERSION: "1.18.x"
+  OTP_VERSION: "27"
+
+jobs:
+  quality:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: omni_archive_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+
+    steps:
+      # ── コードのチェックアウト ──
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── Erlang / Elixir セットアップ ──
+      - name: Setup Erlang & Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{ env.OTP_VERSION }}
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+
+      # ── 依存関係キャッシュ ──
+      - name: Cache deps & _build
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: mix-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            mix-${{ runner.os }}-
+
+      # ── 依存関係のインストール ──
+      - name: Install dependencies
+        run: mix deps.get
+
+      # ── 厳格コンパイル（警告をエラーとして扱う） ──
+      - name: Compile (warnings as errors)
+        run: mix compile --warnings-as-errors
+
+      # ── コードフォーマットチェック ──
+      - name: Check formatting
+        run: mix format --check-formatted
+
+      # ── システム依存パッケージのインストール ──
+      - name: Install system dependencies (poppler-utils)
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
+      # ── ExUnit テスト ──
+      - name: Run tests
+        run: mix test
