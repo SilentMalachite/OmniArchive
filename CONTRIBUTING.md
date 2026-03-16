@@ -39,6 +39,11 @@ mix test
 mix review
 ```
 
+5. 作業前に `AGENTS.md` を確認
+
+ドメイン依存の metadata・validation・facet・UI 文言は shared module に直書きせず、
+`OmniArchive.DomainProfiles.*` に集約してください。
+
 ---
 
 ## 📋 開発プロセス

@@ -2,7 +2,7 @@
 
 ## 1. Project Overview
 
-OmniArchive is a modular-monolith application built with Elixir and Phoenix. It is designed to transform static PDF archaeological reports into rich, interoperable IIIF (International Image Interoperability Framework) assets.
+OmniArchive is a modular-monolith application built with Elixir and Phoenix. It is designed to transform static PDF sources into rich, interoperable IIIF (International Image Interoperability Framework) assets.
 
 ### Core Philosophy
 - **Modular Monolith:** Decouples the "Manual Ingestion & Inspection" module from the "IIIF Delivery" module within a single codebase to ensure maintainability and clear boundaries.
@@ -23,7 +23,7 @@ Ecto schemas will focus on the following core entities:
 | Table Name | Role | Key Fields | Ecto Data Type |
 | :--- | :--- | :--- | :--- |
 | `pdf_sources` | PDF Tracking | `filename`, `page_count`, `status` | `:string`, `:integer`, `:string` |
-| `extracted_images` | Figure Assets | `image_path`, `geometry`, `status`, `site`, `period`, `artifact_type`, `owner_id`, `worker_id` | `:string`, `:map`, `:string`... |
+| `extracted_images` | Figure Assets | `image_path`, `geometry`, `status`, `metadata`, `owner_id`, `worker_id` | `:string`, `:map`, `:string`... |
 | `iiif_manifests` | Manifest Entities | `identifier`, `metadata` | `:string`, `:map` (JSONB) |
 | `users` | Authentication | `email`, `hashed_password`, `confirmed_at` | `:string`, `:string`, `:utc_datetime` |
 
@@ -32,8 +32,8 @@ Ecto schemas will focus on the following core entities:
 To ensure data integrity, the system enforces the following validations:
 
 - **Label Format:** Must match `fig-{number}-{number}` (e.g., `fig-1-1`).
-- **Municipality Check:** The `site` field must contain "市" (City), "町" (Town), or "村" (Village).
-- **Uniqueness:** A composite unique index on `[:site, :label]` prevents duplicate labels within the same site.
+- **Profile-based Metadata Validation:** Domain-specific metadata rules are defined in `OmniArchive.DomainProfiles.*` and applied through shared validation modules.
+- **Uniqueness:** The current compatibility constraint still uses a composite unique index on `[:site, :label]`.
 - **File Versioning:** Uploaded files are renamed to `filename-{timestamp}.ext` to prevent browser caching issues and collisions.
 - **Ownership:** `owner_id` (uploader) and `worker_id` (current editor) foreign keys to `users` table.
 
@@ -49,7 +49,7 @@ To ensure data integrity, the system enforces the following validations:
 To ensure quality control and separate internal workflows from public access, the system implements a strict Stage-Gate model.
 
 ### 4.1 Concept
-- **Laboratory (Internal):** A private workspace for archaeologists/researchers to upload, crop, and annotate images. Content here is in `draft` or `pending_review` status.
+- **Laboratory (Internal):** A private workspace for internal users to upload, crop, and annotate images. Content here is in `draft` or `pending_review` status.
 - **Gallery (Public):** The public-facing gallery and IIIF endpoints. Only content with `published` status is accessible here.
 
 ### 4.2 Status Lifecycle
@@ -61,15 +61,13 @@ To ensure quality control and separate internal workflows from public access, th
 ## 5. Search & Discovery
 
 ### 5.1 Metadata Schema
-To support academic research, specific archaeological metadata fields are indexed:
-- **Site Name (遺跡名)**
-- **Period (時代)**
-- **Artifact Type (遺物種別)**
+To support filtering and discovery, profile-defined metadata fields are indexed:
+- **Profile Metadata Fields** (exact-match facets)
 - **Caption (キャプション - Full Text Search)**
 
 ### 5.2 Implementation Strategy
 - **PostgreSQL FTS:** Utilizes `tsvector` and `GIN` indexes for performant full-text search on captions.
-- **Faceted Search:** LiveView-driven filtering by Period and Artifact Type.
+- **Faceted Search:** LiveView-driven filtering by the active profile's metadata definitions.
 
 ## 6. IIIF Server Implementation (Delivery)
 
@@ -100,7 +98,7 @@ To ensure a stress-free user experience, the ingestion process is strictly divid
 1. **Upload (📄 アップロード):** Submit the PDF. The system automatically converts all pages into high-resolution PNGs for inspection.
 2. **Browse & Select (🔍 ページ選択):** User browses a grid of page thumbnails and manually selects a page containing a figure/illustration.
 3. **Manual Crop (✂️ クロップ):** User defines figure boundaries using a custom JS Hook (`ImageSelection`) with D-Pad Nudge controls. **Double-click** (or double-tap) inside the selection to save.
-4. **Labeling (🏷️ ラベリング):** Captions, labels, and archaeological metadata are entered manually. Labels are validated for uniqueness within the PDF. PTIF generation starts automatically in the background upon completion.
+4. **Labeling (🏷️ ラベリング):** Captions, labels, and active-profile metadata are entered manually. Labels are validated for uniqueness within the current compatibility scope. PTIF generation starts automatically in the background upon completion.
 5. **Review & Submit (✅ レビュー提出):** User verifies the final metadata and submits for admin review.
 
 ### 7.2 Accessibility Feature: "Nudge" Controls

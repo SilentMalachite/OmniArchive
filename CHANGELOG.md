@@ -74,11 +74,11 @@
 - **承認・公開プロセスへの PTIFF 生成の統合 (`ingestion.ex`)**
   - メタデータ保存時の自動生成を廃止し、管理者が「承認 (Approve)」したタイミングで PTIFF を生成する仕組みに移行。
   - 編集中の不要な CPU/ストレージ消費を抑え、リソースを最適化。
-- **`OmniArchive.IIIF.PtiffGenerator` モジュールの新設**
+- **`OmniArchive.Iiif.PtiffGenerator` モジュールの新設**
   - `vix` (libvips) を使用したスタンドアロンの PTIFF 生成ロジックをカプセル化。
   - `generate_ptiff/2` 関数により、高解像度 PNG からピラミッド TIFF を生成。
 - **DEFLATE 可逆圧縮の採用**
-  - 考古学的線画の品質を保つため、JPEG 圧縮ではなく DEFLATE 圧縮を採用。
+  - 線画や図版の品質を保つため、JPEG 圧縮ではなく DEFLATE 圧縮を採用。
   - モスキートノイズを排除し、ディープズーム時でも細い線を鮮明に維持。
 
 ### ⚙️ その他
@@ -653,7 +653,7 @@
   - Step 1: PDF アップロード + 自動 PNG 変換 (pdftoppm 300 DPI)
   - Step 2: サムネイルグリッドによるページ選択
   - Step 3: Cropper.js によるマニュアルクロップ + Nudge コントロール
-  - Step 4: ラベリング（キャプション・ラベル・遺跡名・時代・遺物種別の手入力）
+  - Step 4: ラベリング（キャプション・ラベル・メタデータの手入力）
   - Step 5: レビュー提出（PTIF 自動生成 + IIIF Manifest 登録）
   - 共通ウィザードコンポーネント (`wizard_components.ex`)
 
