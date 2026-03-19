@@ -472,7 +472,19 @@ defmodule OmniArchiveWeb.GalleryLive do
   defp metadata_icon(:site), do: "📍"
   defp metadata_icon(:period), do: "⏳"
   defp metadata_icon(:artifact_type), do: "🏺"
-  defp metadata_icon(_field), do: "•"
+  defp metadata_icon(:collection), do: "🗂️"
+  defp metadata_icon(:item_type), do: "📁"
+  defp metadata_icon(:date_note), do: "📅"
+  defp metadata_icon(field), do: extract_label_icon(field)
+
+  defp extract_label_icon(field) do
+    case OmniArchive.DomainProfiles.metadata_field!(field) do
+      %{label: label} -> String.first(label)
+      _ -> "•"
+    end
+  rescue
+    _ -> "•"
+  end
 
   # 画像プレビューマップの構築（SVGカードクロップ + ポリゴン表示用）
   # 各画像IDに対し {dims_w, dims_h, polygon_points_str, bbox} を保持

@@ -15,23 +15,32 @@ defmodule OmniArchive.DomainMetadataValidation do
 
   def validate_field(field, value) do
     field = normalize_field(field)
-    rule = DomainProfiles.validation_rule!(field)
-    value = to_string(value || "")
 
-    cond do
-      value == "" -> nil
-      max_length_exceeded?(rule, value) -> rule.max_length_error
-      format_invalid?(rule, value) -> rule.format_error
-      required_terms_invalid?(rule, value) -> rule.required_terms_error
-      true -> nil
+    case DomainProfiles.validation_rule(field) do
+      nil ->
+        nil
+
+      rule ->
+        value = to_string(value || "")
+
+        cond do
+          value == "" -> nil
+          max_length_exceeded?(rule, value) -> rule[:max_length_error]
+          format_invalid?(rule, value) -> rule[:format_error]
+          required_terms_invalid?(rule, value) -> rule[:required_terms_error]
+          true -> nil
+        end
     end
   end
 
   def max_length(field) do
     field
     |> normalize_field()
-    |> DomainProfiles.validation_rule!()
-    |> Map.get(:max_length)
+    |> DomainProfiles.validation_rule()
+    |> case do
+      nil -> nil
+      rule -> Map.get(rule, :max_length)
+    end
   end
 
   def duplicate_scope_field do
@@ -98,5 +107,10 @@ defmodule OmniArchive.DomainMetadataValidation do
   end
 
   defp normalize_field(field) when is_atom(field), do: field
-  defp normalize_field(field) when is_binary(field), do: String.to_existing_atom(field)
+
+  defp normalize_field(field) when is_binary(field) do
+    String.to_existing_atom(field)
+  rescue
+    ArgumentError -> String.to_atom(field)
+  end
 end

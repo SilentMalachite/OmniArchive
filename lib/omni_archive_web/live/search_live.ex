@@ -221,7 +221,16 @@ defmodule OmniArchiveWeb.SearchLive do
   defp metadata_icon(:collection), do: "🗂️"
   defp metadata_icon(:item_type), do: "📁"
   defp metadata_icon(:date_note), do: "📅"
-  defp metadata_icon(_field), do: "•"
+  defp metadata_icon(field), do: extract_label_icon(field)
+
+  defp extract_label_icon(field) do
+    case OmniArchive.DomainProfiles.metadata_field!(field) do
+      %{label: label} -> String.first(label)
+      _ -> "•"
+    end
+  rescue
+    _ -> "•"
+  end
 
   # Manifest URL の生成
   defp manifest_url(image) do

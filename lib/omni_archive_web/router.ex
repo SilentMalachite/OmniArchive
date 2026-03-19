@@ -69,6 +69,7 @@ defmodule OmniArchiveWeb.Router do
       live "/users", AdminUserLive.Index, :index
       live "/review", ReviewLive, :index
       live "/trash", AdminTrashLive.Index, :index
+      live "/fields", CustomFieldsLive, :index
     end
   end
 

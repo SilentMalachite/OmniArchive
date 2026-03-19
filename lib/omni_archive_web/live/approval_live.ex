@@ -167,7 +167,19 @@ defmodule OmniArchiveWeb.ApprovalLive do
   defp metadata_icon(:site), do: "📍"
   defp metadata_icon(:period), do: "⏳"
   defp metadata_icon(:artifact_type), do: "🏺"
-  defp metadata_icon(_field), do: "•"
+  defp metadata_icon(:collection), do: "🗂️"
+  defp metadata_icon(:item_type), do: "📁"
+  defp metadata_icon(:date_note), do: "📅"
+  defp metadata_icon(field), do: extract_label_icon(field)
+
+  defp extract_label_icon(field) do
+    case OmniArchive.DomainProfiles.metadata_field!(field) do
+      %{label: label} -> String.first(label)
+      _ -> "•"
+    end
+  rescue
+    _ -> "•"
+  end
 
   # サムネイル URL の生成
   defp image_thumbnail_url(image) do

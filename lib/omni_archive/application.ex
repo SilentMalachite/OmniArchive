@@ -18,6 +18,8 @@ defmodule OmniArchive.Application do
       OmniArchive.Repo,
       {DNSCluster, query: Application.get_env(:omni_archive, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: OmniArchive.PubSub},
+      # カスタムメタデータフィールドの ETS キャッシュ
+      OmniArchive.CustomMetadataFields.Cache,
       # リソース監視 GenServer（CPU/メモリの動的検出）
       OmniArchive.Pipeline.ResourceMonitor,
       {Registry, keys: :unique, name: OmniArchive.UserWorkerRegistry},

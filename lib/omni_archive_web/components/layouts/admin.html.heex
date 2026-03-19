@@ -61,6 +61,20 @@
         >
           🗑️ Trash
         </.link>
+
+        <.link
+          navigate={~p"/admin/fields"}
+          class={[
+            "px-4 py-3 text-sm font-medium rounded-t-lg transition-colors duration-150",
+            "hover:bg-[#1a1a2e] hover:text-[#e8d5a3]",
+            if(String.starts_with?(@current_path, "/admin/fields"),
+              do: "bg-[#1a1a2e] text-[#e8d5a3] border-b-2 border-[#d4a844]",
+              else: "text-gray-400"
+            )
+          ]}
+        >
+          🏷️ Fields
+        </.link>
       </div>
     </div>
   </nav>
