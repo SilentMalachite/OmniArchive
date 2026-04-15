@@ -1,33 +1,44 @@
-# デプロイ手順書
+# Deployment Guide / デプロイ手順書
 
-OmniArchive のデプロイ方法を説明します。
+This guide covers how to deploy OmniArchive to a production server using Docker,
+Docker Compose, or a direct OTP release build. All three approaches require the
+same set of environment variables described in Section 1.
 
----
-
-## 目次
-
-1. [必須環境変数](#必須環境変数)
-2. [Docker デプロイ](#docker-デプロイ)
-3. [Docker Compose デプロイ](#docker-compose-デプロイ)
-4. [ローカルリリースビルド](#ローカルリリースビルド)
-5. [データベースマイグレーション](#データベースマイグレーション)
-6. [ヘルスチェック](#ヘルスチェック)
-7. [トラブルシューティング](#トラブルシューティング)
+OmniArchive のデプロイ方法を説明します。Docker・Docker Compose・OTP リリースビルドの
+3つのアプローチに対応しています。いずれも Section 1 の環境変数設定が必要です。
 
 ---
 
-## 必須環境変数
+## Table of Contents / 目次
 
-| 変数名 | 必須 | 説明 | 例 |
+1. [Required Environment Variables / 必須環境変数](#1-required-environment-variables--必須環境変数)
+2. [Docker Deployment / Docker デプロイ](#2-docker-deployment--docker-デプロイ)
+3. [Docker Compose Deployment / Docker Compose デプロイ](#3-docker-compose-deployment--docker-compose-デプロイ)
+4. [Local Release Build / ローカルリリースビルド](#4-local-release-build--ローカルリリースビルド)
+5. [Database Migrations / データベースマイグレーション](#5-database-migrations--データベースマイグレーション)
+6. [Health Check / ヘルスチェック](#6-health-check--ヘルスチェック)
+7. [Troubleshooting / トラブルシューティング](#7-troubleshooting--トラブルシューティング)
+
+---
+
+## 1. Required Environment Variables / 必須環境変数
+
+Set the following environment variables before starting the application.
+Variables marked ✅ are required; the rest are optional with defaults.
+
+アプリケーションを起動する前に以下の環境変数を設定してください。
+✅ は必須項目です。
+
+| Variable / 変数名 | Required / 必須 | Description / 説明 | Example / 例 |
 |:---|:---:|:---|:---|
-| `DATABASE_URL` | ✅ | PostgreSQL 接続 URL | `ecto://user:pass@localhost/omni_archive_prod` |
-| `SECRET_KEY_BASE` | ✅ | セッション暗号化キー (64文字以上) | `mix phx.gen.secret` で生成 |
-| `PHX_HOST` | ✅ | 本番ホスト名 | `iiif.example.com` |
-| `PORT` | | HTTP ポート番号 | `4000` (デフォルト) |
-| `POOL_SIZE` | | DB コネクションプール数 | `10` (デフォルト) |
-| `ECTO_IPV6` | | IPv6 接続を有効化 | `true` |
+| `DATABASE_URL` | ✅ | PostgreSQL connection URL / PostgreSQL 接続 URL | `ecto://user:pass@localhost/omni_archive_prod` |
+| `SECRET_KEY_BASE` | ✅ | Session encryption key (64+ chars) / セッション暗号化キー (64文字以上) | Generate with `mix phx.gen.secret` |
+| `PHX_HOST` | ✅ | Production hostname / 本番ホスト名 | `iiif.example.com` |
+| `PORT` | | HTTP port / HTTP ポート番号 | `4000` (default) |
+| `POOL_SIZE` | | DB connection pool size / DB コネクションプール数 | `10` (default) |
+| `ECTO_IPV6` | | Enable IPv6 connections / IPv6 接続を有効化 | `true` |
 
-### SECRET_KEY_BASE の生成
+### Generating SECRET_KEY_BASE
 
 ```bash
 mix phx.gen.secret
@@ -35,19 +46,25 @@ mix phx.gen.secret
 
 ---
 
-## Docker デプロイ
+## 2. Docker Deployment / Docker デプロイ
 
-### 前提条件
+OmniArchive ships with a multi-stage Dockerfile. Use named volumes to persist
+uploads, IIIF tile cache, and PTIF image files across container restarts.
+
+マルチステージ Dockerfile が含まれています。アップロード・キャッシュ・PTIF 画像は
+名前付きボリュームで永続化してください。
+
+### Prerequisites / 前提条件
 
 - Docker 20.10 以上
 
-### ビルド
+### Build / ビルド
 
 ```bash
 docker build -t omni_archive .
 ```
 
-### 起動
+### Start / 起動
 
 ```bash
 docker run -d \
@@ -62,10 +79,14 @@ docker run -d \
   omni_archive
 ```
 
-> **⚠️ 重要**: アップロードデータ、キャッシュ、PTIF 画像は永続ボリュームにマウントしてください。
+> **⚠️ Important / 重要**: Always mount uploads, cache, and PTIF image directories
+> as named volumes. Data in these directories will be lost if the container is removed
+> without volumes.
+>
+> アップロードデータ、キャッシュ、PTIF 画像は永続ボリュームにマウントしてください。
 > コンテナを削除するとデータが失われます。
 
-### マイグレーション
+### Migration / マイグレーション
 
 ```bash
 docker exec omni_archive /app/bin/migrate
@@ -73,9 +94,13 @@ docker exec omni_archive /app/bin/migrate
 
 ---
 
-## Docker Compose デプロイ
+## 3. Docker Compose Deployment / Docker Compose デプロイ
 
-以下の `docker-compose.yml` を使用できます：
+Docker Compose starts both the application and a PostgreSQL 15 container together.
+A health check ensures the database is ready before the application starts.
+
+Docker Compose を使うと、アプリケーションと PostgreSQL 15 をまとめて起動できます。
+ヘルスチェックにより、DB の準備が整ってからアプリケーションが起動します。
 
 ```yaml
 version: "3.8"
@@ -119,23 +144,26 @@ volumes:
 ```
 
 ```bash
-# SECRET_KEY_BASE を設定
+# Generate and export SECRET_KEY_BASE / SECRET_KEY_BASE を生成・設定
 export SECRET_KEY_BASE=$(mix phx.gen.secret)
 
-# 起動
+# Start all services / 起動
 docker compose up -d
 
-# マイグレーション
+# Run migrations / マイグレーション
 docker compose exec app /app/bin/migrate
 ```
 
 ---
 
-## ローカルリリースビルド
+## 4. Local Release Build / ローカルリリースビルド
 
-Docker を使わずに直接リリースビルドを行う場合：
+Use this approach if you prefer to run OmniArchive without Docker, directly on
+the server OS.
 
-### 前提条件
+Docker を使わずにサーバー OS 上で直接実行する場合はこの方法を使用してください。
+
+### Prerequisites / 前提条件
 
 - Elixir 1.15+
 - Erlang/OTP 24+
@@ -144,7 +172,7 @@ Docker を使わずに直接リリースビルドを行う場合：
 - poppler-utils
 - Node.js / npm
 
-### ビルド手順
+### Build Steps / ビルド手順
 
 ```bash
 # 1. 依存パッケージを取得
@@ -160,7 +188,7 @@ MIX_ENV=prod mix assets.deploy
 MIX_ENV=prod mix release
 ```
 
-### 起動
+### Start / 起動
 
 ```bash
 # 環境変数を設定
@@ -177,69 +205,80 @@ _build/prod/rel/omni_archive/bin/server
 
 ---
 
-## データベースマイグレーション
+## 5. Database Migrations / データベースマイグレーション
 
-### 開発環境
+Run migrations before starting the application for the first time, and after
+each deployment that includes new migration files.
+
+初回起動前と、マイグレーションファイルを含むデプロイの後に実行してください。
+
+### Development / 開発環境
 
 ```bash
 mix ecto.migrate
 ```
 
-### 本番環境 (リリース)
+### Production (Release) / 本番環境 (リリース)
 
 ```bash
-# 起動スクリプト経由
+# Via migration script / 起動スクリプト経由
 bin/migrate
 
-# または Elixir コード経由
+# Via Elixir eval / Elixir コード経由
 bin/omni_archive eval "OmniArchive.Release.migrate()"
 ```
 
-### ロールバック
+### Rollback / ロールバック
 
 ```bash
-# 開発環境
+# Development / 開発環境
 mix ecto.rollback
 
-# 本番環境
+# Production / 本番環境
 bin/omni_archive eval "OmniArchive.Release.rollback(OmniArchive.Repo, 20260208030921)"
 ```
 
 ---
 
-## ヘルスチェック
+## 6. Health Check / ヘルスチェック
 
-アプリケーションの稼働状態を確認するエンドポイント：
+OmniArchive exposes a health check endpoint at `/api/health`. This is also used
+by the Docker `HEALTHCHECK` instruction.
+
+アプリケーションの稼働状態を確認するエンドポイントです。Docker の `HEALTHCHECK` でも使用されます。
 
 ```bash
 curl http://localhost:4000/api/health
 ```
 
-レスポンス例：
+Expected response / レスポンス例：
 
 ```json
 {"status": "ok", "app": "omni_archive"}
 ```
 
-Docker の HEALTHCHECK でも使用されています。
-
 ---
 
-## トラブルシューティング
+## 7. Troubleshooting / トラブルシューティング
 
-### DB 接続エラー
+### DB Connection Error / DB 接続エラー
 
 ```
 ** (Postgrex.Error) FATAL role "postgres" does not exist
 ```
 
+**Fix**: Update the `username` in `config/dev.exs` to match your local PostgreSQL
+setup.
+
 **解決策**: `config/dev.exs` の `username` を環境に合わせて変更してください。
 
-### libvips が見つからない
+### libvips Not Found / libvips が見つからない
 
 ```
 ** (UndefinedFunctionError) Vix.Vips.Image...
 ```
+
+**Fix**: Install libvips.
 
 **解決策**: libvips をインストールしてください。
 
@@ -251,11 +290,13 @@ brew install vips
 sudo apt install libvips-dev
 ```
 
-### pdftoppm が見つからない
+### pdftoppm Not Found / pdftoppm が見つからない
 
 ```
 ** (ErlangError) :enoent
 ```
+
+**Fix**: Install poppler-utils.
 
 **解決策**: poppler-utils をインストールしてください。
 
@@ -267,12 +308,12 @@ brew install poppler
 sudo apt install poppler-utils
 ```
 
-### アセットビルドエラー
+### Asset Build Errors / アセットビルドエラー
 
 ```bash
-# esbuild を再インストール
+# Re-install esbuild / esbuild を再インストール
 mix esbuild.install --if-missing
 
-# npm 依存を再インストール
+# Re-install npm dependencies / npm 依存を再インストール
 cd assets && rm -rf node_modules && npm install && cd ..
 ```
