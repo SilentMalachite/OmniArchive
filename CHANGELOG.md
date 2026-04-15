@@ -1,6 +1,10 @@
-# 変更履歴 (Changelog)
+# Changelog / 変更履歴
 
-このプロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) に準拠しています。
+All notable changes to this project are documented here.
+This project adheres to [Semantic Versioning](https://semver.org/).
+
+このプロジェクトの主要な変更はすべてここに記録されます。
+[Semantic Versioning](https://semver.org/lang/ja/) に準拠しています。
 
 ---
 
