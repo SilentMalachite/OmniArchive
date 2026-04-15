@@ -70,4 +70,9 @@ defmodule OmniArchive.DomainProfiles.YamlLoaderTest do
     assert {:error, reason} = YamlLoader.load(fixture("bad_ui_texts_missing.yaml"))
     assert reason =~ "ui_texts"
   end
+
+  test "duplicate_identity: scope_field must reference defined field" do
+    assert {:error, reason} = YamlLoader.load(fixture("bad_duplicate_unknown_scope.yaml"))
+    assert reason =~ "scope_field"
+  end
 end
