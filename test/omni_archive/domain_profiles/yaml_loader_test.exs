@@ -75,4 +75,11 @@ defmodule OmniArchive.DomainProfiles.YamlLoaderTest do
     assert {:error, reason} = YamlLoader.load(fixture("bad_duplicate_unknown_scope.yaml"))
     assert reason =~ "scope_field"
   end
+
+  test "loads priv/profiles/example_profile.yaml" do
+    path = Application.app_dir(:omni_archive, "priv/profiles/example_profile.yaml")
+    assert {:ok, profile} = YamlLoader.load(path)
+    assert Enum.any?(profile.metadata_fields, &(&1.field == :caption))
+    assert %Regex{} = profile.validation_rules[:label][:format]
+  end
 end

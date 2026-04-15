@@ -1,0 +1,74 @@
+metadata_fields:
+  - field: caption
+    storage: core
+    label: "キャプション"
+    placeholder: "例: 表紙の写真"
+
+  - field: label
+    storage: core
+    label: "ラベル"
+    placeholder: "例: photo-001"
+
+  - field: collection
+    storage: metadata
+    label: "コレクション"
+    placeholder: "例: 広報写真アーカイブ"
+
+  - field: era
+    storage: metadata
+    label: "年代"
+    placeholder: "例: 昭和30年代"
+
+validation_rules:
+  caption:
+    max_length: 1000
+    max_length_error: "1000文字以内で入力してください"
+
+  label:
+    format: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    format_error: "半角小文字・数字・ハイフンのみで入力してください"
+
+  collection:
+    max_length: 120
+    max_length_error: "120文字以内で入力してください"
+
+  era:
+    max_length: 80
+    max_length_error: "80文字以内で入力してください"
+
+search_facets:
+  - field: collection
+    param: collection
+    label: "コレクション"
+
+  - field: era
+    param: era
+    label: "年代"
+
+duplicate_identity:
+  profile_key: "yaml_archive"
+  scope_field: collection
+  label_field: label
+  duplicate_label_error: "このコレクションでそのラベルは既に登録されています"
+
+ui_texts:
+  search:
+    page_title: "画像を検索"
+    heading: "画像を検索"
+    description: "キーワードやフィルターで検索できます。"
+    placeholder: "キャプション、ラベル、コレクション名で検索..."
+    empty_filtered: "条件に一致する図版が見つかりませんでした。"
+    empty_filtered_hint: "検索条件を変更してみてください。"
+    empty_initial: "まだ図版が登録されていません。"
+    empty_initial_hint: "Inspector から図版を登録してください。"
+    result_none: "結果なし"
+    result_suffix: "件の図版が見つかりました"
+    clear_filters: "✕ フィルターをクリア"
+
+  inspector_label:
+    heading: "図版の情報を入力してください"
+    description: "各フィールドに情報を入力してください。"
+    duplicate_warning: "同じラベルが見つかりました"
+    duplicate_blocked: "⚠️ 重複ラベルがあります。"
+    duplicate_title: "重複先:"
+    duplicate_edit: "既存レコードを更新"
