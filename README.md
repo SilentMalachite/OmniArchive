@@ -5,7 +5,7 @@
 [![Phoenix](https://img.shields.io/badge/Phoenix-1.8+-E8562A?logo=phoenix-framework)](https://www.phoenixframework.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![IIIF](https://img.shields.io/badge/IIIF-v3.0-2873AB)](https://iiif.io/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE) *(Apache 2.0 移行予定 / Apache 2.0 migration planned)*
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 > **Convert static PDFs into IIIF (International Image Interoperability Framework)-compliant digital assets.**
 >
@@ -582,18 +582,11 @@ OmniArchive/
 
 ## 📜 License / ライセンス
 
-Currently released under the **MIT License** — see [LICENSE](LICENSE) for details.
+Released under the **Apache License 2.0** — see [LICENSE](LICENSE) for details.
+Apache 2.0 includes patent clauses that make it suitable for deployment at public institutions and academic organizations.
 
-> **Note on license migration**: OmniArchive is planning to migrate to the
-> **Apache License 2.0** (近日更新予定). Apache 2.0 includes patent clauses that make
-> it more suitable for deployment at public institutions and academic organizations.
-> This README will be updated when the migration is complete.
-
-現在は **MIT License** で公開しています。
-
-> **ライセンス移行の予定**: OmniArchive は **Apache License 2.0** への移行を予定しています（近日更新予定）。
-> Apache 2.0 は特許条項を含むため、公共機関・学術機関でのデプロイに適しています。
-> 移行完了後にこのドキュメントを更新します。
+**Apache License 2.0** で公開しています。詳細は [LICENSE](LICENSE) を参照してください。
+Apache 2.0 は特許条項を含むため、公共機関・学術機関でのデプロイに適しています。
 
 ---
 

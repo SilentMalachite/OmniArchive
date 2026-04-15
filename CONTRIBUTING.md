@@ -279,10 +279,8 @@ mix precommit  # compile + deps + format + test
 
 ## 📜 License / ライセンス
 
-Contributions are accepted under the current project license.
-OmniArchive is planning to migrate from MIT to **Apache License 2.0** (migration pending).
-See [README.md](README.md) for details.
+Contributions are accepted under the **Apache License 2.0**.
+See [LICENSE](LICENSE) for details.
 
-貢献されたコードは現在のプロジェクトライセンスのもとで公開されます。
-OmniArchive は MIT から **Apache License 2.0** への移行を予定しています（近日更新予定）。
-詳細は [README.md](README.md) を参照してください。
+貢献されたコードは **Apache License 2.0** のもとで公開されます。
+詳細は [LICENSE](LICENSE) を参照してください。
