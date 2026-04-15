@@ -493,6 +493,7 @@ OmniArchive/
 | [IIIF_SPEC.md](IIIF_SPEC.md) | 開発仕様書 |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | アーキテクチャ設計 |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | デプロイ手順書 |
+| [PROFILES.md](PROFILES.md) | YAML ベースのドメインプロファイル定義 |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 開発参加ガイドライン |
 | [CHANGELOG.md](CHANGELOG.md) | 変更履歴 |
 
