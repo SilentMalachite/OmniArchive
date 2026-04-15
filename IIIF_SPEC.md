@@ -1,149 +1,375 @@
-# OmniArchive Development Specification (IIIF_SPEC.md)
+# IIIF Implementation Specification / IIIF 実装仕様書
 
-## 1. Project Overview
+OmniArchive implements the IIIF (International Image Interoperability Framework)
+Image API v3.0 and Presentation API v3.0. This document describes the endpoint
+specifications, Manifest structure, compliance level, and viewer compatibility.
 
-OmniArchive is a modular-monolith application built with Elixir and Phoenix. It is designed to transform static PDF sources into rich, interoperable IIIF (International Image Interoperability Framework) assets.
+OmniArchive は IIIF Image API v3.0 および Presentation API v3.0 を実装しています。
+本ドキュメントでは、エンドポイント仕様・Manifest 構造・準拠レベル・ビューア互換性を記載します。
 
-### Core Philosophy
-- **Modular Monolith:** Decouples the "Manual Ingestion & Inspection" module from the "IIIF Delivery" module within a single codebase to ensure maintainability and clear boundaries.
-- **Cognitive Accessibility (Primary UX Goal):** Specifically designed for users in vocational support settings. The UI prioritizes simplicity, low working memory load, and motor-skill-friendly interactions (e.g., utilize large, high-contrast buttons instead of precision-heavy drag-and-drop operations).
+---
 
-## 2. Technical Stack
+## 1. IIIF Compliance Level / 準拠レベル
 
-- **Language/Framework:** Elixir 1.15+ / Phoenix 1.7+ (LiveView).
-- **Database:** PostgreSQL 15+ (utilizing JSONB for flexible metadata and geometry storage).
-- **Image Processing:** [vix](https://github.com/akash-akya/vix) (libvips wrapper) for real-time tiling and Pyramidal TIFF (PTIF) generation.
-- **PDF Processing:** [poppler-utils](https://poppler.freedesktop.org/) (specifically `pdftoppm`) for high-fidelity conversion of PDF pages to images.
-- **Frontend:** Phoenix LiveView with Custom JS Hooks (`ImageSelection`) for precise coordinate mapping.
+### Image API Compliance
 
-## 3. Data Schema (PostgreSQL Strategy)
+OmniArchive targets **Image API Compliance Level 2**.
 
-Ecto schemas will focus on the following core entities:
+| Feature | Support |
+|:---|:---|
+| Full image request (`full`) | ✅ |
+| Region by pixel (`x,y,w,h`) | ✅ |
+| Size by pixel (`w,`) | ✅ |
+| Size `max` | ✅ |
+| Rotation `0` | ✅ |
+| Rotation `90`, `180`, `270` | ✅ |
+| Quality `default`, `color`, `gray` | ✅ |
+| Format `jpg`, `png`, `webp` | ✅ |
+| `info.json` endpoint | ✅ |
 
-| Table Name | Role | Key Fields | Ecto Data Type |
-| :--- | :--- | :--- | :--- |
-| `pdf_sources` | PDF Tracking | `filename`, `page_count`, `status` | `:string`, `:integer`, `:string` |
-| `extracted_images` | Figure Assets | `image_path`, `geometry`, `status`, `metadata`, `owner_id`, `worker_id` | `:string`, `:map`, `:string`... |
-| `iiif_manifests` | Manifest Entities | `identifier`, `metadata` | `:string`, `:map` (JSONB) |
-| `users` | Authentication | `email`, `hashed_password`, `confirmed_at` | `:string`, `:string`, `:utc_datetime` |
+> Compliance level is self-assessed based on implemented features.
+> Formal compliance testing against the IIIF compliance suite has not yet been performed.
 
-### 3.1 Strict Validation Rules
+### Presentation API Compliance
 
-To ensure data integrity, the system enforces the following validations:
+OmniArchive outputs Presentation API v3.0-compliant JSON-LD Manifests, including
+the `Canvas`, `AnnotationPage`, and `Annotation` hierarchy required by the specification.
+Multilingual labels (`en` / `ja`) are supported.
 
-- **Label Format:** Must match `fig-{number}-{number}` (e.g., `fig-1-1`).
-- **Profile-based Metadata Validation:** Domain-specific metadata rules are defined in `OmniArchive.DomainProfiles.*` and applied through shared validation modules.
-- **Uniqueness:** The current compatibility constraint still uses a composite unique index on `[:site, :label]`.
-- **File Versioning:** Uploaded files are renamed to `filename-{timestamp}.ext` to prevent browser caching issues and collisions.
-- **Ownership:** `owner_id` (uploader) and `worker_id` (current editor) foreign keys to `users` table.
+---
 
-## 3.2 Authentication & Authorization
+## 2. Endpoints / エンドポイント一覧
 
-- **Session-based Authentication:** `phx.gen.auth` with `bcrypt_elixir`.
-- **Protected Routes:** `/lab/*` and `/admin/*` require authenticated users (`require_authenticated_user` plug).
-- **Public Routes:** `/`, `/gallery`, `/iiif/*`, `/api/health` are accessible without authentication.
-- **Default Admin:** `seeds.exs` creates `admin@example.com` / `password1234` for development.
+### Image API v3.0
 
-## 4. Stage-Gate Workflow (Laboratory vs Gallery)
-
-To ensure quality control and separate internal workflows from public access, the system implements a strict Stage-Gate model.
-
-### 4.1 Concept
-- **Laboratory (Internal):** A private workspace for internal users to upload, crop, and annotate images. Content here is in `draft` or `pending_review` status.
-- **Gallery (Public):** The public-facing gallery and IIIF endpoints. Only content with `published` status is accessible here.
-
-### 4.2 Status Lifecycle
-1. **Draft:** Initial creation logic (Ingestion).
-2. **Pending Review:** Submitted for approval.
-3. **Rejected:** Returned for corrections. The `review_comment` field stores the rejection reason. Can be resubmitted via `resubmit_image/1`.
-4. **Published:** Approved and visible in the Gallery.
-
-## 5. Search & Discovery
-
-### 5.1 Metadata Schema
-To support filtering and discovery, profile-defined metadata fields are indexed:
-- **Profile Metadata Fields** (exact-match facets)
-- **Caption (キャプション - Full Text Search)**
-
-### 5.2 Implementation Strategy
-- **PostgreSQL FTS:** Utilizes `tsvector` and `GIN` indexes for performant full-text search on captions.
-- **Faceted Search:** LiveView-driven filtering by the active profile's metadata definitions.
-
-## 6. IIIF Server Implementation (Delivery)
-
-### 4.1 Image API (v3.0)
-- **Endpoint:** `/iiif/image/:identifier/:region/:size/:rotation/:quality.:format`
-- **Logic:** Read PTIF files via `vix` and dynamically generate tiles according to the IIIF Image API specification.
-- **Caching:** Store processed tiles in `priv/static/iiif_cache` to optimize performance.
-
-### 4.2 Presentation API (v3.0)
-
-**Individual Image Manifest:**
-- **Endpoint:** `GET /iiif/manifest/:identifier`
-- **Output:** JSON-LD format strictly matching IIIF 3.0 specifications.
-- **Localization:** Support multilingual labels (English/Japanese) as specified in the IIIF metadata requirements.
-
-**PdfSource-level Manifest (Collection):**
-- **Endpoint:** `GET /iiif/presentation/:source_id/manifest`
-- **Output:** JSON-LD Manifest aggregating all `published` images under a PdfSource as Canvases.
-- **Canvas ordering:** Sorted by `page_number` ascending.
-- **Canvas dimensions:** Derived from `geometry.width` / `geometry.height` (fallback: 1000×1000).
-- **Image URL:** Absolute URL constructed from `image_path` via `OmniArchiveWeb.Endpoint.url()`.
-
-## 7. "Manual Inspector" Workflow (Ingestion Pipeline)
-
-To ensure a stress-free user experience, the ingestion process is strictly divided into human-driven, sequential steps (Wizard pattern).
-
-### 7.1 Wizard-Style Flow (5 Steps)
-1. **Upload (📄 アップロード):** Submit the PDF. The system automatically converts all pages into high-resolution PNGs for inspection.
-2. **Browse & Select (🔍 ページ選択):** User browses a grid of page thumbnails and manually selects a page containing a figure/illustration.
-3. **Manual Crop (✂️ クロップ):** User defines figure boundaries using a custom JS Hook (`ImageSelection`) with D-Pad Nudge controls. **Double-click** (or double-tap) inside the selection to save.
-4. **Labeling (🏷️ ラベリング):** Captions, labels, and active-profile metadata are entered manually. Labels are validated for uniqueness within the current compatibility scope. PTIF generation starts automatically in the background upon completion.
-5. **Review & Submit (✅ レビュー提出):** User verifies the final metadata and submits for admin review.
-
-### 7.2 Accessibility Feature: "Nudge" Controls
-The UI provides large (min 60x60px) directional buttons (Up, Down, Left, Right) to allow users to incrementally adjust the crop area. This reduces the cognitive and motor load associated with precise pointer movements.
-
-## 8. Key Implementation Snippets
-
-### 8.1 JS Hook (Manual Crop with Nudge & Double-Click support)
-
-```javascript
-// assets/js/hooks/image_selection_hook.js
-const ImageSelection = {
-  mounted() {
-    // Custom logic for coordinate mapping between CSS and original image size.
-    // Supports dragging to select, Nudge button events from LiveView,
-    // and keyboard arrow keys.
-    this.handleEvent("nudge_crop", ({ direction, amount }) => {
-      // Logic to nudge selection coordinates...
-    });
-
-    // Double-click to save
-    this.el.addEventListener('dblclick', (e) => {
-      if (this.isInSelection(e)) {
-        this.pushEvent("save_crop", this.currentRect);
-      }
-    });
-  }
-};
+```
+GET /iiif/image/{identifier}/{region}/{size}/{rotation}/{quality}.{format}
+GET /iiif/image/{identifier}/info.json
 ```
 
-## 9. UX & Accessibility Requirements
+| Parameter | Values | Description |
+|:---|:---|:---|
+| `identifier` | e.g. `img-42-12345` | Unique image identifier / 画像の一意識別子 |
+| `region` | `full`, `square`, `x,y,w,h`, `pct:x,y,w,h` | Region to extract / 切り出し領域 |
+| `size` | `max`, `w,`, `,h`, `w,h`, `pct:n` | Output size / 出力サイズ |
+| `rotation` | `0`, `90`, `180`, `270` | Rotation in degrees / 回転角度 |
+| `quality` | `default`, `color`, `gray` | Image quality / 画質 |
+| `format` | `jpg`, `png`, `webp` | Output format / 出力フォーマット |
 
-- **Simplicity:** Clean UI with zero hidden menus. Use large, high-contrast, easily clickable elements.
-- **Linearity:** Use a "Wizard" pattern to prevent users from becoming lost in complex or non-linear navigation.
-- **Masonry Layout:** The Gallery uses a masonry grid layout (CSS Multi-column) to display images of varying aspect ratios without cropping, preserving their original composition.
-- **Write-on-Action:** Database records are only created when the user explicitly saves a crop (Step 3), preventing "ghost records" from cluttering the database during browsing.
-- **Immediate Feedback:** Provide clear visual confirmation (e.g., "Image Saved Successfully!") and require explicit confirmation for destructive actions.
-- **Human-in-the-loop:** Optimize manual data entry (captions/metadata) through structured, accessible forms rather than automated extraction.
+**`info.json` response example:**
 
-## 10. Implementation Instructions for AI Agents (Antigravity)
+```json
+{
+  "@context": "http://iiif.io/api/image/3/context.json",
+  "id": "https://example.com/iiif/image/img-42-12345",
+  "type": "ImageService3",
+  "protocol": "http://iiif.io/api/image",
+  "width": 4000,
+  "height": 3000,
+  "profile": "level2",
+  "tiles": [
+    {
+      "width": 256,
+      "scaleFactors": [1, 2, 4, 8]
+    }
+  ]
+}
+```
 
-**System Prompt / Directive:**
-> Implement the OmniArchive modular monolith following this IIIF_SPEC.md exactly. 
-> 1. **Manual Ingestion Pipeline:** Build the 'Inspector' using Phoenix LiveView with a strict Wizard-style flow.
-> 2. **Accessibility Controls:** Implement the `nudge_crop` functionality using large, accessible UI buttons as specified. 
-> 3. **Persistence:** Use PostgreSQL with JSONB to store flexible metadata and crop geometry.
-> 4. **IIIF Delivery:** Implement the IIIF Image API v3.0 using the `vix` library to serve tiles from generated PTIF files.
-> 5. **UX Priority:** The system must not rely on AI for figure extraction; all selection and metadata entry must be user-driven through the high-accessibility interface.
+### Presentation API v3.0
+
+```
+GET /iiif/manifest/{identifier}
+GET /iiif/presentation/{source_id}/manifest
+```
+
+| Endpoint | Description |
+|:---|:---|
+| `GET /iiif/manifest/{identifier}` | Single-image Manifest. Backed by the `iiif_manifests` table. Only available for `published` images. |
+| `GET /iiif/presentation/{source_id}/manifest` | Source-level Manifest. Aggregates all `published` images under a `PdfSource` as Canvases, ordered by `page_number` ascending. |
+
+---
+
+## 3. Manifest Examples / Manifest 実例
+
+### 3.1 Single-Image Manifest
+
+The following is a representative JSON-LD Manifest for a single cropped figure.
+All string values in `label` and `summary` use the IIIF language map format.
+
+単一クロップ図版の JSON-LD Manifest 実例です。
+`label` と `summary` はすべて IIIF 言語マップ形式で記述されます。
+
+```json
+{
+  "@context": "http://iiif.io/api/presentation/3/context.json",
+
+  "id": "https://example.com/iiif/manifest/img-42-12345",
+  "type": "Manifest",
+
+  // Multilingual label: English and Japanese
+  "label": {
+    "en": ["Figure 3: Pottery excavation"],
+    "ja": ["第3図: 土器出土状況"]
+  },
+
+  // Optional human-readable summary
+  "summary": {
+    "en": ["Catalog figure from site report"],
+    "ja": ["発掘調査報告書の資料図版"]
+  },
+
+  "items": [
+    {
+      "id": "https://example.com/iiif/manifest/img-42-12345/canvas/1",
+      "type": "Canvas",
+      "width": 800,
+      "height": 600,
+      "items": [
+        {
+          "id": "https://example.com/iiif/manifest/img-42-12345/canvas/1/page",
+          "type": "AnnotationPage",
+          "items": [
+            {
+              "id": "https://example.com/iiif/manifest/img-42-12345/canvas/1/page/annotation",
+              "type": "Annotation",
+              "motivation": "painting",
+              "body": {
+                // Image API v3.0 service reference
+                "id": "https://example.com/iiif/image/img-42-12345/full/max/0/default.jpg",
+                "type": "Image",
+                "format": "image/jpeg",
+                "width": 800,
+                "height": 600,
+                "service": [
+                  {
+                    "@context": "http://iiif.io/api/image/3/context.json",
+                    "id": "https://example.com/iiif/image/img-42-12345",
+                    "type": "ImageService3",
+                    "profile": "level2"
+                  }
+                ]
+              },
+              "target": "https://example.com/iiif/manifest/img-42-12345/canvas/1"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+### 3.2 Source-Level Manifest (Collection)
+
+A PdfSource-level Manifest aggregates multiple published images as Canvases.
+Canvas dimensions are derived from `geometry.width` / `geometry.height`
+(fallback: 1000×1000 if geometry is unavailable).
+
+PdfSource 単位の Manifest は、複数の公開済み画像を Canvas として集約します。
+Canvas のサイズは `geometry.width` / `geometry.height` から取得します（フォールバック: 1000×1000）。
+
+```json
+{
+  "@context": "http://iiif.io/api/presentation/3/context.json",
+
+  "id": "https://example.com/iiif/presentation/7/manifest",
+  "type": "Manifest",
+
+  "label": {
+    "en": ["Site Report: Nagaoka Excavation 2023"],
+    "ja": ["長岡市発掘調査報告書 2023"]
+  },
+
+  // Canvases are ordered by page_number ascending
+  "items": [
+    {
+      "id": "https://example.com/iiif/presentation/7/manifest/canvas/1",
+      "type": "Canvas",
+      "width": 800,
+      "height": 600,
+      "label": { "en": ["Figure 1"], "ja": ["第1図"] },
+      "items": [ /* AnnotationPage → Annotation → Image body */ ]
+    },
+    {
+      "id": "https://example.com/iiif/presentation/7/manifest/canvas/2",
+      "type": "Canvas",
+      "width": 800,
+      "height": 600,
+      "label": { "en": ["Figure 2"], "ja": ["第2図"] },
+      "items": [ /* ... */ ]
+    }
+  ]
+}
+```
+
+---
+
+## 4. Viewer Compatibility / ビューア互換性
+
+OmniArchive Manifests are designed to load in standard IIIF viewers.
+The table below shows compatibility status.
+
+OmniArchive の Manifest は標準 IIIF ビューアでの読み込みを想定しています。
+
+| Viewer | Version | Status | Notes |
+|:---|:---|:---|:---|
+| [Mirador](https://projectmirador.org/) | 3.x | Not yet verified / 未検証 | Presentation API v3.0 support available in Mirador 3 |
+| [Universal Viewer](https://universalviewer.io/) | 4.x | Not yet verified / 未検証 | UV 4 supports IIIF Presentation API v3.0 |
+| [Clover IIIF](https://samvera-labs.github.io/clover-iiif/) | latest | Not yet verified / 未検証 | React-based viewer; v3.0 Manifest support |
+
+> Viewer testing is planned. Confirmed results will replace the "Not yet verified" status
+> in a future update.
+
+---
+
+## 5. Image Processing / 画像処理
+
+### PTIF Generation / PTIF 生成
+
+OmniArchive generates Pyramidal TIFF (PTIF) files from cropped images using the
+[vix](https://github.com/akash-akya/vix) library (a libvips wrapper for Elixir).
+
+- **Compression**: DEFLATE lossless compression prevents mosquito noise on line drawings.
+- **Lazy generation**: PTIF files are generated only when an administrator approves an
+  image. This avoids unnecessary CPU and storage use during editing.
+- **Tile serving**: The Image API controller reads PTIF tiles via vix and caches them
+  in `priv/static/iiif_cache`.
+
+PTIF ファイルは管理者の承認時に初めて生成されます（Lazy Generation）。
+DEFLATE 可逆圧縮により線画のモスキートノイズを防止します。
+
+### Polygon Crop Processing / ポリゴンクロップ処理
+
+When a crop has a `points` array (polygon geometry), OmniArchive uses a 4-step
+pipeline in `ImageProcessor`:
+
+1. Extract bounding box with `extract_area`
+2. Generate an SVG mask from the polygon points
+3. Composite with white background using `ifthenelse`
+4. Output as a 3-band RGB JPEG (no alpha channel required)
+
+Polygon areas outside the crop region are filled with pure white (255, 255, 255),
+producing JPEG-compatible output.
+
+---
+
+## 6. Technical Stack / 技術スタック
+
+| Component | Technology |
+|:---|:---|
+| Language / Framework | Elixir 1.15+ / Phoenix 1.8+ (LiveView) |
+| Database | PostgreSQL 15+ — JSONB for metadata and geometry |
+| Image processing | [vix](https://github.com/akash-akya/vix) (libvips wrapper) |
+| PDF conversion | [poppler-utils](https://poppler.freedesktop.org/) (`pdftoppm`) |
+| Tile cache | `priv/static/iiif_cache` (filesystem) |
+| Frontend crop UI | Phoenix LiveView + custom JS Hook (`ImageSelection`) |
+
+---
+
+## 7. Data Schema / データスキーマ
+
+### Core Tables / 主要テーブル
+
+| Table | Role | Key Fields |
+|:---|:---|:---|
+| `pdf_sources` | PDF tracking | `filename`, `page_count`, `status`, `workflow_status` |
+| `extracted_images` | Figure assets | `image_path`, `geometry` (JSONB), `status`, `metadata` (JSONB), `owner_id`, `worker_id` |
+| `iiif_manifests` | Manifest entities | `identifier`, `metadata` (JSONB) |
+| `users` | Authentication | `email`, `hashed_password`, `confirmed_at` |
+
+### Geometry JSONB Format / geometry JSONB 形式
+
+**Rectangle (legacy / 後方互換):**
+```json
+{ "x": 150, "y": 200, "width": 800, "height": 600 }
+```
+
+**Polygon (v0.2.22+):**
+```json
+{
+  "points": [
+    {"x": 100, "y": 150},
+    {"x": 500, "y": 120},
+    {"x": 520, "y": 600},
+    {"x": 80,  "y": 580}
+  ]
+}
+```
+
+### Manifest Metadata JSONB Format / Manifest metadata JSONB 形式
+
+```json
+{
+  "label": {
+    "en": ["Figure 3: Pottery excavation"],
+    "ja": ["第3図: 土器出土状況"]
+  },
+  "summary": {
+    "en": ["Catalog figure"],
+    "ja": ["資料の図版"]
+  }
+}
+```
+
+---
+
+## 8. Stage-Gate Workflow / Stage-Gate ワークフロー
+
+| Stage | Status | Description |
+|:---|:---|:---|
+| Lab (internal) | `draft` | Upload, crop, and label within the internal workspace |
+| Submitted | `pending_review` | Submitted for administrator approval |
+| Rejected | `rejected` | Returned for correction; `review_comment` stores the reason |
+| Published | `published` | Approved and visible in Gallery; IIIF endpoints become active |
+
+Only images with `published` status are served by the IIIF endpoints.
+
+`published` ステータスの画像のみが IIIF エンドポイントから配信されます。
+
+---
+
+## 9. Ingestion Workflow / 取り込みワークフロー
+
+The ingestion pipeline follows a strict 5-step wizard pattern designed for cognitive
+accessibility. All selection and metadata entry is performed manually by the user;
+no automated extraction is used.
+
+取り込みパイプラインは5ステップのウィザード形式で、認知アクセシビリティを最優先にしています。
+図版の選択とメタデータ入力はすべてユーザーが手動で行います。
+
+1. **Upload** — Submit PDF. Pages are converted to 300 DPI PNG in 10-page chunks.
+2. **Browse** — Select pages containing figures from a thumbnail grid. No DB record is created at this stage (Write-on-Action policy).
+3. **Crop** — Draw a polygon over the figure using the `ImageSelection` JS Hook. D-Pad Nudge buttons (min 60×60px) allow fine adjustment. Saving the crop creates the `ExtractedImage` record.
+4. **Label** — Enter caption, label, and profile-defined metadata. Auto-saved in real time.
+5. **Submit** — Final review and submission for administrator approval.
+
+---
+
+## 10. Developer Reference / 開発者向け参考情報
+
+For implementation details beyond this specification, see:
+
+| Document | Description |
+|:---|:---|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Module structure, OTP supervision tree, data flow diagrams |
+| [PROFILES.md](PROFILES.md) | YAML-based domain profile configuration |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to add domain profiles and contribute to the project |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Docker and OTP release deployment instructions |
+
+### Caching
+
+Tile responses are cached in `priv/static/iiif_cache/{identifier}/` after the first
+request. The cache is not automatically invalidated on PTIF update; clear the directory
+manually if a PTIF is regenerated.
+
+タイルレスポンスは初回リクエスト後に `priv/static/iiif_cache/{identifier}/` にキャッシュされます。
+PTIF を再生成した場合は手動でディレクトリを削除してください。
+
+### Search Index
+
+Full-text search (FTS) on captions uses PostgreSQL `tsvector` with a `GIN` index.
+Faceted filtering is driven by the active domain profile's metadata field definitions.
+
+キャプションの全文検索は PostgreSQL `tsvector` + `GIN` インデックスを使用します。
+ファセット検索はアクティブなドメインプロファイルのメタデータフィールド定義に基づきます。
