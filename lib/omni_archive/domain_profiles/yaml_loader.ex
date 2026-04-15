@@ -123,7 +123,61 @@ defmodule OmniArchive.DomainProfiles.YamlLoader do
     end
   end
 
-  defp parse_validation_rules(_raw, _fields), do: {:ok, %{}}
+  @allowed_rule_keys ~w[max_length max_length_error format format_error required_terms required_terms_error]
+
+  defp parse_validation_rules(raw, _fields) when not is_map(raw),
+    do: {:error, "validation_rules must be a mapping"}
+
+  defp parse_validation_rules(raw, fields) do
+    field_atoms = Enum.map(fields, & &1.field)
+
+    Enum.reduce_while(raw, {:ok, %{}}, fn {field_str, rules}, {:ok, acc} ->
+      atom = String.to_atom(field_str)
+
+      cond do
+        atom not in field_atoms ->
+          {:halt, {:error, "validation_rules references unknown field: #{field_str}"}}
+
+        not is_map(rules) ->
+          {:halt, {:error, "validation_rules.#{field_str} must be a mapping"}}
+
+        true ->
+          case normalize_rule(rules) do
+            {:ok, normalized} -> {:cont, {:ok, Map.put(acc, atom, normalized)}}
+            {:error, _} = err -> {:halt, err}
+          end
+      end
+    end)
+  end
+
+  defp normalize_rule(rules) do
+    Enum.reduce_while(rules, {:ok, %{}}, fn {k, v}, {:ok, acc} ->
+      cond do
+        k not in @allowed_rule_keys ->
+          {:halt, {:error, "unknown rule key: #{k}"}}
+
+        k == "format" and is_binary(v) ->
+          case Regex.compile(v) do
+            {:ok, re} -> {:cont, {:ok, Map.put(acc, :format, re)}}
+            {:error, reason} -> {:halt, {:error, "invalid format regex: #{inspect(reason)}"}}
+          end
+
+        k == "required_terms" and is_list(v) ->
+          if Enum.all?(v, &is_binary/1),
+            do: {:cont, {:ok, Map.put(acc, :required_terms, v)}},
+            else: {:halt, {:error, "required_terms must be list of strings"}}
+
+        k == "max_length" and is_integer(v) and v > 0 ->
+          {:cont, {:ok, Map.put(acc, :max_length, v)}}
+
+        String.ends_with?(k, "_error") and is_binary(v) ->
+          {:cont, {:ok, Map.put(acc, String.to_atom(k), v)}}
+
+        true ->
+          {:halt, {:error, "invalid value for rule #{k}"}}
+      end
+    end)
+  end
 
   defp parse_search_facets(_raw, _fields), do: {:ok, []}
 

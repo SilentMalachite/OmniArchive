@@ -30,4 +30,24 @@ defmodule OmniArchive.DomainProfiles.YamlLoaderTest do
       assert reason =~ unquote(Macro.escape(pattern))
     end
   end
+
+  test "validation_rules: compiles format into Regex" do
+    {:ok, profile} = YamlLoader.load(fixture("valid_with_validation.yaml"))
+    assert %Regex{} = profile.validation_rules[:label][:format]
+  end
+
+  test "validation_rules: rejects invalid regex" do
+    assert {:error, reason} = YamlLoader.load(fixture("bad_validation_regex.yaml"))
+    assert reason =~ "format"
+  end
+
+  test "validation_rules: rejects unknown field" do
+    assert {:error, reason} = YamlLoader.load(fixture("bad_validation_unknown_field.yaml"))
+    assert reason =~ "unknown"
+  end
+
+  test "validation_rules: required_terms is parsed as list" do
+    {:ok, profile} = YamlLoader.load(fixture("valid_with_validation.yaml"))
+    assert is_list(profile.validation_rules[:collection][:required_terms])
+  end
 end
