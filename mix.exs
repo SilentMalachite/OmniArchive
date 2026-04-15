@@ -40,7 +40,7 @@ defmodule OmniArchive.MixProject do
   def application do
     [
       mod: {OmniArchive.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :yamerl]
     ]
   end
 
@@ -85,7 +85,8 @@ defmodule OmniArchive.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:sobelow, "~> 0.13", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.34", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.34", only: :dev, runtime: false},
+      {:yaml_elixir, "~> 2.9"}
     ]
   end
 
