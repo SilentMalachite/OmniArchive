@@ -4,6 +4,34 @@
 
 ---
 
+## [0.2.23] - 2026-04-16
+
+### 📄 YAML ベースのドメインプロファイル
+
+- **`YamlLoader` モジュールの新設 (`lib/omni_archive/domain_profiles/yaml_loader.ex`)**
+  - YAML ファイルをロードし、`metadata_fields` / `validation_rules` / `search_facets` / `ui_texts` / `duplicate_identity` を検証・パース。
+  - 正規表現文字列を `Regex.compile!/1` でコンパイルし、フィールドキーの命名規則（小文字・数字・アンダースコア）を強制。
+  - `caption` / `label` フィールドの必須チェック、`storage: core` の利用制限、ファセット定義の整合性チェック等を実施。
+- **`YamlCache` GenServer の新設 (`lib/omni_archive/domain_profiles/yaml_cache.ex`)**
+  - ETS バックの GenServer。アプリ起動時に YAML プロファイルを一度だけロードしてキャッシュ。
+  - `OMNI_ARCHIVE_PROFILE_YAML` 環境変数が設定されている場合のみスーパービジョンツリーに追加。
+- **`Yaml` プロファイルモジュールの新設 (`lib/omni_archive/domain_profiles/yaml.ex`)**
+  - `DomainProfile` ビヘイビアを実装。`YamlCache` に委譲し、組み込みプロファイルと同じインターフェースで利用可能。
+- **`runtime.exs` への `OMNI_ARCHIVE_PROFILE_YAML` 環境変数の配線**
+  - 環境変数が設定されている場合、`domain_profile: OmniArchive.DomainProfiles.Yaml` を自動選択。
+- **アクティブプロファイルキーの DB カスタムフィールド予約**
+  - `CustomMetadataField` に予約キーチェックを追加。YAML プロファイル定義済みフィールドと同名の DB カスタムフィールド作成を拒否。
+- **サンプルプロファイルの追加 (`priv/profiles/example_profile.yaml`)**
+- **ドキュメントの追加 (`PROFILES.md`)**
+  - YAML プロファイルの構造・有効化方法・各キーの詳細仕様を記載。
+
+### ⚙️ その他
+
+- **`mix.exs` バージョン更新 (0.2.22 → 0.2.23)**
+- **`yaml_elixir` 依存の追加**
+
+---
+
 ## [0.2.22] - 2026-03-03
 
 ### ✂️ 多角形（ポリゴン）クロップ機能の実装

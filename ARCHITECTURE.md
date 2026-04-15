@@ -99,6 +99,10 @@ PDF 抽出などの重い処理を LiveView プロセスから分離し、UI の
 │                  Application Supervision Tree                 │
 ├──────────────────────────────────────────────────────────────┤
 │                                                               │
+│  OmniArchive.DomainProfiles.YamlCache  (GenServer, 条件付き)    │
+│  └── OMNI_ARCHIVE_PROFILE_YAML 設定時のみ起動                  │
+│      YAML プロファイルを ETS にキャッシュ                       │
+│                                                               │
 │  OmniArchive.UserWorkerRegistry  (Registry)                    │
 │  └── ユーザー ID → PID のマッピング                             │
 │                                                               │
@@ -133,6 +137,31 @@ PDF 抽出などの重い処理を LiveView プロセスから分離し、UI の
 > **ワーカー自動起動**: `UserAuth.mount_current_user` フック内で、認証済みユーザーの
 > `UserWorker` を自動起動します。既に起動済み (`{:error, {:already_started, _}}`) の
 > 場合は安全に無視されます。
+
+### ドメインプロファイル
+
+メタデータフィールド・バリデーション・検索ファセット・UI テキストをプロファイルとして定義する仕組みです。
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                  DomainProfile ビヘイビア                  │
+├───────────────────────┬──────────────────────────────────┤
+│  組み込みプロファイル   │  YAML プロファイル (v0.2.23 以降)  │
+├───────────────────────┼──────────────────────────────────┤
+│ Archaeology (デフォルト)│  YamlLoader                     │
+│ GeneralArchive        │  └── YAML ファイルをパース・検証  │
+│                       │  YamlCache (GenServer + ETS)      │
+│                       │  └── 起動時に一度だけキャッシュ   │
+│                       │  Yaml モジュール                  │
+│                       │  └── YamlCache に委譲             │
+└───────────────────────┴──────────────────────────────────┘
+```
+
+**有効化**: `OMNI_ARCHIVE_PROFILE_YAML=/path/to/profile.yaml` 環境変数を設定すると、`runtime.exs` が自動的に `OmniArchive.DomainProfiles.Yaml` を active profile に設定し、スーパービジョンツリーに `YamlCache` を追加します。未設定時は `Archaeology` がデフォルトとして使用されます。
+
+**予約キー保護**: アクティブな YAML プロファイルのフィールドキーは `CustomMetadataField` の DB カスタムフィールドとして登録できません（重複防止）。
+
+---
 
 ### Stage-Gate フロー
 

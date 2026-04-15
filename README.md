@@ -55,9 +55,13 @@ OmniArchive は、静的な PDF を、国際的な画像相互運用フレーム
 利用可能な profile:
 - `OmniArchive.DomainProfiles.Archaeology` (デフォルト)
 - `OmniArchive.DomainProfiles.GeneralArchive`
+- **YAML 定義プロファイル** (v0.2.23 以降): `OMNI_ARCHIVE_PROFILE_YAML` 環境変数で YAML ファイルを指定
 
 切り替え方法:
-- `config/config.exs` の `config :omni_archive, domain_profile: ...` で active profile を指定します
+- **組み込みプロファイル**: `config/config.exs` の `config :omni_archive, domain_profile: ...` で指定
+- **YAML プロファイル**: 環境変数 `OMNI_ARCHIVE_PROFILE_YAML=/path/to/profile.yaml` を設定して起動（自動的に `OmniArchive.DomainProfiles.Yaml` が有効になります）
+
+詳細は [PROFILES.md](PROFILES.md) を参照してください。
 
 ### ♿ 認知アクセシビリティ
 
@@ -426,6 +430,10 @@ OmniArchive/
 │   │   │   └── resource_monitor.ex      # CPU/メモリ検出・動的並列度
 │   │   ├── workers/                 # OTP バックグラウンド処理
 │   │   │   └── user_worker.ex           # ユーザー専属 GenServer
+│   │   ├── domain_profiles/         # ドメインプロファイル
+│   │   │   ├── yaml.ex                  # YAML プロファイルモジュール
+│   │   │   ├── yaml_cache.ex            # ETS バック GenServer キャッシュ
+│   │   │   └── yaml_loader.ex           # YAML パース・バリデーション
 │   │   ├── accounts/                # 認証・ユーザー管理
 │   │   │   ├── user.ex                  # User スキーマ
 │   │   │   ├── user_token.ex            # セッショントークン
@@ -471,6 +479,8 @@ OmniArchive/
 │   └── lab.css                          # Lab プロジェクト管理スタイル
 ├── assets/js/hooks/
 │       └── image_selection_hook.js         # ポリゴンクロップ選択 JS Hook
+├── priv/profiles/                     # YAML ドメインプロファイル
+│   └── example_profile.yaml             # サンプルプロファイル
 ├── priv/repo/migrations/              # DB マイグレーション
 ├── test/                              # テストコード
 ├── .github/workflows/ci.yml         # GitHub Actions CI パイプライン
