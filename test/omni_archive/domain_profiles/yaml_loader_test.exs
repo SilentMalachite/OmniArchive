@@ -60,4 +60,14 @@ defmodule OmniArchive.DomainProfiles.YamlLoaderTest do
     assert {:error, reason} = YamlLoader.load(fixture("bad_facet_unknown_field.yaml"))
     assert reason =~ "unknown"
   end
+
+  test "ui_texts: returns nested atom-keyed map" do
+    {:ok, profile} = YamlLoader.load(fixture("valid_minimal.yaml"))
+    assert %{search: %{page_title: _}, inspector_label: %{heading: _}} = profile.ui_texts
+  end
+
+  test "ui_texts: rejects missing required keys" do
+    assert {:error, reason} = YamlLoader.load(fixture("bad_ui_texts_missing.yaml"))
+    assert reason =~ "ui_texts"
+  end
 end

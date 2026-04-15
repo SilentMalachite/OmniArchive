@@ -199,7 +199,39 @@ defmodule OmniArchive.DomainProfiles.YamlLoader do
     end)
   end
 
-  defp parse_ui_texts(_raw), do: {:ok, %{}}
+  defp parse_ui_texts(raw) when not is_map(raw),
+    do: {:error, "ui_texts must be a mapping"}
+
+  defp parse_ui_texts(raw) do
+    with {:ok, search} <- parse_ui_section(raw["search"], @required_search_keys, "search"),
+         {:ok, inspector} <-
+           parse_ui_section(raw["inspector_label"], @required_inspector_keys, "inspector_label") do
+      {:ok, %{search: search, inspector_label: inspector}}
+    end
+  end
+
+  defp parse_ui_section(nil, _keys, name), do: {:error, "ui_texts.#{name} is required"}
+
+  defp parse_ui_section(raw, required_keys, name) when is_map(raw) do
+    missing =
+      Enum.filter(required_keys, fn k ->
+        val = Map.get(raw, Atom.to_string(k))
+        not (is_binary(val) and val != "")
+      end)
+
+    case missing do
+      [] ->
+        result =
+          for k <- required_keys, into: %{} do
+            {k, Map.fetch!(raw, Atom.to_string(k))}
+          end
+
+        {:ok, result}
+
+      keys ->
+        {:error, "ui_texts.#{name} missing keys: #{inspect(keys)}"}
+    end
+  end
 
   defp parse_duplicate_identity(nil, _), do: {:error, "duplicate_identity is required"}
   defp parse_duplicate_identity(raw, fields) when is_map(raw) do
