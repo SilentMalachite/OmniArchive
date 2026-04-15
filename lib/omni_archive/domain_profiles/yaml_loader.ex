@@ -179,7 +179,25 @@ defmodule OmniArchive.DomainProfiles.YamlLoader do
     end)
   end
 
-  defp parse_search_facets(_raw, _fields), do: {:ok, []}
+  defp parse_search_facets(raw, _fields) when not is_list(raw),
+    do: {:error, "search_facets must be a list"}
+
+  defp parse_search_facets(raw, fields) do
+    field_atoms = Enum.map(fields, & &1.field)
+
+    map_while_ok(raw, fn
+      %{"field" => f, "param" => p, "label" => l}
+      when is_binary(f) and is_binary(p) and is_binary(l) ->
+        atom = String.to_atom(f)
+
+        if atom in field_atoms,
+          do: {:ok, %{field: atom, param: p, label: l}},
+          else: {:error, "search_facets references unknown field: #{f}"}
+
+      other ->
+        {:error, "invalid facet entry: #{inspect(other)}"}
+    end)
+  end
 
   defp parse_ui_texts(_raw), do: {:ok, %{}}
 

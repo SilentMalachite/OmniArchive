@@ -50,4 +50,14 @@ defmodule OmniArchive.DomainProfiles.YamlLoaderTest do
     {:ok, profile} = YamlLoader.load(fixture("valid_with_validation.yaml"))
     assert is_list(profile.validation_rules[:collection][:required_terms])
   end
+
+  test "search_facets: references defined fields" do
+    {:ok, profile} = YamlLoader.load(fixture("valid_minimal.yaml"))
+    assert [%{field: :collection, param: "collection"}] = profile.search_facets
+  end
+
+  test "search_facets: rejects unknown field reference" do
+    assert {:error, reason} = YamlLoader.load(fixture("bad_facet_unknown_field.yaml"))
+    assert reason =~ "unknown"
+  end
 end
