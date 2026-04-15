@@ -1,0 +1,47 @@
+metadata_fields:
+  - field: caption
+    storage: metadata
+    label: "キャプション"
+    placeholder: ""
+  - field: label
+    storage: core
+    label: "ラベル"
+    placeholder: ""
+  - field: collection
+    storage: metadata
+    label: "コレクション"
+    placeholder: ""
+
+validation_rules: {}
+
+search_facets:
+  - field: collection
+    param: collection
+    label: "コレクション"
+
+duplicate_identity:
+  profile_key: "test_yaml"
+  scope_field: collection
+  label_field: label
+  duplicate_label_error: "重複"
+
+ui_texts:
+  search:
+    page_title: "t"
+    heading: "t"
+    description: "t"
+    placeholder: "t"
+    empty_filtered: "t"
+    empty_filtered_hint: "t"
+    empty_initial: "t"
+    empty_initial_hint: "t"
+    result_none: "t"
+    result_suffix: "t"
+    clear_filters: "t"
+  inspector_label:
+    heading: "t"
+    description: "t"
+    duplicate_warning: "t"
+    duplicate_blocked: "t"
+    duplicate_title: "t"
+    duplicate_edit: "t"
