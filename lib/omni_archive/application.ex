@@ -13,20 +13,29 @@ defmodule OmniArchive.Application do
     Vix.Vips.cache_set_max(100)
     Vix.Vips.cache_set_max_mem(512 * 1024 * 1024)
 
-    children = [
+    yaml_children =
+      if Application.get_env(:omni_archive, :domain_profile) == OmniArchive.DomainProfiles.Yaml do
+        [OmniArchive.DomainProfiles.YamlCache]
+      else
+        []
+      end
+
+    base_children = [
       OmniArchiveWeb.Telemetry,
       OmniArchive.Repo,
       {DNSCluster, query: Application.get_env(:omni_archive, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: OmniArchive.PubSub},
-      # カスタムメタデータフィールドの ETS キャッシュ
+      {Phoenix.PubSub, name: OmniArchive.PubSub}
+    ]
+
+    post_children = [
       OmniArchive.CustomMetadataFields.Cache,
-      # リソース監視 GenServer（CPU/メモリの動的検出）
       OmniArchive.Pipeline.ResourceMonitor,
       {Registry, keys: :unique, name: OmniArchive.UserWorkerRegistry},
       {DynamicSupervisor, strategy: :one_for_one, name: OmniArchive.UserWorkerSupervisor},
-      # Start to serve requests, typically the last entry
       OmniArchiveWeb.Endpoint
     ]
+
+    children = base_children ++ yaml_children ++ post_children
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
