@@ -234,6 +234,7 @@ defmodule OmniArchive.DomainProfiles.YamlLoader do
   end
 
   defp parse_duplicate_identity(nil, _), do: {:error, "duplicate_identity is required"}
+
   defp parse_duplicate_identity(raw, fields) when is_map(raw) do
     with {:ok, profile_key} <- fetch_string(raw, "profile_key"),
          {:ok, scope} <- fetch_field_ref(raw, "scope_field", fields),

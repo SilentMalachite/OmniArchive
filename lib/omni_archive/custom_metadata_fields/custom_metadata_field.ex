@@ -26,11 +26,18 @@ defmodule OmniArchive.CustomMetadataFields.CustomMetadataField do
 
   def changeset(field, attrs) do
     field
-    |> cast(attrs, [:field_key, :label, :placeholder, :sort_order, :searchable, :validation_rules, :active, :profile_key])
+    |> cast(attrs, [
+      :field_key,
+      :label,
+      :placeholder,
+      :sort_order,
+      :searchable,
+      :validation_rules,
+      :active,
+      :profile_key
+    ])
     |> validate_required([:field_key, :label, :profile_key])
-    |> validate_format(:field_key, @field_key_format,
-      message: "半角小文字・数字・アンダースコアのみ（先頭は小文字）"
-    )
+    |> validate_format(:field_key, @field_key_format, message: "半角小文字・数字・アンダースコアのみ（先頭は小文字）")
     |> validate_not_reserved()
     |> validate_length(:label, max: 100)
     |> validate_length(:placeholder, max: 200)
@@ -79,10 +86,16 @@ defmodule OmniArchive.CustomMetadataFields.CustomMetadataField do
 
   defp validate_validation_rules(changeset) do
     case get_change(changeset, :validation_rules) do
-      nil -> changeset
+      nil ->
+        changeset
+
       rules when is_map(rules) ->
-        if valid_rules?(rules), do: changeset, else: add_error(changeset, :validation_rules, "不正なバリデーションルールです")
-      _ -> add_error(changeset, :validation_rules, "マップ形式で入力してください")
+        if valid_rules?(rules),
+          do: changeset,
+          else: add_error(changeset, :validation_rules, "不正なバリデーションルールです")
+
+      _ ->
+        add_error(changeset, :validation_rules, "マップ形式で入力してください")
     end
   end
 
