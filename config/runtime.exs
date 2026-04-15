@@ -117,3 +117,15 @@ if config_env() == :prod do
   #
   # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
 end
+
+# --- YAML ドメインプロファイル ---
+if yaml_path = System.get_env("OMNI_ARCHIVE_PROFILE_YAML") do
+  unless File.exists?(yaml_path) do
+    raise """
+    OMNI_ARCHIVE_PROFILE_YAML で指定されたファイルが存在しません: #{yaml_path}
+    """
+  end
+
+  config :omni_archive, domain_profile: OmniArchive.DomainProfiles.Yaml
+  config :omni_archive, domain_profile_yaml_path: yaml_path
+end
