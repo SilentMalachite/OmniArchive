@@ -44,10 +44,36 @@ defmodule OmniArchive.CustomMetadataFields.CustomMetadataField do
 
   defp validate_not_reserved(changeset) do
     case get_change(changeset, :field_key) do
-      nil -> changeset
-      key when key in @reserved_keys ->
-        add_error(changeset, :field_key, "予約済みのフィールドキーです")
-      _ -> changeset
+      nil ->
+        changeset
+
+      key ->
+        if key in reserved_keys() do
+          add_error(changeset, :field_key, "予約済みのフィールドキーです")
+        else
+          changeset
+        end
+    end
+  end
+
+  defp reserved_keys do
+    Enum.uniq(@reserved_keys ++ active_profile_keys())
+  end
+
+  defp active_profile_keys do
+    profile =
+      Application.get_env(
+        :omni_archive,
+        :domain_profile,
+        OmniArchive.DomainProfiles.Archaeology
+      )
+
+    try do
+      profile.metadata_fields()
+      |> Enum.map(& &1.field)
+      |> Enum.map(&Atom.to_string/1)
+    rescue
+      _ -> []
     end
   end
 
