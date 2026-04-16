@@ -79,7 +79,7 @@ hardcoded in shared modules. Place them in `OmniArchive.DomainProfiles.*`.
 
 ---
 
-## 🧩 Adding a New Domain Profile / ドメインプロファイルの追加
+## 🧩 Adding a Domain Profile / ドメインプロファイルの追加
 
 OmniArchive supports multiple domain profiles through a behavior module. You can add a
 new domain — for example, manuscripts, maps, photographs, or architectural drawings —
