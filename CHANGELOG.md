@@ -10,6 +10,10 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [0.2.23] - 2026-04-16
 
+_Summary: Introduces YAML-based domain profiles so institutions can define metadata
+schemas without writing Elixir. Adds `YamlLoader`, a cached `YamlCache` GenServer,
+and a runtime-activated `Yaml` profile module._
+
 ### 📄 YAML ベースのドメインプロファイル
 
 - **`YamlLoader` モジュールの新設 (`lib/omni_archive/domain_profiles/yaml_loader.ex`)**
@@ -37,6 +41,10 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 ---
 
 ## [0.2.22] - 2026-03-03
+
+_Summary: Replaces rectangle-based cropping with polygon cropping throughout the
+Lab, Gallery, and Admin review UIs. Adds a polygon crop engine to `ImageProcessor`
+using SVG masks and white-background compositing for JPEG-compatible output._
 
 ### ✂️ 多角形（ポリゴン）クロップ機能の実装
 - **クロップ画面 (`crop.ex`) をポリゴン選択 UI に全面移行**
@@ -82,6 +90,9 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 ---
 
 ## [0.2.21] - 2026-03-01
+
+_Summary: Unifies IIIF module casing (`OmniArchive.Iiif`), fixes the OpenSeadragon
+gallery modal interaction, and resolves routing bugs in IIIF image delivery._
 
 ### 🖼️ IIIF モジュール & ギャラリー表示の強化・修正
 - **IIIF モジュールの命名規則の統一**
