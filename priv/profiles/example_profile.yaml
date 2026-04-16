@@ -1,7 +1,7 @@
 metadata_fields:
-  - field: caption
+  - field: summary
     storage: core
-    label: "キャプション"
+    label: "サマリー"
     placeholder: "例: 表紙の写真"
 
   - field: label
@@ -20,7 +20,7 @@ metadata_fields:
     placeholder: "例: 昭和30年代"
 
 validation_rules:
-  caption:
+  summary:
     max_length: 1000
     max_length_error: "1000文字以内で入力してください"
 
@@ -56,7 +56,7 @@ ui_texts:
     page_title: "画像を検索"
     heading: "画像を検索"
     description: "キーワードやフィルターで検索できます。"
-    placeholder: "キャプション、ラベル、コレクション名で検索..."
+    placeholder: "サマリー、ラベル、コレクション名で検索..."
     empty_filtered: "条件に一致する図版が見つかりませんでした。"
     empty_filtered_hint: "検索条件を変更してみてください。"
     empty_initial: "まだ図版が登録されていません。"

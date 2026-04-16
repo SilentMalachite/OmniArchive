@@ -1,5 +1,5 @@
 metadata_fields:
-  - field: caption
+  - field: summary
     storage: core
     label: "キャプション"
     placeholder: ""
@@ -11,7 +11,7 @@ metadata_fields:
     storage: metadata
     label: "コレクション"
     placeholder: ""
-  - field: caption
+  - field: summary
     storage: metadata
     label: "Caption Duplicate"
     placeholder: ""

@@ -1,7 +1,7 @@
 metadata_fields:
-  - field: caption
+  - field: summary
     storage: metadata
-    label: "キャプション"
+    label: "サマリー"
     placeholder: ""
   - field: label
     storage: core

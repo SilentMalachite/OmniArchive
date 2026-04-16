@@ -1,7 +1,7 @@
 metadata_fields:
-  - field: caption
+  - field: summary
     storage: core
-    label: "キャプション"
+    label: "サマリー"
     placeholder: ""
   - field: label
     storage: core
@@ -13,7 +13,7 @@ metadata_fields:
     placeholder: ""
 
 validation_rules:
-  caption:
+  summary:
     max_length: 1000
     max_length_error: "too long"
   label:
