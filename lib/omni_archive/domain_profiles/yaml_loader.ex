@@ -4,7 +4,7 @@ defmodule OmniArchive.DomainProfiles.YamlLoader do
   """
 
   @field_key_format ~r/^[a-z][a-z0-9_]{0,49}$/
-  @core_allowed_fields ~w[caption label]
+  @core_allowed_fields ~w[summary label]
   @required_search_keys ~w[
     page_title heading description placeholder
     empty_filtered empty_filtered_hint
@@ -94,7 +94,7 @@ defmodule OmniArchive.DomainProfiles.YamlLoader do
   end
 
   defp ensure_core_fields_present(fields) do
-    required = [:caption, :label]
+    required = [:summary, :label]
     present = Enum.map(fields, & &1.field)
 
     case required -- present do

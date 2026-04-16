@@ -9,7 +9,7 @@ defmodule OmniArchive.CustomMetadataFields.CustomMetadataField do
   @max_fields_per_profile 20
 
   # コンパイル時プロファイルで使用済みのフィールドキー（重複防止）
-  @reserved_keys ~w(caption label site period artifact_type collection item_type date_note)
+  @reserved_keys ~w(summary label site period artifact_type collection item_type date_note)
 
   schema "custom_metadata_fields" do
     field :field_key, :string
