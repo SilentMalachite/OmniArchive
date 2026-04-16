@@ -349,7 +349,7 @@ defmodule OmniArchiveWeb.Admin.ReviewLive do
                       <% else %>
                         <img
                           src={image_thumbnail_url(item.image)}
-                          alt={item.image.caption || "図版"}
+                          alt={item.image.summary || "図版"}
                           class="review-card-image"
                           loading="lazy"
                           onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
@@ -477,7 +477,7 @@ defmodule OmniArchiveWeb.Admin.ReviewLive do
               <% else %>
                 <img
                   src={image_full_url(@selected_image.image)}
-                  alt={@selected_image.image.caption || "図版"}
+                  alt={@selected_image.image.summary || "図版"}
                   class="inspector-full-image"
                 />
               <% end %>
@@ -490,8 +490,8 @@ defmodule OmniArchiveWeb.Admin.ReviewLive do
                 <span class="inspector-detail-value">{@selected_image.image.label || "—"}</span>
               </div>
               <div class="inspector-detail-item">
-                <span class="inspector-detail-label">キャプション</span>
-                <span class="inspector-detail-value">{@selected_image.image.caption || "—"}</span>
+                <span class="inspector-detail-label">サマリー</span>
+                <span class="inspector-detail-value">{@selected_image.image.summary || "—"}</span>
               </div>
               <div class="inspector-detail-item">
                 <span class="inspector-detail-label">遺跡名</span>

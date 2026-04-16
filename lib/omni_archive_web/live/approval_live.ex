@@ -100,7 +100,7 @@ defmodule OmniArchiveWeb.ApprovalLive do
               <div class="approval-card-image-container">
                 <img
                   src={image_thumbnail_url(image)}
-                  alt={image.caption || "図版"}
+                  alt={image.summary || "図版"}
                   class="approval-card-image"
                   loading="lazy"
                 />
@@ -110,8 +110,8 @@ defmodule OmniArchiveWeb.ApprovalLive do
               <%!-- メタデータ --%>
               <div class="approval-card-body">
                 <h3 class="approval-card-title">{image.label || "名称未設定"}</h3>
-                <%= if image.caption do %>
-                  <p class="approval-card-caption">{image.caption}</p>
+                <%= if image.summary do %>
+                  <p class="approval-card-summary">{image.summary}</p>
                 <% end %>
                 <div class="approval-card-meta">
                   <%= for field <- metadata_display_fields() do %>

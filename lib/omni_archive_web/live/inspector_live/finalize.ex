@@ -218,10 +218,10 @@ defmodule OmniArchiveWeb.InspectorLive.Finalize do
               <span class="confirm-value">ページ {@extracted_image.page_number}</span>
             </div>
 
-            <%= if @extracted_image.caption do %>
+            <%= if @extracted_image.summary do %>
               <div class="confirm-item">
-                <span class="confirm-label">📝 キャプション:</span>
-                <span class="confirm-value">{@extracted_image.caption}</span>
+                <span class="confirm-label">📝 サマリー:</span>
+                <span class="confirm-value">{@extracted_image.summary}</span>
               </div>
             <% end %>
 

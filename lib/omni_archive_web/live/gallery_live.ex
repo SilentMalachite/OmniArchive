@@ -312,15 +312,15 @@ defmodule OmniArchiveWeb.GalleryLive do
                 <% else %>
                   <img
                     src={image_thumbnail_url(image)}
-                    alt={image.caption || "図版"}
+                    alt={image.summary || "図版"}
                     class="result-card-image"
                     loading="lazy"
                   />
                 <% end %>
                 <div class="result-card-body">
                   <h3 class="result-card-title">{image.label || "名称未設定"}</h3>
-                  <%= if image.caption do %>
-                    <p class="result-card-caption">{image.caption}</p>
+                  <%= if image.summary do %>
+                    <p class="result-card-summary">{image.summary}</p>
                   <% end %>
                   <div class="result-card-meta">
                     <%= for field <- metadata_display_fields() do %>
@@ -374,8 +374,8 @@ defmodule OmniArchiveWeb.GalleryLive do
               <h3 class="text-white text-lg font-semibold">
                 {@selected_image.label || "名称未設定"}
               </h3>
-              <%= if @selected_image.caption do %>
-                <p class="text-gray-400 text-sm">{@selected_image.caption}</p>
+              <%= if @selected_image.summary do %>
+                <p class="text-gray-400 text-sm">{@selected_image.summary}</p>
               <% end %>
             </div>
 
@@ -430,7 +430,7 @@ defmodule OmniArchiveWeb.GalleryLive do
                 <% else %>
                   <img
                     src={image_thumbnail_url(@selected_image)}
-                    alt={@selected_image.caption || "図版"}
+                    alt={@selected_image.summary || "図版"}
                     class="max-w-full max-h-[90vh] object-contain shadow-2xl"
                   />
                 <% end %>

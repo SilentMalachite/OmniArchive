@@ -170,14 +170,14 @@ defmodule OmniArchiveWeb.SearchLive do
               <a href={manifest_url(image)} class="result-card-link" target="_blank">
                 <img
                   src={image_thumbnail_url(image)}
-                  alt={image.caption || "図版"}
+                  alt={image.summary || "図版"}
                   class="result-card-image"
                   loading="lazy"
                 />
                 <div class="result-card-body">
                   <h3 class="result-card-title">{image.label || "名称未設定"}</h3>
-                  <%= if image.caption do %>
-                    <p class="result-card-caption">{image.caption}</p>
+                  <%= if image.summary do %>
+                    <p class="result-card-summary">{image.summary}</p>
                   <% end %>
                   <div class="result-card-meta">
                     <%= for field <- metadata_display_fields() do %>
