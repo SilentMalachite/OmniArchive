@@ -9,9 +9,9 @@ defmodule OmniArchive.DomainProfiles.GeneralArchive do
   def metadata_fields do
     [
       %{
-        field: :caption,
+        field: :summary,
         storage: :core,
-        label: "📝 キャプション",
+        label: "📝 サマリー",
         placeholder: "例: 収蔵資料の見出しや内容説明"
       },
       %{
@@ -44,7 +44,7 @@ defmodule OmniArchive.DomainProfiles.GeneralArchive do
   @impl true
   def validation_rules do
     %{
-      caption: %{
+      summary: %{
         max_length: 1000,
         max_length_error: "1000文字以内で入力してください"
       },
@@ -87,7 +87,7 @@ defmodule OmniArchive.DomainProfiles.GeneralArchive do
         page_title: "画像を検索",
         heading: "🔍 画像を検索",
         description: "キーワードやフィルターで、登録済みの図版を検索できます。",
-        placeholder: "キャプション、ラベル、コレクション名で検索...",
+        placeholder: "サマリー、ラベル、コレクション名で検索...",
         empty_filtered: "条件に一致する図版が見つかりませんでした。",
         empty_filtered_hint: "検索キーワードやフィルターを変更してみてください。",
         empty_initial: "まだ図版が登録されていません。",
