@@ -450,8 +450,8 @@ defmodule OmniArchive.Ingestion do
                   "ja" => [image.label || identifier]
                 },
                 "summary" => %{
-                  "en" => [image.caption || ""],
-                  "ja" => [image.caption || ""]
+                  "en" => [image.summary || ""],
+                  "ja" => [image.summary || ""]
                 }
               }
             })

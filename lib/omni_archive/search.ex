@@ -113,11 +113,11 @@ defmodule OmniArchive.Search do
         [e],
         fragment(
           "to_tsvector('simple', coalesce(?, '')) @@ plainto_tsquery('simple', ?)",
-          e.caption,
+          e.summary,
           ^sanitized
         ) or
           ilike(e.label, ^pattern) or
-          ilike(e.caption, ^pattern) or
+          ilike(e.summary, ^pattern) or
           ^metadata_search
       )
 

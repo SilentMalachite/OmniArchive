@@ -420,8 +420,8 @@ defmodule OmniArchive.Pipeline do
           "ja" => [extracted_image.label || identifier]
         },
         "summary" => %{
-          "en" => [extracted_image.caption || ""],
-          "ja" => [extracted_image.caption || ""]
+          "en" => [extracted_image.summary || ""],
+          "ja" => [extracted_image.summary || ""]
         }
       }
     })
