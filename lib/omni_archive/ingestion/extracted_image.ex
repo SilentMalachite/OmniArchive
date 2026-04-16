@@ -27,8 +27,8 @@ defmodule OmniArchive.Ingestion.ExtractedImage do
     field :image_path, :string
     # クロップデータ (x, y, width, height) — JSONB
     field :geometry, :map
-    # キャプション (手動入力)
-    field :caption, :string
+    # サマリー (手動入力) — IIIF v3.0 summary
+    field :summary, :string
     # ラベル (手動入力)
     field :label, :string
     # 生成された PTIF のパス
@@ -68,7 +68,7 @@ defmodule OmniArchive.Ingestion.ExtractedImage do
       :page_number,
       :image_path,
       :geometry,
-      :caption,
+      :summary,
       :label,
       :ptif_path,
       :metadata,
