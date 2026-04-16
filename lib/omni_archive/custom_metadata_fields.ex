@@ -29,7 +29,10 @@ defmodule OmniArchive.CustomMetadataFields do
   def create_field(attrs) do
     count =
       CustomMetadataField
-      |> where([f], f.profile_key == ^(attrs[:profile_key] || attrs["profile_key"]) and f.active == true)
+      |> where(
+        [f],
+        f.profile_key == ^(attrs[:profile_key] || attrs["profile_key"]) and f.active == true
+      )
       |> Repo.aggregate(:count)
 
     if count >= CustomMetadataField.max_fields_per_profile() do

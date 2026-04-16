@@ -54,7 +54,9 @@ defmodule OmniArchiveWeb.Admin.CustomFieldsLive do
 
   @impl true
   def handle_event("validate", %{"custom_metadata_field" => params}, socket) do
-    target = socket.assigns.editing_field || %CustomMetadataField{profile_key: socket.assigns.profile_key}
+    target =
+      socket.assigns.editing_field ||
+        %CustomMetadataField{profile_key: socket.assigns.profile_key}
 
     changeset =
       target
@@ -89,7 +91,11 @@ defmodule OmniArchiveWeb.Admin.CustomFieldsLive do
 
       {:error, :max_fields_reached} ->
         {:noreply,
-         put_flash(socket, :error, "フィールド数が上限（#{CustomMetadataField.max_fields_per_profile()}）に達しています")}
+         put_flash(
+           socket,
+           :error,
+           "フィールド数が上限（#{CustomMetadataField.max_fields_per_profile()}）に達しています"
+         )}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
@@ -157,8 +163,7 @@ defmodule OmniArchiveWeb.Admin.CustomFieldsLive do
         <div>
           <h1 class="text-2xl font-bold text-[#e8d5a3]">🏷️ カスタムフィールド管理</h1>
           <p class="text-gray-400 text-sm mt-1">
-            プロファイル: <span class="text-[#d4a844]">{@profile_key}</span>
-            ・ランタイムで追加したメタデータフィールドを管理します
+            プロファイル: <span class="text-[#d4a844]">{@profile_key}</span> ・ランタイムで追加したメタデータフィールドを管理します
           </p>
         </div>
         <button
@@ -192,7 +197,10 @@ defmodule OmniArchiveWeb.Admin.CustomFieldsLive do
                   placeholder="例: donor_name"
                   class={[
                     "w-full px-3 py-2 bg-[#12121f] border rounded-lg text-gray-200 focus:outline-none focus:border-[#d4a844]",
-                    if(@changeset.action && @changeset.errors[:field_key], do: "border-red-500", else: "border-gray-600")
+                    if(@changeset.action && @changeset.errors[:field_key],
+                      do: "border-red-500",
+                      else: "border-gray-600"
+                    )
                   ]}
                   {if @editing_field, do: [disabled: true], else: []}
                 />
@@ -286,7 +294,9 @@ defmodule OmniArchiveWeb.Admin.CustomFieldsLive do
 
       <%!-- コンパイル時フィールド一覧（参考表示） --%>
       <div class="mb-6">
-        <h2 class="text-sm font-medium text-gray-400 mb-2 uppercase tracking-wider">固定フィールド（プロファイル定義）</h2>
+        <h2 class="text-sm font-medium text-gray-400 mb-2 uppercase tracking-wider">
+          固定フィールド（プロファイル定義）
+        </h2>
         <div class="bg-[#1a1a2e]/50 border border-gray-700/30 rounded-lg divide-y divide-gray-700/30">
           <%= for field <- compile_time_fields() do %>
             <div class="px-4 py-3 flex items-center justify-between">
@@ -311,15 +321,22 @@ defmodule OmniArchiveWeb.Admin.CustomFieldsLive do
         <% else %>
           <div class="bg-[#1a1a2e] border border-gray-700/50 rounded-lg divide-y divide-gray-700/50">
             <%= for {field, idx} <- Enum.with_index(@fields) do %>
-              <div class={["px-4 py-3 flex items-center justify-between", !field.active && "opacity-50"]}>
+              <div class={[
+                "px-4 py-3 flex items-center justify-between",
+                !field.active && "opacity-50"
+              ]}>
                 <div class="flex-1">
                   <span class="text-gray-200 text-sm font-medium">{field.label}</span>
                   <span class="text-gray-500 text-xs ml-2">({field.field_key})</span>
                   <%= if field.searchable do %>
-                    <span class="ml-2 text-xs px-1.5 py-0.5 bg-[#d4a844]/20 text-[#d4a844] rounded">検索可</span>
+                    <span class="ml-2 text-xs px-1.5 py-0.5 bg-[#d4a844]/20 text-[#d4a844] rounded">
+                      検索可
+                    </span>
                   <% end %>
                   <%= if !field.active do %>
-                    <span class="ml-2 text-xs px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded">無効</span>
+                    <span class="ml-2 text-xs px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded">
+                      無効
+                    </span>
                   <% end %>
                   <%= if max_len = get_in(field.validation_rules, ["max_length"]) do %>
                     <span class="ml-2 text-gray-500 text-xs">最大{max_len}文字</span>
@@ -356,7 +373,13 @@ defmodule OmniArchiveWeb.Admin.CustomFieldsLive do
                   <button
                     phx-click="toggle_active"
                     phx-value-id={field.id}
-                    class={["p-1", if(field.active, do: "text-green-400 hover:text-red-400", else: "text-red-400 hover:text-green-400")]}
+                    class={[
+                      "p-1",
+                      if(field.active,
+                        do: "text-green-400 hover:text-red-400",
+                        else: "text-red-400 hover:text-green-400"
+                      )
+                    ]}
                     title={if field.active, do: "無効にする", else: "有効にする"}
                   >
                     {if field.active, do: "🟢", else: "🔴"}
