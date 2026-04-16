@@ -22,28 +22,21 @@ YAML 設定によるドメインプロファイルの切り替えにより、考
 
 ---
 
-## Project Background / プロジェクトの背景
+## Background / プロジェクトの背景
 
-OmniArchive was conceived in a supported employment context (就労継続支援) in Niigata, Japan.
+OmniArchive originated in a supported employment context (就労継続支援) in Niigata, Japan.
 The primary use case is digitizing historical documents — excavation reports, local archive
 materials — that exist only as static PDFs and are therefore inaccessible to standard digital
-archive tools. Cognitive accessibility is a first-class design constraint, not an afterthought:
-the project was built by and for people who work in accessibility-conscious environments.
-OmniArchive aims to lower the barrier for small institutions — local museums, universities
-without dedicated digital archive staff — to adopt IIIF-compliant workflows.
-
-OmniArchive is a generalized successor to [AlchemIIIF](https://github.com/SilentMalachite/alchemiif),
-which was built for archaeological site reports. OmniArchive extends the same IIIF pipeline to
-support multiple domain profiles via YAML-driven configuration.
+archive tools. It targets small institutions such as local museums and regional archives that
+want to adopt IIIF-compliant workflows without dedicated digital archive staff. Cognitive
+accessibility is a first-class design constraint, not an afterthought: the project was built
+by and for people who work in accessibility-conscious environments.
 
 > OmniArchive は、新潟県の就労継続支援 B 型施設の現場から生まれたプロジェクトです。
 > 主な用途は、静的 PDF としてしか存在しない歴史資料（発掘調査報告書・地域アーカイブ素材）のデジタル化です。
-> 小規模な地域アーカイブ（地方博物館・大学図書館など）が IIIF に準拠したデジタルアーカイブを
+> 専任スタッフのいない小規模機関（地方博物館・地域アーカイブなど）が、IIIF に準拠したデジタルアーカイブを
 > 自前で構築できるようにすることを目指しています。認知アクセシビリティを設計の根幹に置いており、
 > アクセシビリティを意識した環境で働く人々によって、その人々のために開発されました。
->
-> OmniArchive は、考古学発掘調査報告書を対象として開発した AlchemIIIF の汎用版です。
-> YAML 設定によるドメインプロファイルの切り替えにより、考古資料以外のアーカイブ資料にも対応しています。
 
 ---
 
@@ -595,3 +588,6 @@ Apache 2.0 は特許条項を含むため、公共機関・学術機関でのデ
 - [IIIF Consortium (International Image Interoperability Framework)](https://iiif.io/) — for the open standard that makes interoperable digital archives possible
 - [Phoenix Framework](https://www.phoenixframework.org/)
 - [vix (libvips Elixir wrapper)](https://github.com/akash-akya/vix)
+
+OmniArchive is a domain-agnostic successor to [AlchemIIIF](https://github.com/SilentMalachite/AlchemIIIF),
+which was built for archaeological site reports. / 考古学報告書向けに開発した AlchemIIIF の汎用版です。
