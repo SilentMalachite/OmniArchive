@@ -46,7 +46,7 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
      |> assign(:has_crop, geo != nil)
      |> assign(:polygon_points, polygon_points)
      |> assign(:bbox, bbox)
-     |> assign(:caption, extracted_image.caption || "")
+     |> assign(:summary, extracted_image.summary || "")
      |> assign(:label, extracted_image.label || "")
      |> assign(:metadata_fields, ExtractedImageMetadata.metadata_fields())
      |> assign(
@@ -80,7 +80,7 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
     # フォームの実入力値で assigns を更新
     socket =
       socket
-      |> assign(:caption, Map.get(params, "caption", socket.assigns.caption))
+      |> assign(:summary, Map.get(params, "summary", socket.assigns.summary))
       |> assign(:label, Map.get(params, "label", socket.assigns.label))
       |> assign(:metadata_values, updated_metadata_values(socket, params))
 
@@ -159,7 +159,7 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
       [previous | rest] ->
         {:noreply,
          socket
-         |> assign(:caption, previous.caption)
+         |> assign(:summary, previous.summary)
          |> assign(:label, previous.label)
          |> assign(:metadata_values, previous.metadata_values)
          |> assign(:undo_stack, rest)
@@ -226,7 +226,7 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
 
   defp take_snapshot(socket) do
     %{
-      caption: socket.assigns.caption,
+      summary: socket.assigns.summary,
       label: socket.assigns.label,
       metadata: socket.assigns.metadata_values,
       metadata_values: socket.assigns.metadata_values
@@ -303,7 +303,7 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
   # 全メタデータを一括保存する共通関数
   defp save_metadata(socket, extra_attrs) do
     base_attrs = %{
-      caption: socket.assigns.caption,
+      summary: socket.assigns.summary,
       label: socket.assigns.label,
       metadata: socket.assigns.metadata_values
     }
@@ -566,22 +566,22 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
         <%!-- メタデータ入力フォーム（phx-change でリアルタイムバリデーション） --%>
         <form phx-change="validate_metadata" class="metadata-form">
           <div class="form-group">
-            <% caption_field = metadata_field(:caption) %>
-            <label for="caption-input" class="form-label">{caption_field.label}</label>
+            <% summary_field = metadata_field(:summary) %>
+            <label for="summary-input" class="form-label">{summary_field.label}</label>
             <input
               type="text"
-              id="caption-input"
-              class={["form-input form-input-large", @validation_errors[:caption] && "input-error"]}
-              value={@caption}
+              id="summary-input"
+              class={["form-input form-input-large", @validation_errors[:summary] && "input-error"]}
+              value={@summary}
               phx-blur="blur_save_field"
-              phx-value-field="caption"
-              placeholder={caption_field.placeholder}
-              name="caption"
+              phx-value-field="summary"
+              placeholder={summary_field.placeholder}
+              name="summary"
               maxlength="1000"
             />
-            <%!-- キャプションエラー --%>
-            <%= if @validation_errors[:caption] do %>
-              <p class="field-error-text">⚠️ {@validation_errors[:caption]}</p>
+            <%!-- サマリーエラー --%>
+            <%= if @validation_errors[:summary] do %>
+              <p class="field-error-text">⚠️ {@validation_errors[:summary]}</p>
             <% end %>
           </div>
 
@@ -622,8 +622,8 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
                     <span class="duplicate-card-id">
                       ID: #{@duplicate_record.id}
                     </span>
-                    <span class="duplicate-card-caption">
-                      {@duplicate_record.caption || "（キャプションなし）"}
+                    <span class="duplicate-card-summary">
+                      {@duplicate_record.summary || "（サマリーなし）"}
                     </span>
                   </div>
                   <button
@@ -744,12 +744,12 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
     Map.new(values, fn {key, value} -> {to_string(key), value || ""} end)
   end
 
-  defp field_value(socket, field) when field in ["caption", "label"],
+  defp field_value(socket, field) when field in ["summary", "label"],
     do: Map.get(socket.assigns, field_atom(field))
 
   defp field_value(socket, field), do: metadata_value(socket, field)
 
-  defp assign_field_value(socket, field, value) when field in ["caption", "label"] do
+  defp assign_field_value(socket, field, value) when field in ["summary", "label"] do
     assign(socket, field_atom(field), value)
   end
 
@@ -760,7 +760,7 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
   defp metadata_value(socket, field),
     do: Map.get(socket.assigns.metadata_values, to_string(field), "")
 
-  defp auto_save_attrs(_socket, field, value) when field in ["caption", "label"] do
+  defp auto_save_attrs(_socket, field, value) when field in ["summary", "label"] do
     %{field_atom(field) => value}
   end
 
