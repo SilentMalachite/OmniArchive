@@ -17,7 +17,7 @@ defmodule OmniArchive.DomainProfiles.GeneralArchiveTest do
     assert DomainProfiles.current() == GeneralArchive
 
     assert Enum.map(DomainProfiles.metadata_fields(), & &1.field) == [
-             :caption,
+             :summary,
              :label,
              :collection,
              :item_type,

@@ -38,7 +38,7 @@ defmodule OmniArchiveWeb.SearchLiveTest do
     test "テキスト検索が実行される", %{conn: conn} do
       insert_extracted_image(%{
         ptif_path: "/path/to/test.tif",
-        caption: "テスト土器の出土状況",
+        summary: "テスト土器の出土状況",
         label: "fig-50-1"
       })
 
@@ -56,7 +56,7 @@ defmodule OmniArchiveWeb.SearchLiveTest do
     test "空の検索で全件表示に戻る", %{conn: conn} do
       insert_extracted_image(%{
         ptif_path: "/path/to/test.tif",
-        caption: "テスト"
+        summary: "テスト"
       })
 
       {:ok, view, _html} = live(conn, ~p"/lab/search")

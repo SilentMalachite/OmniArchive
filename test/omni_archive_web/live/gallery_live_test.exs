@@ -62,7 +62,7 @@ defmodule OmniArchiveWeb.GalleryLiveTest do
       insert_extracted_image(%{
         ptif_path: "/path/to/test.tif",
         status: "published",
-        caption: "ギャラリー検索テスト",
+        summary: "ギャラリー検索テスト",
         label: "fig-43-1"
       })
 
@@ -146,7 +146,7 @@ defmodule OmniArchiveWeb.GalleryLiveTest do
           ptif_path: "/path/to/modal.tif",
           status: "published",
           label: "fig-44-1",
-          caption: "テストキャプション",
+          summary: "テストサマリー",
           image_path: "priv/static/uploads/test.png",
           geometry: %{"x" => 10, "y" => 20, "width" => 200, "height" => 150}
         })

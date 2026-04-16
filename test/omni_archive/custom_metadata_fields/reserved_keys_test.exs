@@ -6,8 +6,8 @@ defmodule OmniArchive.CustomMetadataFields.ReservedKeysTest do
   @fixture Path.expand("../../support/yaml_fixtures/valid_reserved_keys.yaml", __DIR__)
 
   describe "with built-in profile active" do
-    test "rejects keys that are statically reserved (e.g. caption)" do
-      attrs = %{field_key: "caption", label: "x", profile_key: "whatever"}
+    test "rejects keys that are statically reserved (e.g. summary)" do
+      attrs = %{field_key: "summary", label: "x", profile_key: "whatever"}
       changeset = CustomMetadataField.changeset(%CustomMetadataField{}, attrs)
       refute changeset.valid?
       assert {"予約済みのフィールドキーです", _} = changeset.errors[:field_key]

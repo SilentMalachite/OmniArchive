@@ -25,7 +25,7 @@ defmodule OmniArchiveWeb.InspectorLive.LabelTest do
     test "初期状態でステップ4が表示される", %{conn: conn, user: user} do
       image =
         create_user_image(user, %{
-          caption: "テスト土器第3図",
+          summary: "テスト土器第3図",
           label: "fig-3-1",
           site: "テスト市遺跡",
           period: "縄文時代",
@@ -43,7 +43,7 @@ defmodule OmniArchiveWeb.InspectorLive.LabelTest do
     test "既存のメタデータが入力フィールドに表示される", %{conn: conn, user: user} do
       image =
         create_user_image(user, %{
-          caption: "テスト土器第3図",
+          summary: "テスト土器第3図",
           label: "fig-3-1",
           site: "テスト市遺跡",
           period: "縄文時代",
@@ -96,7 +96,7 @@ defmodule OmniArchiveWeb.InspectorLive.LabelTest do
     test "メタデータが空の場合でも正常に表示される", %{conn: conn, user: user} do
       image =
         create_user_image(user, %{
-          caption: nil,
+          summary: nil,
           label: nil,
           site: nil,
           period: nil,
@@ -201,7 +201,7 @@ defmodule OmniArchiveWeb.InspectorLive.LabelTest do
           pdf_source_id: pdf_source.id,
           label: "fig-1-1",
           site: "重複検出テスト市遺跡",
-          caption: "既存の図版"
+          summary: "既存の図版"
         })
 
       # 2つ目のレコード — 同じ pdf_source_id でラベル未設定
@@ -222,7 +222,7 @@ defmodule OmniArchiveWeb.InspectorLive.LabelTest do
         "_target" => ["label"],
         "label" => "fig-1-1",
         "site" => "重複検出テスト市遺跡",
-        "caption" => "",
+        "summary" => "",
         "period" => "",
         "artifact_type" => ""
       })
@@ -241,7 +241,7 @@ defmodule OmniArchiveWeb.InspectorLive.LabelTest do
           pdf_source_id: pdf_a.id,
           label: "fig-1-1",
           site: "別PDFテスト市遺跡",
-          caption: "PDF A の図版"
+          summary: "PDF A の図版"
         })
 
       # PDF B のレコード（別の pdf_source）
@@ -263,7 +263,7 @@ defmodule OmniArchiveWeb.InspectorLive.LabelTest do
         "_target" => ["label"],
         "label" => "fig-1-1",
         "site" => "",
-        "caption" => "",
+        "summary" => "",
         "period" => "",
         "artifact_type" => ""
       })
@@ -297,7 +297,7 @@ defmodule OmniArchiveWeb.InspectorLive.LabelTest do
         "_target" => ["label"],
         "label" => "",
         "site" => "",
-        "caption" => "",
+        "summary" => "",
         "period" => "",
         "artifact_type" => ""
       })
@@ -334,7 +334,7 @@ defmodule OmniArchiveWeb.InspectorLive.LabelTest do
         "_target" => ["label"],
         "label" => "fig-1-1",
         "site" => "ブロックテスト市遺跡",
-        "caption" => "",
+        "summary" => "",
         "period" => "",
         "artifact_type" => ""
       })
@@ -358,7 +358,7 @@ defmodule OmniArchiveWeb.InspectorLive.LabelTest do
           pdf_source_id: pdf_source.id,
           label: "fig-1-1",
           site: "マージテスト市遺跡",
-          caption: "既存の図版"
+          summary: "既存の図版"
         })
 
       # current は別のラベルで作成（DB 制約回避）
@@ -379,7 +379,7 @@ defmodule OmniArchiveWeb.InspectorLive.LabelTest do
         "_target" => ["label"],
         "label" => "fig-1-1",
         "site" => "マージテスト市遺跡",
-        "caption" => "",
+        "summary" => "",
         "period" => "",
         "artifact_type" => ""
       })
@@ -436,7 +436,7 @@ defmodule OmniArchiveWeb.InspectorLive.LabelTest do
           pdf_source_id: pdf_source.id,
           label: "photo-001",
           metadata: %{"collection" => "広報写真アーカイブ"},
-          caption: "既存の資料"
+          summary: "既存の資料"
         })
 
       current =
@@ -454,7 +454,7 @@ defmodule OmniArchiveWeb.InspectorLive.LabelTest do
       |> render_change(%{
         "_target" => ["label"],
         "label" => "photo-001",
-        "caption" => "",
+        "summary" => "",
         "collection" => "広報写真アーカイブ",
         "item_type" => "",
         "date_note" => ""

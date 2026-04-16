@@ -13,7 +13,7 @@ defmodule OmniArchive.Ingestion.ExtractedImageTest do
         pdf_source_id: pdf_source.id,
         page_number: 1,
         image_path: "priv/static/uploads/pages/1/page-001.png",
-        caption: "テストキャプション",
+        summary: "テストサマリー",
         label: "fig-1-1"
       }
 

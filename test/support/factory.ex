@@ -47,7 +47,7 @@ defmodule OmniArchive.Factory do
         page_number: 1,
         image_path: "priv/static/uploads/pages/test/page-001.png",
         geometry: %{"x" => 10, "y" => 20, "width" => 200, "height" => 300},
-        caption: "第1図 テスト土器",
+        summary: "第1図 テスト土器",
         label: "fig-#{System.unique_integer([:positive])}-1",
         site: "テスト市遺跡",
         period: "縄文時代",

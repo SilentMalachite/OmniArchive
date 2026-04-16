@@ -18,7 +18,7 @@ defmodule OmniArchiveWeb.InspectorLive.FinalizeTest do
       image =
         insert_extracted_image(%{
           page_number: 3,
-          caption: "テスト土器第3図",
+          summary: "テスト土器第3図",
           label: "fig-3-1",
           geometry: %{"x" => 10, "y" => 20, "width" => 200, "height" => 300}
         })
@@ -71,7 +71,7 @@ defmodule OmniArchiveWeb.InspectorLive.FinalizeTest do
 
   describe "キャプション・ラベルなしの場合" do
     test "キャプションがない場合は表示されない", %{conn: conn} do
-      image = insert_extracted_image(%{caption: nil, label: nil, geometry: nil})
+      image = insert_extracted_image(%{summary: nil, label: nil, geometry: nil})
 
       {:ok, _view, html} = live(conn, ~p"/lab/finalize/#{image.id}")
 

@@ -14,7 +14,7 @@ defmodule OmniArchive.SearchTest do
       insert_extracted_image(%{
         pdf_source_id: pdf.id,
         page_number: 1,
-        caption: "第1図 縄文土器出土状況",
+        summary: "第1図 縄文土器出土状況",
         label: "fig-1-1",
         site: "吉野ヶ里町遺跡",
         period: "縄文時代",
@@ -27,7 +27,7 @@ defmodule OmniArchive.SearchTest do
       insert_extracted_image(%{
         pdf_source_id: pdf.id,
         page_number: 2,
-        caption: "第2図 弥生時代の銅鉛",
+        summary: "第2図 弥生時代の銅鉛",
         label: "fig-2-1",
         site: "静岡市登呂遺跡",
         period: "弥生時代",
@@ -40,7 +40,7 @@ defmodule OmniArchive.SearchTest do
       insert_extracted_image(%{
         pdf_source_id: pdf.id,
         page_number: 3,
-        caption: "第3図 下書きの図版",
+        summary: "第3図 下書きの図版",
         label: "fig-3-1",
         site: "吉野ヶ里町遺跡",
         period: "縄文時代",
@@ -272,7 +272,7 @@ defmodule OmniArchive.SearchTest do
     test "metadata-only field で検索と filter options が動く" do
       image =
         insert_extracted_image(%{
-          caption: "市史写真",
+          summary: "市史写真",
           label: "photo-001",
           ptif_path: "/path/to/general.tif",
           site: "旧サイト値",
@@ -301,7 +301,7 @@ defmodule OmniArchive.SearchTest do
 
     test "metadata-only field を使って count_results/2 できる" do
       insert_extracted_image(%{
-        caption: "館報",
+        summary: "館報",
         label: "doc-2024-05",
         ptif_path: "/path/to/general-count.tif",
         metadata: %{

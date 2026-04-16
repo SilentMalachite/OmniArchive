@@ -160,13 +160,13 @@ defmodule OmniArchive.IngestionTest do
         pdf_source_id: pdf.id,
         page_number: 3,
         image_path: "priv/static/uploads/pages/1/page-003.png",
-        caption: "テスト図版",
+        summary: "テスト図版",
         label: "fig-100-1"
       }
 
       assert {:ok, %ExtractedImage{} = image} = Ingestion.create_extracted_image(attrs)
       assert image.page_number == 3
-      assert image.caption == "テスト図版"
+      assert image.summary == "テスト図版"
       assert image.status == "draft"
     end
 
@@ -181,11 +181,11 @@ defmodule OmniArchive.IngestionTest do
 
       assert {:ok, updated} =
                Ingestion.update_extracted_image(image, %{
-                 caption: "更新されたキャプション",
+                 summary: "更新されたサマリー",
                  label: "fig-200-2"
                })
 
-      assert updated.caption == "更新されたキャプション"
+      assert updated.summary == "更新されたサマリー"
       assert updated.label == "fig-200-2"
     end
   end
@@ -363,13 +363,13 @@ defmodule OmniArchive.IngestionTest do
       stale_image = %{image | lock_version: image.lock_version - 1}
 
       assert {:error, :stale} =
-               Ingestion.update_extracted_image(stale_image, %{caption: "新caption"})
+               Ingestion.update_extracted_image(stale_image, %{summary: "新summary"})
     end
 
     test "lock_version が一致していれば正常に更新される" do
       image = insert_extracted_image(%{label: "fig-1000-2"})
-      assert {:ok, updated} = Ingestion.update_extracted_image(image, %{caption: "更新OK"})
-      assert updated.caption == "更新OK"
+      assert {:ok, updated} = Ingestion.update_extracted_image(image, %{summary: "更新OK"})
+      assert updated.summary == "更新OK"
       assert updated.lock_version == image.lock_version + 1
     end
 

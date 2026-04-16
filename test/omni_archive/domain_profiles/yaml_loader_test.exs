@@ -9,7 +9,7 @@ defmodule OmniArchive.DomainProfiles.YamlLoaderTest do
   test "loads a valid minimal profile" do
     assert {:ok, profile} = YamlLoader.load(fixture("valid_minimal.yaml"))
     assert is_list(profile.metadata_fields)
-    assert Enum.any?(profile.metadata_fields, &(&1.field == :caption))
+    assert Enum.any?(profile.metadata_fields, &(&1.field == :summary))
     assert Enum.any?(profile.metadata_fields, &(&1.field == :label))
     assert profile.duplicate_identity.profile_key == "test_yaml"
     assert profile.duplicate_identity.scope_field == :collection
@@ -18,9 +18,9 @@ defmodule OmniArchive.DomainProfiles.YamlLoaderTest do
   @error_cases [
     {"bad_invalid_field_key.yaml", ~r/invalid field key/},
     {"bad_duplicate_fields.yaml", ~r/duplicate/},
-    {"bad_missing_caption.yaml", ~r/caption|missing/},
+    {"bad_missing_summary.yaml", ~r/summary|missing/},
     {"bad_missing_label.yaml", ~r/label|missing/},
-    {"bad_caption_metadata_storage.yaml", ~r/storage: core/},
+    {"bad_summary_metadata_storage.yaml", ~r/storage: core/},
     {"bad_core_on_other_field.yaml", ~r/storage: core/}
   ]
 
@@ -79,7 +79,7 @@ defmodule OmniArchive.DomainProfiles.YamlLoaderTest do
   test "loads priv/profiles/example_profile.yaml" do
     path = Application.app_dir(:omni_archive, "priv/profiles/example_profile.yaml")
     assert {:ok, profile} = YamlLoader.load(path)
-    assert Enum.any?(profile.metadata_fields, &(&1.field == :caption))
+    assert Enum.any?(profile.metadata_fields, &(&1.field == :summary))
     assert %Regex{} = profile.validation_rules[:label][:format]
   end
 end

@@ -16,7 +16,7 @@ defmodule OmniArchive.DomainProfiles.YamlCacheTest do
 
   test "loads profile on init and exposes accessors" do
     start_supervised!(YamlCache)
-    assert [%{field: :caption} | _] = YamlCache.metadata_fields()
+    assert [%{field: :summary} | _] = YamlCache.metadata_fields()
     assert %{profile_key: "test_yaml"} = YamlCache.duplicate_identity()
     assert is_map(YamlCache.ui_texts())
     assert is_list(YamlCache.search_facets())
