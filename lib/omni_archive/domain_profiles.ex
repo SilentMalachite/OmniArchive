@@ -4,9 +4,9 @@ defmodule OmniArchive.DomainProfiles do
   コンパイル時フィールドとランタイムカスタムフィールドをマージして返します。
   """
 
-  alias OmniArchive.DomainProfiles.Archaeology
   alias OmniArchive.CustomMetadataFields
   alias OmniArchive.CustomMetadataFields.Cache
+  alias OmniArchive.DomainProfiles.Archaeology
 
   @default_profile Archaeology
   @compile_time_default_profile Application.compile_env(

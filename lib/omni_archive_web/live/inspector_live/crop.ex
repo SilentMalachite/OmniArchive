@@ -89,9 +89,6 @@ defmodule OmniArchiveWeb.InspectorLive.Crop do
   @impl true
   def handle_event("preview_crop", %{"points" => points} = _params, socket)
       when is_list(points) do
-    # Phase 1: ポリゴン頂点を IO.inspect で確認
-    IO.inspect(points, label: "[Phase1] preview_crop polygon points")
-
     normalized_points = normalize_points(points)
 
     # 現在の値を Undo スタックに保存
@@ -127,8 +124,6 @@ defmodule OmniArchiveWeb.InspectorLive.Crop do
   # ダブルクリック/ダブルタップによる明示的保存（ポリゴン）
   @impl true
   def handle_event("save_crop", %{"points" => points} = _params, socket) when is_list(points) do
-    IO.inspect(points, label: "[Phase1] save_crop polygon points")
-
     normalized_points = normalize_points(points)
     geometry = %{"points" => normalized_points}
 

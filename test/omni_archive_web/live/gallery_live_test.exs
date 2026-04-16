@@ -157,7 +157,7 @@ defmodule OmniArchiveWeb.GalleryLiveTest do
 
       # モーダルが表示される
       assert html =~ "fig-44-1"
-      assert html =~ "テストキャプション"
+      assert html =~ "テストサマリー"
       assert html =~ "bg-black/90"
     end
 

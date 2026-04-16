@@ -4,9 +4,9 @@ defmodule OmniArchive.CustomMetadataFields do
   """
 
   import Ecto.Query
-  alias OmniArchive.Repo
-  alias OmniArchive.CustomMetadataFields.CustomMetadataField
   alias OmniArchive.CustomMetadataFields.Cache
+  alias OmniArchive.CustomMetadataFields.CustomMetadataField
+  alias OmniArchive.Repo
 
   # --- CRUD ---
 

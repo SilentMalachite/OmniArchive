@@ -107,7 +107,7 @@ defmodule OmniArchiveWeb.InspectorLive.LabelTest do
 
       # フォームが表示される
       assert html =~ "図版の情報を入力してください"
-      assert html =~ "キャプション"
+      assert html =~ "サマリー"
       assert html =~ "例: 新潟市中野遺跡"
       assert html =~ "例: 縄文時代"
     end

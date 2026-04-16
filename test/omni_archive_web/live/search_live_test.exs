@@ -15,7 +15,7 @@ defmodule OmniArchiveWeb.SearchLiveTest do
 
       assert html =~ "画像を検索"
       assert html =~ "search-input"
-      assert html =~ "キャプション、ラベル、遺跡名で検索..."
+      assert html =~ "サマリー、ラベル、遺跡名で検索..."
     end
 
     test "初期状態で結果件数が表示される", %{conn: conn} do

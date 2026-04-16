@@ -37,7 +37,7 @@ defmodule OmniArchive.DomainProfiles.GeneralArchiveTest do
   test "GeneralArchive の validation と UI text を返す" do
     assert DomainMetadataValidation.duplicate_scope_field() == :collection
     assert DomainMetadataValidation.duplicate_label_error() == "このコレクションでそのラベルは既に登録されています"
-    assert DomainProfiles.ui_text([:search, :placeholder]) == "キャプション、ラベル、コレクション名で検索..."
+    assert DomainProfiles.ui_text([:search, :placeholder]) == "サマリー、ラベル、コレクション名で検索..."
 
     assert DomainMetadataValidation.validate_field(:label, "photo-001") == nil
 

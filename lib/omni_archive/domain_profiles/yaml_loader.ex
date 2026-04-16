@@ -60,24 +60,22 @@ defmodule OmniArchive.DomainProfiles.YamlLoader do
 
   defp normalize_field(%{"field" => key, "label" => label} = f)
        when is_binary(key) and is_binary(label) and label != "" do
-    cond do
-      not Regex.match?(@field_key_format, key) ->
-        {:error, "invalid field key: #{inspect(key)}"}
+    if Regex.match?(@field_key_format, key) do
+      storage = Map.get(f, "storage", "metadata")
 
-      true ->
-        storage = Map.get(f, "storage", "metadata")
-
-        if storage not in ["core", "metadata"] do
-          {:error, "invalid storage for #{key}: #{inspect(storage)}"}
-        else
-          {:ok,
-           %{
-             field: String.to_atom(key),
-             label: label,
-             placeholder: Map.get(f, "placeholder", ""),
-             storage: String.to_atom(storage)
-           }}
-        end
+      if storage in ["core", "metadata"] do
+        {:ok,
+         %{
+           field: String.to_atom(key),
+           label: label,
+           placeholder: Map.get(f, "placeholder", ""),
+           storage: String.to_atom(storage)
+         }}
+      else
+        {:error, "invalid storage for #{key}: #{inspect(storage)}"}
+      end
+    else
+      {:error, "invalid field key: #{inspect(key)}"}
     end
   end
 
@@ -152,32 +150,40 @@ defmodule OmniArchive.DomainProfiles.YamlLoader do
 
   defp normalize_rule(rules) do
     Enum.reduce_while(rules, {:ok, %{}}, fn {k, v}, {:ok, acc} ->
-      cond do
-        k not in @allowed_rule_keys ->
-          {:halt, {:error, "unknown rule key: #{k}"}}
-
-        k == "format" and is_binary(v) ->
-          case Regex.compile(v) do
-            {:ok, re} -> {:cont, {:ok, Map.put(acc, :format, re)}}
-            {:error, reason} -> {:halt, {:error, "invalid format regex: #{inspect(reason)}"}}
-          end
-
-        k == "required_terms" and is_list(v) ->
-          if Enum.all?(v, &is_binary/1),
-            do: {:cont, {:ok, Map.put(acc, :required_terms, v)}},
-            else: {:halt, {:error, "required_terms must be list of strings"}}
-
-        k == "max_length" and is_integer(v) and v > 0 ->
-          {:cont, {:ok, Map.put(acc, :max_length, v)}}
-
-        String.ends_with?(k, "_error") and is_binary(v) ->
-          {:cont, {:ok, Map.put(acc, String.to_atom(k), v)}}
-
-        true ->
-          {:halt, {:error, "invalid value for rule #{k}"}}
+      case normalize_rule_entry(k, v) do
+        {:ok, key, val} -> {:cont, {:ok, Map.put(acc, key, val)}}
+        {:error, _} = err -> {:halt, err}
       end
     end)
   end
+
+  defp normalize_rule_entry(k, _v) when k not in @allowed_rule_keys,
+    do: {:error, "unknown rule key: #{k}"}
+
+  defp normalize_rule_entry("format", v) when is_binary(v) do
+    case Regex.compile(v) do
+      {:ok, re} -> {:ok, :format, re}
+      {:error, reason} -> {:error, "invalid format regex: #{inspect(reason)}"}
+    end
+  end
+
+  defp normalize_rule_entry("required_terms", v) when is_list(v) do
+    if Enum.all?(v, &is_binary/1),
+      do: {:ok, :required_terms, v},
+      else: {:error, "required_terms must be list of strings"}
+  end
+
+  defp normalize_rule_entry("max_length", v) when is_integer(v) and v > 0,
+    do: {:ok, :max_length, v}
+
+  defp normalize_rule_entry(k, v) when is_binary(v) and k != "" do
+    if String.ends_with?(k, "_error"),
+      do: {:ok, String.to_atom(k), v},
+      else: {:error, "invalid value for rule #{k}"}
+  end
+
+  defp normalize_rule_entry(k, _v),
+    do: {:error, "invalid value for rule #{k}"}
 
   defp parse_search_facets(raw, _fields) when not is_list(raw),
     do: {:error, "search_facets must be a list"}
