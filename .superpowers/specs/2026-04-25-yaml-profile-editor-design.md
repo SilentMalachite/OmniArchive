@@ -18,8 +18,9 @@ OmniArchive は `OMNI_ARCHIVE_PROFILE_YAML` 環境変数で指定した YAML フ
 | 保存先 | `OMNI_ARCHIVE_PROFILE_YAML` 環境変数が指すファイルパス（外部ディレクトリ） |
 | テンプレート参照 | `priv/profiles/example_profile.yaml`（変更不要、読み取り専用） |
 | 編集対象セクション | 全5セクション（metadata_fields / validation_rules / search_facets / duplicate_identity / ui_texts） |
-| 保存と適用の分離 | 「下書き保存」（ファイル書き込み）と「適用」（`YamlCache.reload!`）を別ボタンで操作 |
+| 保存と適用の分離 | 「下書き保存」（ファイル書き込み）と「適用」（同期的な `YamlCache.reload_from_disk/0`）を別ボタンで操作 |
 | 環境変数未設定時 | フォーム非表示、設定方法のメッセージのみ表示 |
+| 初回作成 | 環境変数あり・ファイル未存在でもアプリは起動し、テンプレート内容を初期値にした新規作成モードを表示 |
 
 ---
 
@@ -37,9 +38,22 @@ OmniArchive は `OMNI_ARCHIVE_PROFILE_YAML` 環境変数で指定した YAML フ
 
 - `lib/omni_archive_web/router.ex` — `live "/yaml_profile", YamlProfileLive, :index` を admin スコープに追加
 - 管理レイアウト — タブナビゲーションに「YAMLプロファイル」リンクを追加
+- `config/runtime.exs` — `OMNI_ARCHIVE_PROFILE_YAML` が未存在ファイルを指しても起動時に raise しない
+- `lib/omni_archive/domain_profiles/yaml_loader.ex` — `load_string/1` と UI 必須キー参照関数を追加
+- `lib/omni_archive/domain_profiles/yaml_cache.ex` — テンプレート fallback と同期的な安全 reload を追加
 - `mix.exs` — `{:ymlr, "~> 5.0"}` を追加（YAML エンコード用）
 
 ---
+
+## 起動時設定と初回作成
+
+現状の `config/runtime.exs` は `OMNI_ARCHIVE_PROFILE_YAML` が未存在ファイルを指すと起動時に raise する。このままでは `:new` モードの LiveView に到達できないため、本機能では次の挙動に変更する。
+
+- `OMNI_ARCHIVE_PROFILE_YAML` が未設定の場合は従来どおり YAML profile を有効化しない。
+- `OMNI_ARCHIVE_PROFILE_YAML` が設定されている場合は、ファイル存在有無にかかわらず `:domain_profile_yaml_path` を設定し、active profile を `OmniArchive.DomainProfiles.Yaml` にする。
+- `YamlCache.init/1` は対象 YAML が存在する場合はそれを読み込む。存在しない場合は `priv/profiles/example_profile.yaml` を読み込んで一時的な in-memory profile として使う。
+- LiveView の `:new` 判定は `File.exists?(@yaml_path) == false` で行う。フォーム初期値はテンプレートから読み込むが、テンプレートファイル自体は絶対に書き換えない。
+- 対象 YAML が未存在のまま「適用」を押した場合はエラーにする。最初に下書き保存で対象パスへファイルを作成する。
 
 ## LiveView の状態
 
@@ -62,7 +76,7 @@ OmniArchive は `OMNI_ARCHIVE_PROFILE_YAML` 環境変数で指定した YAML フ
 | 状態 | 条件 | UIの動作 |
 |---|---|---|
 | `:unconfigured` | 環境変数未設定 | フォーム非表示。設定方法のメッセージを表示 |
-| `:new` | 環境変数あり・ファイル未存在 | 全セクション空欄で新規作成モード |
+| `:new` | 環境変数あり・ファイル未存在 | `priv/profiles/example_profile.yaml` の内容を初期値にした新規作成モード |
 | `:loaded` | 環境変数あり・ファイル存在 | 既存内容をフォームに読み込んで表示 |
 
 ---
@@ -84,7 +98,7 @@ OmniArchive は `OMNI_ARCHIVE_PROFILE_YAML` 環境変数で指定した YAML フ
 
 - 対応ルール: `max_length` / `max_length_error` / `format` / `format_error` / `required_terms` / `required_terms_error`
 - `format` は `@validation_rules` assigns に**生の文字列（raw pattern）**として保持する。`YamlLoader` はロード時にコンパイル済み `Regex` 構造体を返すが、`ymlr` はそれをシリアライズできないため、フォーム側では元の文字列を使う。`format` 入力時はリアルタイムで `Regex.compile/1` を使い構文チェックのみ行う。
-- `metadata_fields` に存在しないフィールドのルールは表示しない
+- `metadata_fields` に存在しないフィールドのルールは孤立参照として表示し、保存時にエラーにする。フィールド削除時は関連ルール・ファセットも削除する確認 UI を出す。
 
 ### タブ3: `search_facets`
 
@@ -98,11 +112,22 @@ OmniArchive は `OMNI_ARCHIVE_PROFILE_YAML` 環境変数で指定した YAML フ
 単一マップのシンプルなフォーム。
 
 - `scope_field` / `label_field` は `metadata_fields` のプルダウン
-- `profile_key` / `duplicate_label_error` はテキスト入力
+- `profile_key` は新規作成時のみ編集可。既存 YAML では読み取り専用にする（既存 fingerprint と runtime custom fields が `profile_key` に依存するため）
+- `duplicate_label_error` はテキスト入力
 
 ### タブ5: `ui_texts`
 
-2サブセクション（`search` 11項目 / `inspector_label` 8項目）のテキスト入力フォーム。必須キーはすべて `YamlLoader` の `@required_search_keys` / `@required_inspector_keys` に準拠。
+2サブセクション（`search` 11項目 / `inspector_label` 6項目）のテキスト入力フォーム。必須キーは `YamlLoader.required_ui_text_keys(:search)` / `YamlLoader.required_ui_text_keys(:inspector_label)` で参照し、LiveView 側で private module attribute を重複定義しない。
+
+---
+
+## YAML 読み書き方針
+
+- フォーム初期値は `YamlElixir.read_from_file/1` で取得した raw map から作る。`YamlLoader.load/1` の戻り値は atom key 化・Regex コンパイル済みなので、編集状態の復元には使わない。
+- `:new` モードでは `priv/profiles/example_profile.yaml` の raw map を読み込み、`@yaml_path` への保存候補として表示する。
+- 保存時は string key の map を組み立て、`Ymlr.document!/2` で YAML 文字列化する。
+- バリデーション用に `YamlLoader.load_string/1` を追加する。`load/1` と `load_string/1` は共通の `parse_raw/1` に委譲し、検証ロジックを重複させない。
+- `format` は保存前まで raw string のまま保持する。`load_string/1` が成功した時点で Regex として妥当と判断する。
 
 ---
 
@@ -113,11 +138,12 @@ OmniArchive は `OMNI_ARCHIVE_PROFILE_YAML` 環境変数で指定した YAML フ
 ```
 1. assigns の全セクションを YAML マップに組み立て
 2. ymlr でエンコード（YAML 文字列化）
-3. YamlLoader.load/1 でバリデーション
+3. YamlLoader.load_string/1 でバリデーション
    ├─ {:error, reason} → @validation_errors に格納、タブバッジ + インラインエラー表示
-   └─ {:ok, _} → File.write(@yaml_path, yaml_string)
-4. @has_unsaved_changes = false、@draft_saved = true
-5. フラッシュ: "プロファイルを保存しました（まだ適用されていません）"
+   └─ {:ok, _} → 同一ディレクトリの一時ファイルへ書き込み後、File.rename/2 で @yaml_path に atomic 置換
+4. File.write / File.rename 失敗時はフラッシュエラー表示
+5. @has_unsaved_changes = false、@draft_saved = true
+6. フラッシュ: "プロファイルを保存しました（まだ適用されていません）"
 ```
 
 ### 適用（`handle_event("activate")`）
@@ -125,13 +151,17 @@ OmniArchive は `OMNI_ARCHIVE_PROFILE_YAML` 環境変数で指定した YAML フ
 適用ボタンは `@draft_saved == true and @has_unsaved_changes == false` のときのみ有効。
 
 ```
-1. YamlCache.reload!()
-   ├─ GenServer.stop は同期的にプロセスを終了させる
-   └─ supervisor による再起動は非同期のため、完了を Process.whereis/1 でポーリング（最大200ms、10msごと）
-2. ポーリングタイムアウト → フラッシュエラー表示（再試行を促す）
-3. 再起動確認後 → @draft_saved = false
+1. YamlCache.reload_from_disk()
+   ├─ GenServer.call で同期実行
+   ├─ @yaml_path を YamlLoader.load/1 で読み込み・検証
+   ├─ 成功時のみ ETS の profile tuple を差し替える
+   └─ 失敗時は既存 cache を維持して {:error, reason} を返す
+2. {:error, reason} → フラッシュエラー表示（既存 profile は継続）
+3. {:ok, _profile} → @draft_saved = false
 4. フラッシュ: "プロファイルを適用しました"
 ```
+
+`YamlCache` は個別キーを複数行で ETS に保存するのではなく、`{:profile, profile_map}` の単一 tuple を保存する。これにより reload 中の空状態や、metadata_fields だけ新旧が混ざる中間状態を避ける。
 
 ---
 
@@ -141,8 +171,10 @@ OmniArchive は `OMNI_ARCHIVE_PROFILE_YAML` 環境変数で指定した YAML フ
 |---|---|
 | `File.write` 失敗（パーミッションエラーなど） | `{:error, reason}` をキャッチしてフラッシュエラー表示 |
 | `YamlLoader` バリデーション失敗 | タブバッジに `⚠️` 表示 + フォーム内にインラインエラー |
-| `YamlCache.reload!` 中の短時間の ETS 空状態 | 許容（ミリ秒以内で supervisor が再起動） |
-| `metadata_fields` 削除によって `validation_rules` / `search_facets` に孤立参照が生じる | 保存時に `YamlLoader` が検知してエラー表示 |
+| `YamlCache.reload_from_disk/0` 失敗 | 既存 cache を維持し、適用失敗のフラッシュを表示 |
+| reload 中の ETS 空状態 | 許容しない。単一 profile tuple の差し替えで中間状態を作らない |
+| `metadata_fields` 削除によって `validation_rules` / `search_facets` に孤立参照が生じる | UI で孤立参照として表示し、保存時に `YamlLoader` が検知してエラー表示 |
+| 対象ファイルが外部で更新済み | mount 時に mtime または content hash を保存し、下書き保存時に変化していれば上書きを止める |
 
 ---
 
@@ -163,8 +195,11 @@ OmniArchive は `OMNI_ARCHIVE_PROFILE_YAML` 環境変数で指定した YAML フ
 |---|---|
 | `mount` の3状態（unconfigured / new / loaded） | `test/omni_archive_web/live/admin/yaml_profile_live_test.exs` |
 | 下書き保存フロー（正常系・バリデーションエラー系） | 同上（実ファイルを一時ディレクトリに作成して検証） |
-| 適用フロー（`YamlCache.reload!` 後に ETS の内容が更新されること + `@draft_saved` が false になること） | 同上 |
-| `ymlr` エンコード → `YamlLoader` デコードのラウンドトリップ | `test/omni_archive/domain_profiles/yaml_roundtrip_test.exs` |
+| 適用フロー（`YamlCache.reload_from_disk/0` 後に ETS の内容が更新されること + `@draft_saved` が false になること） | 同上 |
+| `load_string/1` と `load/1` が同じ検証結果を返すこと | `test/omni_archive/domain_profiles/yaml_loader_test.exs` |
+| `YamlCache.reload_from_disk/0` が invalid YAML で既存 cache を維持すること | `test/omni_archive/domain_profiles/yaml_cache_test.exs` |
+| `ymlr` エンコード → `YamlLoader.load_string/1` デコードのラウンドトリップ | `test/omni_archive/domain_profiles/yaml_roundtrip_test.exs` |
+| 既存 YAML の `format` が raw string としてフォームに復元されること | `test/omni_archive_web/live/admin/yaml_profile_live_test.exs` |
 
 ---
 

@@ -47,8 +47,7 @@ If the repository is still mid-rename and these paths do not exist yet, use the 
 ## Rename and migration rules
 
 - When renaming modules or directories, update all references in code, tests, config, docs, release metadata, and CI files in the same change.
-- After any namespace rename, run a repository-wide search for legacy names and fix leftovers in text files.
-- Do not edit binary assets just to change product names; update nearby docs or alt text instead.
+- After any namespace rename, run a repository-wide search for legacy names and fix leftovers in text files Do not edit binary assets just to change product names; update nearby docs or alt text instead.
 
 ## Validation
 
