@@ -49,11 +49,12 @@ OmniArchive は `OMNI_ARCHIVE_PROFILE_YAML` 環境変数で指定した YAML フ
 | `@yaml_path` | string \| nil | 環境変数 `OMNI_ARCHIVE_PROFILE_YAML` の値 |
 | `@profile_state` | `:unconfigured \| :new \| :loaded` | UIの表示モードを制御 |
 | `@fields` | list | metadata_fields の編集中リスト |
-| `@validation_rules` | map | フィールドキー → バリデーションルールのマップ |
+| `@validation_rules` | map | フィールドキー → バリデーションルールのマップ（`format` は生文字列で保持、コンパイル済み Regex は持たない） |
 | `@search_facets` | list | search_facets の編集中リスト |
 | `@duplicate_identity` | map | duplicate_identity の編集中値 |
 | `@ui_texts` | map | ui_texts の編集中値（search / inspector_label） |
-| `@has_unsaved_changes` | bool | 未保存変更の有無（適用ボタンの活性制御） |
+| `@has_unsaved_changes` | bool | フォームに未保存の変更があるか（true = ファイルと不一致） |
+| `@draft_saved` | bool | このセッションでファイルを保存したか（true = 適用ボタン有効の前提条件） |
 | `@validation_errors` | map | セクション別バリデーションエラー |
 
 ### `@profile_state` の遷移
@@ -82,7 +83,7 @@ OmniArchive は `OMNI_ARCHIVE_PROFILE_YAML` 環境変数で指定した YAML フ
 `metadata_fields` で定義済みのフィールドをプルダウンで選択し、ルールを設定。
 
 - 対応ルール: `max_length` / `max_length_error` / `format` / `format_error` / `required_terms` / `required_terms_error`
-- `format` 入力時はリアルタイムで正規表現の構文チェック（`Regex.compile/1`）
+- `format` は `@validation_rules` assigns に**生の文字列（raw pattern）**として保持する。`YamlLoader` はロード時にコンパイル済み `Regex` 構造体を返すが、`ymlr` はそれをシリアライズできないため、フォーム側では元の文字列を使う。`format` 入力時はリアルタイムで `Regex.compile/1` を使い構文チェックのみ行う。
 - `metadata_fields` に存在しないフィールドのルールは表示しない
 
 ### タブ3: `search_facets`
@@ -115,16 +116,20 @@ OmniArchive は `OMNI_ARCHIVE_PROFILE_YAML` 環境変数で指定した YAML フ
 3. YamlLoader.load/1 でバリデーション
    ├─ {:error, reason} → @validation_errors に格納、タブバッジ + インラインエラー表示
    └─ {:ok, _} → File.write(@yaml_path, yaml_string)
-4. @has_unsaved_changes = false
+4. @has_unsaved_changes = false、@draft_saved = true
 5. フラッシュ: "プロファイルを保存しました（まだ適用されていません）"
 ```
 
 ### 適用（`handle_event("activate")`）
 
+適用ボタンは `@draft_saved == true and @has_unsaved_changes == false` のときのみ有効。
+
 ```
-1. @has_unsaved_changes == false であることを確認
-2. YamlCache.reload!()
-3. :timer.sleep(50) で GenServer 再起動完了を待つ
+1. YamlCache.reload!()
+   ├─ GenServer.stop は同期的にプロセスを終了させる
+   └─ supervisor による再起動は非同期のため、完了を Process.whereis/1 でポーリング（最大200ms、10msごと）
+2. ポーリングタイムアウト → フラッシュエラー表示（再試行を促す）
+3. 再起動確認後 → @draft_saved = false
 4. フラッシュ: "プロファイルを適用しました"
 ```
 
@@ -158,7 +163,7 @@ OmniArchive は `OMNI_ARCHIVE_PROFILE_YAML` 環境変数で指定した YAML フ
 |---|---|
 | `mount` の3状態（unconfigured / new / loaded） | `test/omni_archive_web/live/admin/yaml_profile_live_test.exs` |
 | 下書き保存フロー（正常系・バリデーションエラー系） | 同上（実ファイルを一時ディレクトリに作成して検証） |
-| 適用フロー（`YamlCache.reload!` 後の ETS 内容変化を確認） | 同上 |
+| 適用フロー（`YamlCache.reload!` 後に ETS の内容が更新されること + `@draft_saved` が false になること） | 同上 |
 | `ymlr` エンコード → `YamlLoader` デコードのラウンドトリップ | `test/omni_archive/domain_profiles/yaml_roundtrip_test.exs` |
 
 ---
