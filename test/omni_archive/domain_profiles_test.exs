@@ -2,22 +2,22 @@ defmodule OmniArchive.DomainProfilesTest do
   use ExUnit.Case, async: true
 
   alias OmniArchive.DomainProfiles
-  alias OmniArchive.DomainProfiles.Archaeology
+  alias OmniArchive.DomainProfiles.GeneralArchive
 
-  test "active profile defaults to archaeology" do
-    assert DomainProfiles.current() == Archaeology
+  test "active profile defaults to GeneralArchive" do
+    assert DomainProfiles.current() == GeneralArchive
   end
 
-  test "search facet definitions preserve current fields" do
+  test "search facet definitions match GeneralArchive" do
     assert DomainProfiles.search_facets() == [
-             %{field: :site, param: "site", label: "📍 遺跡名"},
-             %{field: :period, param: "period", label: "⏳ 時代"},
-             %{field: :artifact_type, param: "artifact_type", label: "🏺 遺物種別"}
+             %{field: :collection, param: "collection", label: "🗂️ コレクション"},
+             %{field: :item_type, param: "item_type", label: "📁 資料種別"},
+             %{field: :date_note, param: "date_note", label: "📅 年代メモ"}
            ]
   end
 
-  test "duplicate identity defaults to archaeology" do
-    assert DomainProfiles.profile_key() == "archaeology"
-    assert DomainProfiles.duplicate_scope_field() == :site
+  test "duplicate identity defaults to GeneralArchive" do
+    assert DomainProfiles.profile_key() == "general_archive"
+    assert DomainProfiles.duplicate_scope_field() == :collection
   end
 end

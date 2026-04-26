@@ -45,12 +45,12 @@ defmodule OmniArchive.DomainProfiles.GeneralArchiveTest do
              "半角小文字・数字・ハイフンのみの slug 形式で入力してください（例: photo-001）"
   end
 
-  test "Archaeology デフォルトは維持される" do
+  test "デフォルトは GeneralArchive" do
     restore = Application.get_env(:omni_archive, :domain_profile)
     Application.delete_env(:omni_archive, :domain_profile)
 
     try do
-      assert DomainProfiles.current() == Archaeology
+      assert DomainProfiles.current() == GeneralArchive
     after
       if restore do
         Application.put_env(:omni_archive, :domain_profile, restore)
@@ -58,5 +58,12 @@ defmodule OmniArchive.DomainProfiles.GeneralArchiveTest do
         Application.delete_env(:omni_archive, :domain_profile)
       end
     end
+  end
+
+  test "put_domain_profile(Archaeology) で Archaeology にオプトインできる" do
+    put_domain_profile(Archaeology)
+    assert DomainProfiles.current() == Archaeology
+    assert DomainProfiles.profile_key() == "archaeology"
+    assert DomainProfiles.duplicate_scope_field() == :site
   end
 end

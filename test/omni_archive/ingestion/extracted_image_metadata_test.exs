@@ -6,6 +6,12 @@ defmodule OmniArchive.Ingestion.ExtractedImageMetadataTest do
   alias OmniArchive.Ingestion.ExtractedImageMetadata
   alias OmniArchive.Repo
   import OmniArchive.Factory
+  import OmniArchive.DomainProfileTestHelper
+
+  setup do
+    put_domain_profile(OmniArchive.DomainProfiles.Archaeology)
+    :ok
+  end
 
   describe "migration / backfill" do
     test "metadata column exists on extracted_images" do

@@ -4,6 +4,12 @@ defmodule OmniArchive.Ingestion.ExtractedImageTest do
   alias OmniArchive.Ingestion.ExtractedImage
   alias OmniArchive.Ingestion.ExtractedImageMetadata
   import OmniArchive.Factory
+  import OmniArchive.DomainProfileTestHelper
+
+  setup do
+    put_domain_profile(OmniArchive.DomainProfiles.Archaeology)
+    :ok
+  end
 
   describe "changeset/2" do
     test "有効な属性でチェンジセットが正常に作成される" do

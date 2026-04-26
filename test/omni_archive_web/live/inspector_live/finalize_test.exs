@@ -10,8 +10,14 @@ defmodule OmniArchiveWeb.InspectorLive.FinalizeTest do
 
   import Phoenix.LiveViewTest
   import OmniArchive.Factory
+  import OmniArchive.DomainProfileTestHelper
 
   setup :register_and_log_in_user
+
+  setup do
+    put_domain_profile(OmniArchive.DomainProfiles.Archaeology)
+    :ok
+  end
 
   describe "マウント" do
     test "初期状態で確認画面が表示される", %{conn: conn} do

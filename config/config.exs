@@ -21,7 +21,7 @@ config :omni_archive, :scopes,
   ]
 
 config :omni_archive,
-  domain_profile: OmniArchive.DomainProfiles.Archaeology,
+  domain_profile: OmniArchive.DomainProfiles.GeneralArchive,
   ecto_repos: [OmniArchive.Repo],
   generators: [timestamp_type: :utc_datetime]
 

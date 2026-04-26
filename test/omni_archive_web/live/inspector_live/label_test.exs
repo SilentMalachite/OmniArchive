@@ -12,8 +12,14 @@ defmodule OmniArchiveWeb.InspectorLive.LabelTest do
   alias OmniArchive.DomainProfiles.GeneralArchive
   alias OmniArchive.Repo
   import OmniArchive.Factory
+  import OmniArchive.DomainProfileTestHelper
 
   setup :register_and_log_in_user
+
+  setup do
+    put_domain_profile(OmniArchive.DomainProfiles.Archaeology)
+    :ok
+  end
 
   # ヘルパー: ログインユーザー所有の PdfSource + ExtractedImage を作成
   defp create_user_image(user, overrides \\ %{}) do

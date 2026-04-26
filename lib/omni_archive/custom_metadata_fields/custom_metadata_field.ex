@@ -72,7 +72,7 @@ defmodule OmniArchive.CustomMetadataFields.CustomMetadataField do
       Application.get_env(
         :omni_archive,
         :domain_profile,
-        OmniArchive.DomainProfiles.Archaeology
+        OmniArchive.DomainProfiles.GeneralArchive
       )
 
     try do

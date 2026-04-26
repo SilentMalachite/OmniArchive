@@ -5,9 +5,13 @@ defmodule OmniArchive.DuplicateIdentityTest do
   alias OmniArchive.Ingestion.ExtractedImage
   import OmniArchive.DomainProfileTestHelper
 
+  setup do
+    put_domain_profile(OmniArchive.DomainProfiles.Archaeology)
+    :ok
+  end
+
   describe "fingerprint builder" do
     test "Archaeology で profile key + site + label から fingerprint を作る" do
-      put_domain_profile(OmniArchive.DomainProfiles.Archaeology)
       image = %ExtractedImage{site: " 新潟市中野遺跡 ", label: " FIG-1-1 "}
 
       assert DuplicateIdentity.fingerprint_for_image(image) ==

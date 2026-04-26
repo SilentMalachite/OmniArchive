@@ -5,6 +5,12 @@ defmodule OmniArchive.SearchTest do
   alias OmniArchive.Repo
   alias OmniArchive.Search
   import OmniArchive.Factory
+  import OmniArchive.DomainProfileTestHelper
+
+  setup do
+    put_domain_profile(OmniArchive.DomainProfiles.Archaeology)
+    :ok
+  end
 
   # テストデータのセットアップヘルパー
   defp create_test_images do

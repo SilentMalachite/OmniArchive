@@ -1,9 +1,15 @@
 defmodule OmniArchiveWeb.GalleryLiveTest do
-  use OmniArchiveWeb.ConnCase, async: true
+  use OmniArchiveWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   import OmniArchive.Factory
+  import OmniArchive.DomainProfileTestHelper
   alias OmniArchive.Repo
+
+  setup do
+    put_domain_profile(OmniArchive.DomainProfiles.Archaeology)
+    :ok
+  end
 
   describe "mount/3" do
     test "ギャラリー画面が正常にマウントされる", %{conn: conn} do

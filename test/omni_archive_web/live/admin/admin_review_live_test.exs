@@ -1,8 +1,9 @@
 defmodule OmniArchiveWeb.Admin.ReviewLiveTest do
-  use OmniArchiveWeb.ConnCase, async: true
+  use OmniArchiveWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   import OmniArchive.Factory
+  import OmniArchive.DomainProfileTestHelper
   alias OmniArchive.Ingestion
 
   # Admin ロール必須のため、admin_fixture でユーザーを作成してログイン
@@ -10,6 +11,11 @@ defmodule OmniArchiveWeb.Admin.ReviewLiveTest do
     user = OmniArchive.AccountsFixtures.admin_fixture()
     conn = OmniArchiveWeb.ConnCase.log_in_user(conn, user)
     %{conn: conn, user: user}
+  end
+
+  setup do
+    put_domain_profile(OmniArchive.DomainProfiles.Archaeology)
+    :ok
   end
 
   describe "mount/3" do

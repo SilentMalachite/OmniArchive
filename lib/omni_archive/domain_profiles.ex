@@ -6,9 +6,9 @@ defmodule OmniArchive.DomainProfiles do
 
   alias OmniArchive.CustomMetadataFields
   alias OmniArchive.CustomMetadataFields.Cache
-  alias OmniArchive.DomainProfiles.Archaeology
+  alias OmniArchive.DomainProfiles.GeneralArchive
 
-  @default_profile Archaeology
+  @default_profile GeneralArchive
   @compile_time_default_profile Application.compile_env(
                                   :omni_archive,
                                   :domain_profile,

@@ -1,11 +1,17 @@
 defmodule OmniArchiveWeb.ApprovalLiveTest do
-  use OmniArchiveWeb.ConnCase, async: true
+  use OmniArchiveWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   import OmniArchive.Factory
+  import OmniArchive.DomainProfileTestHelper
   alias OmniArchive.Repo
 
   setup :register_and_log_in_user
+
+  setup do
+    put_domain_profile(OmniArchive.DomainProfiles.Archaeology)
+    :ok
+  end
 
   describe "mount/3" do
     test "承認ダッシュボードが正常にマウントされる", %{conn: conn} do

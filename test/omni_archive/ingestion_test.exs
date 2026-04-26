@@ -67,8 +67,8 @@ defmodule OmniArchive.IngestionTest do
       pdf1 = insert_pdf_source()
       pdf2 = insert_pdf_source()
 
-      img1 = insert_extracted_image(%{pdf_source_id: pdf1.id, page_number: 1, label: "fig-1-1"})
-      _img2 = insert_extracted_image(%{pdf_source_id: pdf2.id, page_number: 1, label: "fig-2-1"})
+      img1 = insert_extracted_image(%{pdf_source_id: pdf1.id, page_number: 1, label: "item-1-1"})
+      _img2 = insert_extracted_image(%{pdf_source_id: pdf2.id, page_number: 1, label: "item-2-1"})
 
       result = Ingestion.list_extracted_images(pdf1.id)
       assert length(result) == 1
@@ -79,9 +79,9 @@ defmodule OmniArchive.IngestionTest do
       pdf = insert_pdf_source()
 
       # 順不同で挿入
-      img3 = insert_extracted_image(%{pdf_source_id: pdf.id, page_number: 3, label: "fig-3-1"})
-      img1 = insert_extracted_image(%{pdf_source_id: pdf.id, page_number: 1, label: "fig-1-1"})
-      img2 = insert_extracted_image(%{pdf_source_id: pdf.id, page_number: 2, label: "fig-2-1"})
+      img3 = insert_extracted_image(%{pdf_source_id: pdf.id, page_number: 3, label: "item-3-1"})
+      img1 = insert_extracted_image(%{pdf_source_id: pdf.id, page_number: 1, label: "item-1-1"})
+      img2 = insert_extracted_image(%{pdf_source_id: pdf.id, page_number: 2, label: "item-2-1"})
 
       result = Ingestion.list_extracted_images(pdf.id)
       ids = Enum.map(result, & &1.id)
@@ -101,8 +101,8 @@ defmodule OmniArchive.IngestionTest do
       user = insert_user()
 
       # 異なるオーナーの画像を作成
-      img1 = insert_extracted_image(%{owner_id: admin.id, label: "fig-9001-1"})
-      img2 = insert_extracted_image(%{owner_id: user.id, label: "fig-9001-2"})
+      img1 = insert_extracted_image(%{owner_id: admin.id, label: "item-9001-1"})
+      img2 = insert_extracted_image(%{owner_id: user.id, label: "item-9001-2"})
 
       result = Ingestion.list_extracted_images(admin)
       ids = Enum.map(result, & &1.id)
@@ -115,8 +115,8 @@ defmodule OmniArchive.IngestionTest do
       user_a = insert_user()
       user_b = insert_user()
 
-      img_a = insert_extracted_image(%{owner_id: user_a.id, label: "fig-9002-1"})
-      _img_b = insert_extracted_image(%{owner_id: user_b.id, label: "fig-9002-2"})
+      img_a = insert_extracted_image(%{owner_id: user_a.id, label: "item-9002-1"})
+      _img_b = insert_extracted_image(%{owner_id: user_b.id, label: "item-9002-2"})
 
       result = Ingestion.list_extracted_images(user_a)
       ids = Enum.map(result, & &1.id)
@@ -129,8 +129,8 @@ defmodule OmniArchive.IngestionTest do
       user_a = insert_user()
       user_b = insert_user()
 
-      _img_a = insert_extracted_image(%{owner_id: user_a.id, label: "fig-9003-1"})
-      img_b = insert_extracted_image(%{owner_id: user_b.id, label: "fig-9003-2"})
+      _img_a = insert_extracted_image(%{owner_id: user_a.id, label: "item-9003-1"})
+      img_b = insert_extracted_image(%{owner_id: user_b.id, label: "item-9003-2"})
 
       result_a = Ingestion.list_extracted_images(user_a)
       ids_a = Enum.map(result_a, & &1.id)
@@ -141,7 +141,7 @@ defmodule OmniArchive.IngestionTest do
 
   describe "get_extracted_image!/1" do
     test "ID で ExtractedImage を取得する" do
-      image = insert_extracted_image(%{label: "fig-99-1"})
+      image = insert_extracted_image(%{label: "item-99-1"})
       assert Ingestion.get_extracted_image!(image.id).id == image.id
     end
 
@@ -161,7 +161,7 @@ defmodule OmniArchive.IngestionTest do
         page_number: 3,
         image_path: "priv/static/uploads/pages/1/page-003.png",
         summary: "テスト図版",
-        label: "fig-100-1"
+        label: "item-100-1"
       }
 
       assert {:ok, %ExtractedImage{} = image} = Ingestion.create_extracted_image(attrs)
@@ -177,16 +177,16 @@ defmodule OmniArchive.IngestionTest do
 
   describe "update_extracted_image/2" do
     test "ExtractedImage を更新する" do
-      image = insert_extracted_image(%{label: "fig-200-1"})
+      image = insert_extracted_image(%{label: "item-200-1"})
 
       assert {:ok, updated} =
                Ingestion.update_extracted_image(image, %{
                  summary: "更新されたサマリー",
-                 label: "fig-200-2"
+                 label: "item-200-2"
                })
 
       assert updated.summary == "更新されたサマリー"
-      assert updated.label == "fig-200-2"
+      assert updated.label == "item-200-2"
     end
   end
 
@@ -194,49 +194,49 @@ defmodule OmniArchive.IngestionTest do
 
   describe "submit_for_review/1" do
     test "draft → pending_review に遷移する" do
-      image = insert_extracted_image(%{status: "draft", label: "fig-300-1"})
+      image = insert_extracted_image(%{status: "draft", label: "item-300-1"})
       assert {:ok, updated} = Ingestion.submit_for_review(image)
       assert updated.status == "pending_review"
     end
 
     test "draft 以外のステータスではエラーを返す" do
-      image = insert_extracted_image(%{status: "published", label: "fig-300-2"})
+      image = insert_extracted_image(%{status: "published", label: "item-300-2"})
       assert {:error, :invalid_status_transition} = Ingestion.submit_for_review(image)
     end
 
     test "pending_review からの遷移はエラーを返す" do
-      image = insert_extracted_image(%{status: "pending_review", label: "fig-300-3"})
+      image = insert_extracted_image(%{status: "pending_review", label: "item-300-3"})
       assert {:error, :invalid_status_transition} = Ingestion.submit_for_review(image)
     end
   end
 
   describe "approve_and_publish/1" do
     test "pending_review → published に遷移する" do
-      image = insert_extracted_image(%{status: "pending_review", label: "fig-400-1"})
+      image = insert_extracted_image(%{status: "pending_review", label: "item-400-1"})
       assert {:ok, updated} = Ingestion.approve_and_publish(image)
       assert updated.status == "published"
     end
 
     test "pending_review 以外のステータスではエラーを返す" do
-      image = insert_extracted_image(%{status: "draft", label: "fig-400-2"})
+      image = insert_extracted_image(%{status: "draft", label: "item-400-2"})
       assert {:error, :invalid_status_transition} = Ingestion.approve_and_publish(image)
     end
   end
 
   describe "reject_to_draft/1" do
     test "pending_review → draft に遷移する" do
-      image = insert_extracted_image(%{status: "pending_review", label: "fig-500-1"})
+      image = insert_extracted_image(%{status: "pending_review", label: "item-500-1"})
       assert {:ok, updated} = Ingestion.reject_to_draft(image)
       assert updated.status == "draft"
     end
 
     test "pending_review 以外のステータスではエラーを返す" do
-      image = insert_extracted_image(%{status: "draft", label: "fig-500-2"})
+      image = insert_extracted_image(%{status: "draft", label: "item-500-2"})
       assert {:error, :invalid_status_transition} = Ingestion.reject_to_draft(image)
     end
 
     test "published からの遷移はエラーを返す" do
-      image = insert_extracted_image(%{status: "published", label: "fig-500-3"})
+      image = insert_extracted_image(%{status: "published", label: "item-500-3"})
       assert {:error, :invalid_status_transition} = Ingestion.reject_to_draft(image)
     end
   end
@@ -247,25 +247,25 @@ defmodule OmniArchive.IngestionTest do
         insert_extracted_image(%{
           status: "draft",
           ptif_path: "/path/to/test.tif",
-          label: "fig-600-1"
+          label: "item-600-1"
         })
 
       pending_with_ptif =
         insert_extracted_image(%{
           status: "pending_review",
           ptif_path: "/path/to/test2.tif",
-          label: "fig-600-2"
+          label: "item-600-2"
         })
 
       _published =
         insert_extracted_image(%{
           status: "published",
           ptif_path: "/path/to/test3.tif",
-          label: "fig-600-3"
+          label: "item-600-3"
         })
 
       pending_no_ptif =
-        insert_extracted_image(%{status: "pending_review", ptif_path: nil, label: "fig-600-4"})
+        insert_extracted_image(%{status: "pending_review", ptif_path: nil, label: "item-600-4"})
 
       result = Ingestion.list_pending_review_images()
       ids = Enum.map(result, & &1.id)
@@ -279,16 +279,16 @@ defmodule OmniArchive.IngestionTest do
   describe "list_all_images_for_lab/0" do
     test "PTIF ありの全ステータス画像を返す" do
       img1 =
-        insert_extracted_image(%{status: "draft", ptif_path: "/path/a.tif", label: "fig-700-1"})
+        insert_extracted_image(%{status: "draft", ptif_path: "/path/a.tif", label: "item-700-1"})
 
       img2 =
         insert_extracted_image(%{
           status: "published",
           ptif_path: "/path/b.tif",
-          label: "fig-700-2"
+          label: "item-700-2"
         })
 
-      _no_ptif = insert_extracted_image(%{status: "draft", ptif_path: nil, label: "fig-700-3"})
+      _no_ptif = insert_extracted_image(%{status: "draft", ptif_path: nil, label: "item-700-3"})
 
       result = Ingestion.list_all_images_for_lab()
       ids = Enum.map(result, & &1.id)
@@ -301,23 +301,23 @@ defmodule OmniArchive.IngestionTest do
 
   describe "list_rejected_images/0" do
     test "rejected ステータスの画像のみを返す" do
-      _draft = insert_extracted_image(%{status: "draft", label: "fig-800-1"})
+      _draft = insert_extracted_image(%{status: "draft", label: "item-800-1"})
 
       rejected1 =
         insert_extracted_image(%{
           status: "rejected",
           review_comment: "メタデータ不足",
-          label: "fig-800-2"
+          label: "item-800-2"
         })
 
       rejected2 =
         insert_extracted_image(%{
           status: "rejected",
           review_comment: "クロップが不正確",
-          label: "fig-800-3"
+          label: "item-800-3"
         })
 
-      _published = insert_extracted_image(%{status: "published", label: "fig-800-4"})
+      _published = insert_extracted_image(%{status: "published", label: "item-800-4"})
 
       result = Ingestion.list_rejected_images()
       ids = Enum.map(result, & &1.id)
@@ -328,7 +328,7 @@ defmodule OmniArchive.IngestionTest do
     end
 
     test "rejected がない場合は空リストを返す" do
-      _draft = insert_extracted_image(%{status: "draft", label: "fig-800-5"})
+      _draft = insert_extracted_image(%{status: "draft", label: "item-800-5"})
       assert Ingestion.list_rejected_images() == []
     end
   end
@@ -336,7 +336,7 @@ defmodule OmniArchive.IngestionTest do
   describe "resubmit_image/1" do
     test "rejected → pending_review に遷移し review_comment をクリアする" do
       image =
-        insert_extracted_image(%{status: "rejected", review_comment: "要修正", label: "fig-900-1"})
+        insert_extracted_image(%{status: "rejected", review_comment: "要修正", label: "item-900-1"})
 
       assert {:ok, updated} = Ingestion.resubmit_image(image)
       assert updated.status == "pending_review"
@@ -344,12 +344,12 @@ defmodule OmniArchive.IngestionTest do
     end
 
     test "rejected 以外のステータスではエラーを返す" do
-      image = insert_extracted_image(%{status: "draft", label: "fig-900-2"})
+      image = insert_extracted_image(%{status: "draft", label: "item-900-2"})
       assert {:error, :invalid_status_transition} = Ingestion.resubmit_image(image)
     end
 
     test "pending_review からの再提出はエラーを返す" do
-      image = insert_extracted_image(%{status: "pending_review", label: "fig-900-3"})
+      image = insert_extracted_image(%{status: "pending_review", label: "item-900-3"})
       assert {:error, :invalid_status_transition} = Ingestion.resubmit_image(image)
     end
   end
@@ -358,7 +358,7 @@ defmodule OmniArchive.IngestionTest do
 
   describe "optimistic locking" do
     test "lock_version 不一致で {:error, :stale} を返す" do
-      image = insert_extracted_image(%{label: "fig-1000-1"})
+      image = insert_extracted_image(%{label: "item-1000-1"})
       # lock_version を意図的にずらして stale を再現
       stale_image = %{image | lock_version: image.lock_version - 1}
 
@@ -367,14 +367,14 @@ defmodule OmniArchive.IngestionTest do
     end
 
     test "lock_version が一致していれば正常に更新される" do
-      image = insert_extracted_image(%{label: "fig-1000-2"})
+      image = insert_extracted_image(%{label: "item-1000-2"})
       assert {:ok, updated} = Ingestion.update_extracted_image(image, %{summary: "更新OK"})
       assert updated.summary == "更新OK"
       assert updated.lock_version == image.lock_version + 1
     end
 
     test "ステータス遷移でも楽観的ロックが適用される" do
-      image = insert_extracted_image(%{status: "draft", label: "fig-1000-3"})
+      image = insert_extracted_image(%{status: "draft", label: "item-1000-3"})
       stale_image = %{image | lock_version: image.lock_version - 1}
       assert {:error, :stale} = Ingestion.submit_for_review(stale_image)
     end
@@ -384,7 +384,7 @@ defmodule OmniArchive.IngestionTest do
 
   describe "delete_extracted_image/1" do
     test "DB レコードが削除される" do
-      image = insert_extracted_image(%{label: "fig-8001-1"})
+      image = insert_extracted_image(%{label: "item-8001-1"})
       assert {:ok, _} = Ingestion.delete_extracted_image(image)
 
       assert_raise Ecto.NoResultsError, fn ->
@@ -405,7 +405,7 @@ defmodule OmniArchive.IngestionTest do
         insert_extracted_image(%{
           image_path: img_path,
           ptif_path: ptif_path,
-          label: "fig-8002-1"
+          label: "item-8002-1"
         })
 
       assert {:ok, _} = Ingestion.delete_extracted_image(image)
@@ -421,7 +421,7 @@ defmodule OmniArchive.IngestionTest do
         insert_extracted_image(%{
           image_path: "/tmp/nonexistent_file.png",
           ptif_path: nil,
-          label: "fig-8003-1"
+          label: "item-8003-1"
         })
 
       assert {:ok, _} = Ingestion.delete_extracted_image(image)
@@ -432,9 +432,9 @@ defmodule OmniArchive.IngestionTest do
 
   describe "delete_multiple_extracted_images/1" do
     test "複数の DB レコードが削除される" do
-      img1 = insert_extracted_image(%{label: "fig-9501-1"})
-      img2 = insert_extracted_image(%{label: "fig-9501-2"})
-      img3 = insert_extracted_image(%{label: "fig-9501-3"})
+      img1 = insert_extracted_image(%{label: "item-9501-1"})
+      img2 = insert_extracted_image(%{label: "item-9501-2"})
+      img3 = insert_extracted_image(%{label: "item-9501-3"})
 
       assert {:ok, 2} = Ingestion.delete_multiple_extracted_images([img1.id, img2.id])
 
@@ -466,14 +466,14 @@ defmodule OmniArchive.IngestionTest do
         insert_extracted_image(%{
           image_path: img1_path,
           ptif_path: ptif1_path,
-          label: "fig-9502-1"
+          label: "item-9502-1"
         })
 
       image2 =
         insert_extracted_image(%{
           image_path: img2_path,
           ptif_path: nil,
-          label: "fig-9502-2"
+          label: "item-9502-2"
         })
 
       assert {:ok, 2} = Ingestion.delete_multiple_extracted_images([image1.id, image2.id])
@@ -491,7 +491,7 @@ defmodule OmniArchive.IngestionTest do
     end
 
     test "存在しない ID が混在しても正常動作する" do
-      img = insert_extracted_image(%{label: "fig-9504-1"})
+      img = insert_extracted_image(%{label: "item-9504-1"})
       nonexistent_id = 999_999
 
       assert {:ok, 1} = Ingestion.delete_multiple_extracted_images([img.id, nonexistent_id])
@@ -513,8 +513,8 @@ defmodule OmniArchive.IngestionTest do
       pdf2 = insert_pdf_source(%{filename: "user-report.pdf"})
 
       # 各 PDF に画像を紐付け
-      insert_extracted_image(%{pdf_source_id: pdf1.id, owner_id: admin.id, label: "fig-10001-1"})
-      insert_extracted_image(%{pdf_source_id: pdf2.id, owner_id: user.id, label: "fig-10001-2"})
+      insert_extracted_image(%{pdf_source_id: pdf1.id, owner_id: admin.id, label: "item-10001-1"})
+      insert_extracted_image(%{pdf_source_id: pdf2.id, owner_id: user.id, label: "item-10001-2"})
 
       result = Ingestion.list_pdf_sources(admin)
       ids = Enum.map(result, & &1.id)
@@ -530,8 +530,8 @@ defmodule OmniArchive.IngestionTest do
       pdf1 = insert_pdf_source(%{filename: "shared.pdf"})
       pdf2 = insert_pdf_source(%{filename: "other.pdf"})
 
-      insert_extracted_image(%{pdf_source_id: pdf1.id, owner_id: user_a.id, label: "fig-10002-1"})
-      insert_extracted_image(%{pdf_source_id: pdf2.id, owner_id: user_b.id, label: "fig-10002-2"})
+      insert_extracted_image(%{pdf_source_id: pdf1.id, owner_id: user_a.id, label: "item-10002-1"})
+      insert_extracted_image(%{pdf_source_id: pdf2.id, owner_id: user_b.id, label: "item-10002-2"})
 
       result = Ingestion.list_pdf_sources(user_a)
       ids = Enum.map(result, & &1.id)
@@ -544,8 +544,8 @@ defmodule OmniArchive.IngestionTest do
       admin = insert_user(%{role: "admin"})
       pdf = insert_pdf_source(%{filename: "count-test.pdf"})
 
-      insert_extracted_image(%{pdf_source_id: pdf.id, owner_id: admin.id, label: "fig-10003-1"})
-      insert_extracted_image(%{pdf_source_id: pdf.id, owner_id: admin.id, label: "fig-10003-2"})
+      insert_extracted_image(%{pdf_source_id: pdf.id, owner_id: admin.id, label: "item-10003-1"})
+      insert_extracted_image(%{pdf_source_id: pdf.id, owner_id: admin.id, label: "item-10003-2"})
 
       [result] = Ingestion.list_pdf_sources(admin)
       assert result.image_count == 2
@@ -637,8 +637,8 @@ defmodule OmniArchive.IngestionTest do
       user = insert_user()
       pdf = insert_pdf_source(%{filename: "count-test.pdf", user_id: user.id})
 
-      insert_extracted_image(%{pdf_source_id: pdf.id, owner_id: user.id, label: "fig-30001-1"})
-      insert_extracted_image(%{pdf_source_id: pdf.id, owner_id: user.id, label: "fig-30001-2"})
+      insert_extracted_image(%{pdf_source_id: pdf.id, owner_id: user.id, label: "item-30001-1"})
+      insert_extracted_image(%{pdf_source_id: pdf.id, owner_id: user.id, label: "item-30001-2"})
 
       [result] = Ingestion.list_user_pdf_sources(user)
       assert result.image_count == 2
@@ -668,7 +668,7 @@ defmodule OmniArchive.IngestionTest do
     test "ソフトデリート後、list_pdf_sources から除外される" do
       admin = insert_user(%{role: "admin"})
       pdf = insert_pdf_source(%{filename: "hidden.pdf"})
-      insert_extracted_image(%{pdf_source_id: pdf.id, owner_id: admin.id, label: "fig-20001-1"})
+      insert_extracted_image(%{pdf_source_id: pdf.id, owner_id: admin.id, label: "item-20001-1"})
 
       # ソフトデリート前: 含まれる
       result_before = Ingestion.list_pdf_sources(admin)
@@ -688,14 +688,14 @@ defmodule OmniArchive.IngestionTest do
   describe "published?/1" do
     test "公開済み画像がある場合 true を返す" do
       pdf = insert_pdf_source(%{filename: "pub-check.pdf"})
-      insert_extracted_image(%{pdf_source_id: pdf.id, status: "published", label: "fig-30001-1"})
+      insert_extracted_image(%{pdf_source_id: pdf.id, status: "published", label: "item-30001-1"})
 
       assert Ingestion.published?(pdf) == true
     end
 
     test "公開済み画像がない（draft のみ）場合 false を返す" do
       pdf = insert_pdf_source(%{filename: "draft-only.pdf"})
-      insert_extracted_image(%{pdf_source_id: pdf.id, status: "draft", label: "fig-30002-1"})
+      insert_extracted_image(%{pdf_source_id: pdf.id, status: "draft", label: "item-30002-1"})
 
       assert Ingestion.published?(pdf) == false
     end
@@ -712,7 +712,7 @@ defmodule OmniArchive.IngestionTest do
   describe "soft_delete_pdf_source/1 (publish lock)" do
     test "公開済み画像がある場合 {:error, :published_project} を返す" do
       pdf = insert_pdf_source(%{filename: "locked.pdf"})
-      insert_extracted_image(%{pdf_source_id: pdf.id, status: "published", label: "fig-30003-1"})
+      insert_extracted_image(%{pdf_source_id: pdf.id, status: "published", label: "item-30003-1"})
 
       assert {:error, :published_project} = Ingestion.soft_delete_pdf_source(pdf)
       # deleted_at が設定されていないことを確認
@@ -722,7 +722,7 @@ defmodule OmniArchive.IngestionTest do
 
     test "公開済み画像がない場合は正常にソフトデリートされる" do
       pdf = insert_pdf_source(%{filename: "unlocked.pdf"})
-      insert_extracted_image(%{pdf_source_id: pdf.id, status: "draft", label: "fig-30004-1"})
+      insert_extracted_image(%{pdf_source_id: pdf.id, status: "draft", label: "item-30004-1"})
 
       assert {:ok, updated} = Ingestion.soft_delete_pdf_source(pdf)
       refute is_nil(updated.deleted_at)
@@ -764,7 +764,7 @@ defmodule OmniArchive.IngestionTest do
   describe "hard_delete_pdf_source/1" do
     test "PdfSource と関連 ExtractedImage の DB レコードが削除される" do
       pdf = insert_pdf_source(%{filename: "to-delete.pdf"})
-      img = insert_extracted_image(%{pdf_source_id: pdf.id, label: "fig-10006-1"})
+      img = insert_extracted_image(%{pdf_source_id: pdf.id, label: "item-10006-1"})
 
       assert {:ok, _} = Ingestion.hard_delete_pdf_source(pdf)
 
@@ -794,7 +794,7 @@ defmodule OmniArchive.IngestionTest do
         pdf_source_id: pdf.id,
         image_path: img_path,
         ptif_path: ptif_path,
-        label: "fig-10007-1"
+        label: "item-10007-1"
       })
 
       assert {:ok, _} = Ingestion.hard_delete_pdf_source(pdf)

@@ -48,7 +48,7 @@ defmodule OmniArchive.Factory do
         image_path: "priv/static/uploads/pages/test/page-001.png",
         geometry: %{"x" => 10, "y" => 20, "width" => 200, "height" => 300},
         summary: "第1図 テスト土器",
-        label: "fig-#{System.unique_integer([:positive])}-1",
+        label: default_factory_label(),
         site: "テスト市遺跡",
         period: "縄文時代",
         artifact_type: "土器",
@@ -56,6 +56,17 @@ defmodule OmniArchive.Factory do
       },
       overrides
     )
+  end
+
+  # active profile の label format に合わせたデフォルトを返す。
+  # Archaeology は `fig-N-N`、それ以外（GeneralArchive など）は `item-N-N` slug。
+  defp default_factory_label do
+    n = System.unique_integer([:positive])
+
+    case OmniArchive.DomainProfiles.current() do
+      OmniArchive.DomainProfiles.Archaeology -> "fig-#{n}-1"
+      _ -> "item-#{n}-1"
+    end
   end
 
   @doc "ExtractedImage レコードを作成・挿入（PdfSource を自動生成）"

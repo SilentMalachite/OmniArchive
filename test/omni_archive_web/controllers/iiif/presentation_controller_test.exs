@@ -1,7 +1,13 @@
 defmodule OmniArchiveWeb.IIIF.PresentationControllerTest do
-  use OmniArchiveWeb.ConnCase, async: true
+  use OmniArchiveWeb.ConnCase, async: false
 
   import OmniArchive.Factory
+  import OmniArchive.DomainProfileTestHelper
+
+  setup do
+    put_domain_profile(OmniArchive.DomainProfiles.Archaeology)
+    :ok
+  end
 
   describe "GET /iiif/presentation/:source_id/manifest" do
     test "公開済み画像の Manifest を JSON-LD で返す", %{conn: conn} do
