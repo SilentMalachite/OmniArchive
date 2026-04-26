@@ -19,7 +19,7 @@ Then route to code by task:
 | PDF ingestion / pipeline | `lib/omni_archive/ingestion/pdf_processor.ex`, `extracted_image.ex`, `lib/omni_archive/application.ex` |
 | Search / facets | `lib/omni_archive/search.ex`, `lib/omni_archive_web/live/search_live.ex` |
 | Lab wizard (5 steps) | `lib/omni_archive_web/live/inspector_live/{upload,browse,crop,label,finalize}.ex` |
-| IIIF delivery | `lib/omni_archive_web/iiif/`, `lib/omni_archive/iiif/` |
+| IIIF delivery | `lib/omni_archive_web/controllers/iiif/`, `lib/omni_archive/iiif/` |
 | Routing / auth scoping | `lib/omni_archive_web/router.ex` |
 | Domain profiles | `lib/omni_archive/domain_profile.ex`, `lib/omni_archive/domain_profiles/*.ex` |
 | Custom review mix tasks | `lib/mix/tasks/review_*.ex` |
@@ -46,7 +46,9 @@ move `wip → pending_review → returned/approved`. **PTIF generation is lazy**
 only at admin approval. Public projects are protected via soft-delete
 (`deleted_at`, surfaced in `/admin/trash`). The Lab is a 5-step LiveView wizard
 in `lib/omni_archive_web/live/inspector_live/`. Crop uses a **Write-on-Action**
-policy: no DB record exists until the polygon is committed.
+policy: no DB record exists until the polygon is committed. Crop geometry is
+server-limited before persistence (64 points, 20k px coordinate/dimension caps,
+100M px area cap).
 
 ### Domain profiles (the genericness contract)
 
@@ -92,7 +94,11 @@ PDF jobs run off the LiveView socket via per-user `UserWorker` GenServers:
 **Authentication is enforced at the router level** — pass `current_scope` into
 LiveViews and controllers. `PdfSource` has `user_id`; non-admin users only see
 their own projects. `ExtractedImage` also tracks `owner_id` / `worker_id`.
-Public registration is disabled (invitation / admin-create model).
+Public registration is disabled (invitation / admin-create model). User-facing
+route/event IDs should go through nil-safe getters and complete integer parsing;
+do not pass raw route params into `Repo.get!` or `get_*!`. `priv/static/uploads`
+is not public; Lab page images are served only through the authenticated
+`/lab/uploads/pages/:pdf_source_id/:filename` controller.
 
 ## Invariants that bite
 

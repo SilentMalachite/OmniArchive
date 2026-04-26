@@ -8,6 +8,45 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.25] - 2026-04-27
+
+_Summary: Hardens security-sensitive routes, LiveView events, private upload delivery,
+IIIF access, dynamic metadata keys, PDF processing limits, and crop geometry input._
+
+### 🔐 セキュリティ強化
+
+- **旧 `/lab/approval` ルートを無効化**
+  - 承認操作は Admin 専用の `/admin/review` に集約。
+  - 旧 Lab approval ルートはログイン済みユーザーでも到達不能に変更。
+- **`priv/static/uploads` の直接公開を停止**
+  - `uploads` を `Plug.Static` の配信対象から除外。
+  - Lab ページ画像は `/lab/uploads/pages/:pdf_source_id/:filename` の認証・所有者確認付き controller 経由で配信。
+- **公開 Gallery / IIIF / Download の公開状態チェックを強化**
+  - Gallery の LiveView `select_image` は `published` 画像のみ選択可能。
+  - IIIF Image API と `/download/:id` は公開済み画像のみ配信。
+  - IIIF Image API は `region` / `size` / `rotation` / `quality.format` を明示検証し、不正値を 400 として扱う。
+- **route/event ID の nil-safe 化**
+  - 公開 `/download/:id`、IIIF Presentation、Lab/Admin LiveView の route/event ID を完全一致の正整数として検証。
+  - 不正 ID や未存在 ID は 404/flash に変換し、`Repo.get!` 由来の 500 を回避。
+- **LiveView 入力境界の強化**
+  - Admin review/dashboard/custom fields/user/trash、Lab project、Inspector browse/crop/label/finalize/upload で不正イベント入力を通常分岐で処理。
+  - `switch_tab` は allowlist によるタブ選択に変更。
+- **クロップ geometry 制限**
+  - Crop LiveView の `preview_crop` / `save_crop` / `update_crop_data` / `proceed_to_label` で geometry を検証。
+  - polygon は最大 64 点、座標は 0..20,000px、矩形辺は 1..20,000px、bbox 面積は 100,000,000px 以下に制限。
+- **動的 atom 生成の廃止**
+  - YAML / DB カスタムフィールド由来のフィールドキーを string のまま処理。
+  - validation rule / facet / duplicate identity は定義済みフィールド参照のみ許可。
+- **PDF 処理クォータ・タイムアウト**
+  - PDF ページ数、外部コマンド時間、生成 PNG 総量、ユーザー別処理中ジョブ、24時間アップロード件数を制限。
+
+### 📚 ドキュメント
+
+- `security_best_practices_report.md` を現状の実装に合わせて更新。
+- `README.md` / `ARCHITECTURE.md` / `IIIF_SPEC.md` / `PROFILES.md` / `DEPLOYMENT.md` に、非公開 uploads、公開済み画像限定配信、route/event ID 検証、crop geometry 制限、YAML string key 方針を追記。
+
+---
+
 ## [0.2.24] - 2026-04-26
 
 _Summary: Switches the built-in default domain profile from `Archaeology` to

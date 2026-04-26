@@ -72,7 +72,7 @@ Reviewers approve or return items before they appear in the public Gallery.
 | **プロジェクトワークフロー** | プロジェクト単位の作業進捗管理（作業中 → 審査待ち → 差し戻し/承認）。一般ユーザーが「作業完了」として提出し、管理者が承認または差し戻し（メッセージ付き）を行います |
 | **承認** | 管理者が `/admin/review` で内容を確認、承認、差し戻し、または削除（一括削除対応）を行います |
 | **差し戻し・再提出** | 差し戻されたアセットは「要修正」タブに表示され、修正後に再提出できます。プロジェクトレベル・画像レベル両方の差し戻し理由を確認可能です |
-| **Gallery (公開)** | 承認されたアセットを表示。カードクリックで IIIF 対応の OpenSeadragon 拡大モーダル（PTIFF 生成前は SVG ベースのフォールバック）を表示します。高解像度クロップ画像のダウンロードも可能です |
+| **Gallery (公開)** | 承認された `published` アセットのみを表示。カードクリックで IIIF 対応の OpenSeadragon 拡大モーダル（PTIFF 生成前は SVG ベースのフォールバック）を表示します。公開済み画像の高解像度クロップ画像ダウンロードも可能です |
 | **管理者ダッシュボード** | 管理者が `/admin` で全ユーザーのデータを管理。非同期ロードによる高速表示。一括削除やユーザー管理が可能です |
 | **ゴミ箱管理** | 削除されたプロジェクトは `/admin/trash` で管理。復元または完全削除が可能です。公開済プロジェクトは削除から保護されます |
 
@@ -122,6 +122,8 @@ Each user can only access their own projects; administrators have full visibilit
 - **招待制モデル**: 公開ユーザー登録を制限し、管理者によるアカウント作成・招待モデルを採用しています
 - **グローバルナビバー**: ログイン状態に応じたナビゲーション。管理者には管理メニューが表示されます
 - **複数ユーザーの協力モデル**: `ExtractedImage` にも `owner_id` / `worker_id` の追跡を持たせ、管理者が全体の作業状況を把握できます。
+- **非公開アップロード保護**: `priv/static/uploads` は静的配信対象外です。Lab ページ画像は認証・所有者確認付きの `/lab/uploads/pages/:pdf_source_id/:filename` からのみ配信されます。
+- **route/event ID 検証**: 公開 `/download/:id`、IIIF Presentation、Lab/Admin LiveView の route/event ID は完全一致の正整数として検証し、不正値や未存在 ID は 404/flash で処理します。
 
 ### 🛡️ Data Integrity and Reliability / データ整合性と信頼性
 
@@ -135,6 +137,7 @@ consistency of bibliographic metadata and image assets.
 - **公開済みプロジェクト保護**: Gallery に公開済みの画像を含むプロジェクトは削除不可。UI 上でロックアイコンを表示
 - **プロジェクト ワークフロー管理**: プロジェクト単位で作業進捗を管理（`wip` → `pending_review` → `returned` / `approved`）。差し戻し時には管理者メッセージを記録可能
 - **セキュリティと入力制限**: XSS やリソース枯渇攻撃を防ぐため、メタデータ入力に profile 定義ベースの文字数制限と形式検証を導入。
+- **クロップ geometry 上限**: ポリゴン頂点数、座標範囲、矩形サイズ、切り出し面積をサーバー側で検証し、後段の libvips 処理に過大な geometry を渡さないよう制限します。
 
 ### ⚡ Parallel Processing Pipeline / 並列処理パイプライン & バックグラウンド処理
 
@@ -331,6 +334,7 @@ mix phx.server
 - **ポリゴン描画**: クリックで頂点を追加し、ダブルクリック（または始点クリック / Enter キー）で多角形を閉じて保存します。**この操作で初めてレコードが作成されます。**
 - **D-Pad ナッジボタン** (↑↓←→): 10px 単位でポリゴン全体を微調整。キーボードの矢印キーでも操作可能です。
 - **クリア（やり直し）**: ポリゴンをリセットして最初から描き直すことができます。Undo 機能も利用可能です。
+- **サーバー側の geometry 制限**: 最大 64 頂点、座標・矩形辺 20,000px、切り出し面積 100,000,000px までに制限されます。
 
 ### 4. Add Metadata Labels / ラベリング（メタデータ入力）
 
@@ -348,7 +352,7 @@ mix phx.server
 
 ### 6. Approve and Publish / 承認・公開
 
-1. `/lab/approval` で作業者がアイテムを「レビュー依頼」として提出します。
+1. Finalize 画面で作業者がアイテムを「レビュー依頼」として提出します。
 2. `/admin/review` で管理者が内容を確認し、承認すると `/gallery` に公開されます。
 3. 管理者は必要に応じて、アイテムの一括削除やユーザー管理を行うことができます。
 
@@ -372,7 +376,12 @@ GET /iiif/image/{identifier}/{region}/{size}/{rotation}/{quality}
 
 # Image Info
 GET /iiif/image/{identifier}/info.json
+
+# Download (published images only)
+GET /download/{id}
 ```
+
+IIIF Image API とダウンロードは `published` 画像だけを配信します。不正な IIIF パラメータは 400、存在しない ID や非公開画像は 404/403 として扱います。
 
 ---
 
@@ -528,16 +537,22 @@ OmniArchive/
 │       │   │   ├── label.ex                 # Step 4: ラベリング
 │       │   │   └── finalize.ex              # Step 5: レビュー提出
 │       │   ├── search_live.ex           # 検索 LiveView
-│       │   ├── approval_live.ex         # 承認 LiveView
+│       │   ├── approval_live.ex         # 旧承認 LiveView（ルート未接続）
 │       │   ├── gallery_live.ex          # 公開ギャラリー LiveView
 │       │   └── admin/
+│       │       ├── dashboard_live.ex    # 管理ダッシュボード
 │       │       ├── review_live.ex       # 管理者レビュー LiveView
+│       │       ├── custom_fields_live.ex # カスタムフィールド管理
+│       │       ├── admin_user_live/     # ユーザー管理 LiveView
 │       │       └── admin_trash_live/
 │       │           └── index.ex         # ゴミ箱管理 LiveView
-│       └── controllers/iiif/           # IIIF API
-│           ├── image_controller.ex      # Image API v3.0
-│           ├── manifest_controller.ex   # Presentation API v3.0 (個別画像)
-│           └── presentation_controller.ex # Presentation API v3.0 (PdfSource 単位)
+│       ├── upload_urls.ex               # private upload path → Lab URL 変換
+│       └── controllers/
+│           ├── upload_asset_controller.ex # 認証付き Lab ページ画像配信
+│           └── iiif/                    # IIIF API
+│               ├── image_controller.ex      # Image API v3.0
+│               ├── manifest_controller.ex   # Presentation API v3.0 (個別画像)
+│               └── presentation_controller.ex # Presentation API v3.0 (PdfSource 単位)
 ├── assets/css/
 │   ├── admin-review.css                # 管理者レビュー専用テーマ
 │   ├── app.css                         # メインスタイル（Tailwind @import）

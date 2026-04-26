@@ -86,6 +86,15 @@ docker run -d \
 > アップロードデータ、キャッシュ、PTIF 画像は永続ボリュームにマウントしてください。
 > コンテナを削除するとデータが失われます。
 
+> **Security note / セキュリティ注意**: `priv/static/uploads` is intentionally not
+> exposed by Phoenix static file serving. Do not map it directly from a reverse proxy.
+> Lab page images must be served through `/lab/uploads/pages/:pdf_source_id/:filename`,
+> which performs authentication and owner/admin checks.
+>
+> `priv/static/uploads` は Phoenix の静的配信対象外です。reverse proxy から直接公開しないでください。
+> Lab のページ画像は、認証と所有者/admin 確認を行う
+> `/lab/uploads/pages/:pdf_source_id/:filename` 経由でのみ配信します。
+
 ### Migration / マイグレーション
 
 ```bash

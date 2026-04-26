@@ -211,8 +211,8 @@ metadata schemas without changing application code.
 ├───────────────────────┬──────────────────────────────────┤
 │  組み込みプロファイル   │  YAML プロファイル (v0.2.23 以降)  │
 ├───────────────────────┼──────────────────────────────────┤
-│ Archaeology (デフォルト)│  YamlLoader                     │
-│ GeneralArchive        │  └── YAML ファイルをパース・検証  │
+│ GeneralArchive (デフォルト)│  YamlLoader                 │
+│ Archaeology          │  └── YAML ファイルをパース・検証  │
 │                       │  YamlCache (GenServer + ETS)      │
 │                       │  └── 起動時に一度だけキャッシュ   │
 │                       │  Yaml モジュール                  │
@@ -220,9 +220,9 @@ metadata schemas without changing application code.
 └───────────────────────┴──────────────────────────────────┘
 ```
 
-**有効化**: `OMNI_ARCHIVE_PROFILE_YAML=/path/to/profile.yaml` 環境変数を設定すると、`runtime.exs` が自動的に `OmniArchive.DomainProfiles.Yaml` を active profile に設定し、スーパービジョンツリーに `YamlCache` を追加します。未設定時は `Archaeology` がデフォルトとして使用されます。
+**有効化**: `OMNI_ARCHIVE_PROFILE_YAML=/path/to/profile.yaml` 環境変数を設定すると、`runtime.exs` が自動的に `OmniArchive.DomainProfiles.Yaml` を active profile に設定し、スーパービジョンツリーに `YamlCache` を追加します。未設定時は `GeneralArchive` がデフォルトとして使用されます。考古学向けの `Archaeology` は明示 opt-in で利用できます。
 
-**予約キー保護**: アクティブな YAML プロファイルのフィールドキーは `CustomMetadataField` の DB カスタムフィールドとして登録できません（重複防止）。
+**予約キー保護**: アクティブな YAML プロファイルのフィールドキーは `CustomMetadataField` の DB カスタムフィールドとして登録できません（重複防止）。YAML / DB カスタムフィールド由来のキーは string のまま扱い、外部入力から新規 atom を生成しません。
 
 ---
 
@@ -528,6 +528,12 @@ guarantees consistent bibliographic data even under concurrent access.
 5.  **入力値の長さ制限**:
     *   `caption` と active profile で定義された metadata に対し、profile ベースの文字数制限を適用。
     *   フロントエンドの制限に依存せず、サーバーサイドでのバリデーションエラーを日本語で明示し、意図しないデータ投入やXSSをサーバーレベルで阻止します。
+6.  **クロップ geometry 制限**:
+    *   Crop LiveView はポリゴン頂点数（最大 64 点）、座標範囲（0..20,000px）、矩形辺（1..20,000px）、切り出し面積（最大 100,000,000px）を保存前に検証します。
+    *   `preview_crop` / `save_crop` / `update_crop_data` / `proceed_to_label` の各入口で同じ検証を通し、過大な geometry が `ImageProcessor` / libvips に渡らないようにします。
+7.  **route/event ID 検証**:
+    *   公開 `/download/:id`、IIIF Presentation、Lab/Admin の route/event ID は完全一致の正整数としてパースし、不正値や未存在 ID は nil-safe getter で 404/flash に変換します。
+    *   LiveView プロセス例外によるログ汚染や軽い DoS を避けるため、event handler から route param を直接 `Repo.get!` 系 API に渡しません。
 
 ---
 
@@ -548,8 +554,9 @@ plug.
 |:---|:---|:---|
 | `/` | `PageController` | トップページ |
 | `/gallery` | `GalleryLive` | 公開ギャラリー (Gallery) |
-| `/iiif/image/:id/...` | `ImageController` | IIIF Image API v3.0 |
-| `/iiif/manifest/:id` | `ManifestController` | IIIF Presentation API v3.0 (個別画像) |
+| `/download/:id` | `DownloadController` | 公開済み画像のみの高解像度ダウンロード |
+| `/iiif/image/:identifier/...` | `ImageController` | IIIF Image API v3.0（published 画像のみ） |
+| `/iiif/manifest/:identifier` | `ManifestController` | IIIF Presentation API v3.0 (個別画像) |
 | `/iiif/presentation/:source_id/manifest` | `PresentationController` | IIIF Presentation API v3.0 (PdfSource 単位) |
 | `/api/health` | `HealthController` | ヘルスチェック |
 
@@ -560,17 +567,19 @@ plug.
 | `/lab` | `LabLive.Index` | Lab: プロジェクト一覧 |
 | `/lab/projects/:id` | `LabLive.Show` | Lab: プロジェクト詳細（画像グリッド） |
 | `/lab/upload` | `InspectorLive.Upload` | Lab: Step 1 — PDF アップロード |
+| `/lab/uploads/pages/:pdf_source_id/:filename` | `UploadAssetController` | 認証・所有者確認付きページ画像配信 |
 | `/lab/browse/:pdf_source_id` | `InspectorLive.Browse` | Lab: Step 2 — ページ選択 |
 | `/lab/crop/:pdf_source_id/:page_number` | `InspectorLive.Crop` | Lab: Step 3 — クロップ (Write-on-Action) |
+| `/lab/inspector/:pdf_source_id/page/:page_number` | `InspectorLive.Crop` | Step 2 からの Lazy Creation 用クロップ入口 |
 | `/lab/label/:image_id` | `InspectorLive.Label` | Lab: Step 4 — ラベリング |
 | `/lab/finalize/:image_id` | `InspectorLive.Finalize` | Lab: Step 5 — レビュー提出 |
 | `/lab/search` | `SearchLive` | Lab: 検索 |
-| `/lab/approval` | `ApprovalLive` | Lab: 承認管理 |
 | `/admin` | `PageController.redirect_admin` | → `/admin/review` へリダイレクト |
 | `/admin/dashboard` | `DashboardLive` | Admin: 管理ダッシュボード |
-| `/admin/users` | `UserManagementLive` | Admin: ユーザー管理 |
+| `/admin/users` | `AdminUserLive.Index` | Admin: ユーザー管理 |
 | `/admin/review` | `ReviewLive` | Admin: 最終承認 (Review) |
 | `/admin/trash` | `AdminTrashLive.Index` | Admin: ゴミ箱（ソフトデリート管理） |
+| `/admin/fields` | `CustomFieldsLive` | Admin: カスタムメタデータフィールド管理 |
 | `/users/settings` | `UserSettingsController` | ユーザー設定 |
 
 ### Authentication Routes / 認証ルート
@@ -578,7 +587,6 @@ plug.
 | Path / パス | Module / モジュール | Description / 説明 |
 |:---|:---|:---|
 | `/users/log-in` | `UserSessionController` | ログイン |
-| `/users/register` | `UserRegistrationController` | ユーザー登録 |
 | `/users/log-out` | `UserSessionController` | ログアウト |
 
 ---
@@ -634,6 +642,8 @@ hierarchies, making it directly loadable in Mirador 3 and Universal Viewer.
 IIIF 3.0 仕様に準拠した JSON-LD Manifest を返却します。
 Canvas、AnnotationPage、Annotation の階層構造を含みます。
 
+Image API は Manifest と `ExtractedImage` を join し、`status == "published"` かつ PTIF パスがある画像のみ配信します。不正な `region` / `size` / `rotation` / `quality.format` は画像処理前に 400 として返し、region / 出力サイズには上限を設けます。
+
 **2つのエンドポイント:**
 
 | Endpoint / エンドポイント | Description / 説明 |
@@ -641,7 +651,7 @@ Canvas、AnnotationPage、Annotation の階層構造を含みます。
 | `GET /iiif/manifest/:identifier` | 個別画像の Manifest（`iiif_manifests` テーブル経由） |
 | `GET /iiif/presentation/:source_id/manifest` | PdfSource 単位の Manifest（published 画像を Canvas に集約） |
 
-PdfSource 単位の Manifest では、Canvas のサイズは `geometry` の `width`/`height` から取得します（フォールバック: 1000×1000）。
+PdfSource 単位の Manifest では、公開済み画像だけを Canvas として集約します。Canvas のサイズは矩形 geometry の `width`/`height` から取得し、ポリゴン geometry や寸法未取得時は 1000×1000 にフォールバックします。
 
 ---
 
@@ -669,7 +679,6 @@ capabilities.
 ├───────────────────────────────────────────────────────────────┤
 │                                                               │
 │  [未認証] ─── /users/log-in ──┐                               │
-│  [未認証] ─── /users/register ─┤                              │
 │                                ▼                              │
 │                          UserToken 発行                        │
 │                          セッション Cookie 設定                │
@@ -688,7 +697,7 @@ capabilities.
 
 | Component / コンポーネント | Path / パス | Role / 役割 |
 |:---|:---|:---|
-| `Accounts` | `lib/omni_archive/accounts.ex` | ユーザー登録・認証・トークン管理のコンテキスト |
+| `Accounts` | `lib/omni_archive/accounts.ex` | 管理者によるユーザー作成・認証・トークン管理のコンテキスト |
 | `User` | `lib/omni_archive/accounts/user.ex` | ユーザースキーマ（email, hashed_password） |
 | `UserToken` | `lib/omni_archive/accounts/user_token.ex` | セッション・メール確認トークン |
 | `UserAuth` | `lib/omni_archive_web/user_auth.ex` | 認証プラグ群 |
@@ -711,7 +720,7 @@ capabilities.
 - **Admin ロール**: 全ユーザーの `PdfSource` にアクセス可能。ダッシュボードや `/admin/review` での全件管理。
 - **User ロール**: 自身が作成（アップロード）した `PdfSource` およびそれに紐づく `ExtractedImage` のみアクセス・編集可能。
 
-他ユーザーのデータアクセス試行に対しては `Ecto.NoResultsError` を発行し、404 エラーページへフォールバックさせて不正操作を防止します。
+他ユーザーのデータアクセス試行や不正な route/event ID は、nil-safe getter と完全一致パースにより 404/flash に変換します。ユーザー入力由来の ID を直接 `Repo.get!` / `get_*!` に渡さないことで、例外ログ汚染と軽い DoS を抑制します。
 
 ### Owner/Worker Model / 所有者/作業者モデル (ExtractedImage)
 
@@ -739,8 +748,10 @@ LiveView (Elixir)              JS Hook (JavaScript)
   "nudge_crop"  ─────────────>  setData() で位置調整
                                    ↓ cropend イベント
   handle_event  <─────────────  pushEvent("update_crop_data")
-  "update_crop_data"           getData(true) を送信
+  "update_crop_data"           geometry 上限検証後に assigns 更新
 ```
+
+サーバー側では `preview_crop`、`save_crop`、`update_crop_data`、`proceed_to_label` のすべてで同じ geometry 検証を行い、Hook から送られた過大な polygon 配列や異常な矩形を保存しません。
 
 ### Gallery UI Architecture / ギャラリー UI アーキテクチャ
 

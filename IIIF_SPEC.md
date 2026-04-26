@@ -13,7 +13,7 @@ OmniArchive は IIIF Image API v3.0 および Presentation API v3.0 を実装し
 
 ### Image API Compliance
 
-OmniArchive targets **Image API Compliance Level 2**.
+OmniArchive targets **Image API Compliance Level 1**.
 
 | Feature | Support |
 |:---|:---|
@@ -50,11 +50,19 @@ GET /iiif/image/{identifier}/info.json
 | Parameter | Values | Description |
 |:---|:---|:---|
 | `identifier` | e.g. `img-42-12345` | Unique image identifier / 画像の一意識別子 |
-| `region` | `full`, `square`, `x,y,w,h`, `pct:x,y,w,h` | Region to extract / 切り出し領域 |
-| `size` | `max`, `w,`, `,h`, `w,h`, `pct:n` | Output size / 出力サイズ |
+| `region` | `full`, `x,y,w,h` | Region to extract / 切り出し領域 |
+| `size` | `max`, `full`, `w,`, `w,h` | Output size / 出力サイズ |
 | `rotation` | `0`, `90`, `180`, `270` | Rotation in degrees / 回転角度 |
 | `quality` | `default`, `color`, `gray` | Image quality / 画質 |
 | `format` | `jpg`, `png`, `webp` | Output format / 出力フォーマット |
+
+Only `published` images with an existing PTIF path are served. Invalid `region`,
+`size`, `rotation`, or `quality.format` parameters return `400 Bad Request` before
+libvips processing. Unknown identifiers and non-published images return `404`.
+
+配信対象は PTIF パスを持つ `published` 画像のみです。不正な `region` / `size` /
+`rotation` / `quality.format` は libvips 処理前に `400 Bad Request` を返します。
+存在しない identifier と非公開画像は `404` です。
 
 **`info.json` response example:**
 
@@ -66,13 +74,7 @@ GET /iiif/image/{identifier}/info.json
   "protocol": "http://iiif.io/api/image",
   "width": 4000,
   "height": 3000,
-  "profile": "level2",
-  "tiles": [
-    {
-      "width": 256,
-      "scaleFactors": [1, 2, 4, 8]
-    }
-  ]
+  "profile": "level1"
 }
 ```
 
@@ -146,7 +148,7 @@ All string values in `label` and `summary` use the IIIF language map format.
                     "@context": "http://iiif.io/api/image/3/context.json",
                     "id": "https://example.com/iiif/image/img-42-12345",
                     "type": "ImageService3",
-                    "profile": "level2"
+                    "profile": "level1"
                   }
                 ]
               },
@@ -163,11 +165,11 @@ All string values in `label` and `summary` use the IIIF language map format.
 ### 3.2 Source-Level Manifest (Collection)
 
 A PdfSource-level Manifest aggregates multiple published images as Canvases.
-Canvas dimensions are derived from `geometry.width` / `geometry.height`
-(fallback: 1000×1000 if geometry is unavailable).
+Canvas dimensions are derived from rectangle `geometry.width` / `geometry.height`.
+Polygon geometry and missing dimensions fall back to 1000×1000.
 
 PdfSource 単位の Manifest は、複数の公開済み画像を Canvas として集約します。
-Canvas のサイズは `geometry.width` / `geometry.height` から取得します（フォールバック: 1000×1000）。
+Canvas のサイズは矩形 geometry の `width` / `height` から取得します。ポリゴン geometry や寸法未取得時は 1000×1000 にフォールバックします。
 
 ```json
 {
@@ -251,6 +253,17 @@ pipeline in `ImageProcessor`:
 
 Polygon areas outside the crop region are filled with pure white (255, 255, 255),
 producing JPEG-compatible output.
+
+Crop geometry is validated before persistence in the Lab LiveView. Polygon crops
+are limited to 64 points, coordinates must be within 0..20,000 pixels, rectangle
+sides must be within 1..20,000 pixels, and the crop bounding area must not exceed
+100,000,000 pixels. This keeps malformed LiveView events from pushing excessive
+work into the libvips processing path.
+
+Lab LiveView では保存前に crop geometry を検証します。ポリゴンは最大 64 点、
+座標は 0..20,000px、矩形辺は 1..20,000px、切り出し bbox 面積は
+100,000,000px 以下に制限されます。これにより、不正な LiveView イベントから
+libvips 処理へ過大な入力が渡ることを防ぎます。
 
 ---
 
