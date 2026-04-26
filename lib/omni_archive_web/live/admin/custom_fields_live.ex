@@ -40,16 +40,20 @@ defmodule OmniArchiveWeb.Admin.CustomFieldsLive do
 
   @impl true
   def handle_event("edit_field", %{"id" => id}, socket) do
-    field = CustomMetadataFields.get_field!(id)
+    case CustomMetadataFields.get_field(id) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "フィールドを選択できません")}
 
-    changeset =
-      CustomMetadataField.changeset(field, %{})
+      field ->
+        changeset =
+          CustomMetadataField.changeset(field, %{})
 
-    {:noreply,
-     socket
-     |> assign(:show_form, true)
-     |> assign(:editing_field, field)
-     |> assign(:changeset, changeset)}
+        {:noreply,
+         socket
+         |> assign(:show_form, true)
+         |> assign(:editing_field, field)
+         |> assign(:changeset, changeset)}
+    end
   end
 
   @impl true
@@ -104,54 +108,56 @@ defmodule OmniArchiveWeb.Admin.CustomFieldsLive do
 
   @impl true
   def handle_event("toggle_active", %{"id" => id}, socket) do
-    field = CustomMetadataFields.get_field!(id)
+    case CustomMetadataFields.get_field(id) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "フィールドを更新できません")}
 
-    result =
-      if field.active,
-        do: CustomMetadataFields.deactivate_field(field),
-        else: CustomMetadataFields.activate_field(field)
+      field ->
+        result =
+          if field.active,
+            do: CustomMetadataFields.deactivate_field(field),
+            else: CustomMetadataFields.activate_field(field)
 
-    case result do
-      {:ok, _} ->
-        fields = CustomMetadataFields.list_all_fields(socket.assigns.profile_key)
-        {:noreply, assign(socket, :fields, fields)}
+        case result do
+          {:ok, _} ->
+            fields = CustomMetadataFields.list_all_fields(socket.assigns.profile_key)
+            {:noreply, assign(socket, :fields, fields)}
 
-      {:error, _} ->
-        {:noreply, put_flash(socket, :error, "更新に失敗しました")}
+          {:error, _} ->
+            {:noreply, put_flash(socket, :error, "更新に失敗しました")}
+        end
     end
   end
 
   @impl true
   def handle_event("move_up", %{"id" => id}, socket) do
-    field = CustomMetadataFields.get_field!(id)
-    CustomMetadataFields.move_field_up(field)
-    fields = CustomMetadataFields.list_all_fields(socket.assigns.profile_key)
-    {:noreply, assign(socket, :fields, fields)}
+    move_field(socket, id, :up)
   end
 
   @impl true
   def handle_event("move_down", %{"id" => id}, socket) do
-    field = CustomMetadataFields.get_field!(id)
-    CustomMetadataFields.move_field_down(field)
-    fields = CustomMetadataFields.list_all_fields(socket.assigns.profile_key)
-    {:noreply, assign(socket, :fields, fields)}
+    move_field(socket, id, :down)
   end
 
   @impl true
   def handle_event("delete_field", %{"id" => id}, socket) do
-    field = CustomMetadataFields.get_field!(id)
+    case CustomMetadataFields.get_field(id) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "フィールドを削除できません")}
 
-    case CustomMetadataFields.delete_field(field) do
-      {:ok, _} ->
-        fields = CustomMetadataFields.list_all_fields(socket.assigns.profile_key)
+      field ->
+        case CustomMetadataFields.delete_field(field) do
+          {:ok, _} ->
+            fields = CustomMetadataFields.list_all_fields(socket.assigns.profile_key)
 
-        {:noreply,
-         socket
-         |> assign(:fields, fields)
-         |> put_flash(:info, "フィールドを削除しました")}
+            {:noreply,
+             socket
+             |> assign(:fields, fields)
+             |> put_flash(:info, "フィールドを削除しました")}
 
-      {:error, _} ->
-        {:noreply, put_flash(socket, :error, "削除に失敗しました")}
+          {:error, _} ->
+            {:noreply, put_flash(socket, :error, "削除に失敗しました")}
+        end
     end
   end
 
@@ -419,6 +425,22 @@ defmodule OmniArchiveWeb.Admin.CustomFieldsLive do
   defp get_max_length(changeset) do
     rules = Ecto.Changeset.get_field(changeset, :validation_rules) || %{}
     rules["max_length"] || Map.get(rules, :max_length)
+  end
+
+  defp move_field(socket, id, direction) do
+    case CustomMetadataFields.get_field(id) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "フィールドを並び替えできません")}
+
+      field ->
+        case direction do
+          :up -> CustomMetadataFields.move_field_up(field)
+          :down -> CustomMetadataFields.move_field_down(field)
+        end
+
+        fields = CustomMetadataFields.list_all_fields(socket.assigns.profile_key)
+        {:noreply, assign(socket, :fields, fields)}
+    end
   end
 
   defp normalize_validation_rules(params) do

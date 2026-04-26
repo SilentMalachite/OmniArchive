@@ -1,10 +1,16 @@
 defmodule OmniArchiveWeb.IIIF.ManifestControllerTest do
-  use OmniArchiveWeb.ConnCase, async: true
+  use OmniArchiveWeb.ConnCase, async: false
 
   import OmniArchive.Factory
+  import OmniArchive.DomainProfileTestHelper
 
   alias OmniArchive.Iiif.Manifest
   alias OmniArchive.Repo
+
+  setup do
+    put_domain_profile(OmniArchive.DomainProfiles.Archaeology)
+    :ok
+  end
 
   describe "GET /iiif/manifest/:identifier" do
     test "存在しない identifier で 404 を返す", %{conn: conn} do

@@ -189,6 +189,36 @@ defmodule OmniArchiveWeb.GalleryLiveTest do
       refute html =~ "bg-black/90"
     end
 
+    test "非公開画像 ID を直接指定してもモーダルに表示されない", %{conn: conn} do
+      private_images =
+        [
+          {"draft", "fig-46-1"},
+          {"pending_review", "fig-46-2"},
+          {"rejected", "fig-46-3"}
+        ]
+        |> Enum.map(fn {status, label} ->
+          insert_extracted_image(%{
+            ptif_path: "/path/to/private-#{status}.tif",
+            status: status,
+            label: label,
+            summary: "非公開サマリー #{status}"
+          })
+        end)
+
+      {:ok, view, initial_html} = live(conn, ~p"/gallery")
+
+      refute initial_html =~ "fig-46-"
+      refute initial_html =~ "非公開サマリー"
+
+      for image <- private_images do
+        html = render_click(view, "select_image", %{"id" => image.id})
+
+        refute html =~ image.label
+        refute html =~ image.summary
+        refute html =~ "bg-black/90"
+      end
+    end
+
     test "初期状態ではモーダルが表示されない", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/gallery")
 

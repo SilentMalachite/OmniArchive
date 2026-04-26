@@ -12,12 +12,7 @@ defmodule OmniArchiveWeb.InspectorLive.Browse do
 
   @impl true
   def mount(%{"pdf_source_id" => pdf_source_id}, _session, socket) do
-    pdf_source =
-      try do
-        Ingestion.get_pdf_source!(pdf_source_id, socket.assigns.current_user)
-      rescue
-        Ecto.NoResultsError -> nil
-      end
+    pdf_source = Ingestion.get_pdf_source(pdf_source_id, socket.assigns.current_user)
 
     if is_nil(pdf_source) do
       {:ok,
@@ -39,8 +34,7 @@ defmodule OmniArchiveWeb.InspectorLive.Browse do
             %{
               filename: filename,
               page_number: index,
-              # 静的ファイルとして配信するパス
-              url: "/uploads/pages/#{pdf_source.id}/#{filename}"
+              url: "/lab/uploads/pages/#{pdf_source.id}/#{filename}"
             }
           end)
         else
@@ -58,8 +52,8 @@ defmodule OmniArchiveWeb.InspectorLive.Browse do
 
   @impl true
   def handle_event("select_page", %{"page" => page_str}, socket) do
-    case Integer.parse(to_string(page_str)) do
-      {page_number, _} ->
+    case parse_page_number(page_str) do
+      {:ok, page_number} ->
         # ページの存在確認のみ行い、レコードは作成しない（Write-on-Action）
         page_image =
           Enum.find(socket.assigns.page_images, &(&1.page_number == page_number))
@@ -75,6 +69,13 @@ defmodule OmniArchiveWeb.InspectorLive.Browse do
 
       _ ->
         {:noreply, put_flash(socket, :error, "無効なページ番号です")}
+    end
+  end
+
+  defp parse_page_number(page_number) do
+    case Integer.parse(to_string(page_number)) do
+      {parsed, ""} when parsed > 0 -> {:ok, parsed}
+      _ -> :error
     end
   end
 

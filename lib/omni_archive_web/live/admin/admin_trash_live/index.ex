@@ -38,19 +38,23 @@ defmodule OmniArchiveWeb.Admin.AdminTrashLive.Index do
 
   @impl true
   def handle_event("destroy", %{"id" => id}, socket) do
-    pdf_source = Ingestion.get_pdf_source!(id)
-
-    case Ingestion.hard_delete_pdf_source(pdf_source) do
-      {:ok, _} ->
-        projects = Enum.reject(socket.assigns.projects, &(&1.id == pdf_source.id))
-
-        {:noreply,
-         socket
-         |> assign(:projects, projects)
-         |> put_flash(:info, "「#{pdf_source.filename}」を完全に削除しました。")}
-
-      {:error, _} ->
+    case Ingestion.get_pdf_source(id) do
+      nil ->
         {:noreply, put_flash(socket, :error, "完全削除に失敗しました。")}
+
+      pdf_source ->
+        case Ingestion.hard_delete_pdf_source(pdf_source) do
+          {:ok, _} ->
+            projects = Enum.reject(socket.assigns.projects, &(&1.id == pdf_source.id))
+
+            {:noreply,
+             socket
+             |> assign(:projects, projects)
+             |> put_flash(:info, "「#{pdf_source.filename}」を完全に削除しました。")}
+
+          {:error, _} ->
+            {:noreply, put_flash(socket, :error, "完全削除に失敗しました。")}
+        end
     end
   end
 

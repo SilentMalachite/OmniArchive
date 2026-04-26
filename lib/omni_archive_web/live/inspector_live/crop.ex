@@ -21,6 +21,11 @@ defmodule OmniArchiveWeb.InspectorLive.Crop do
   alias OmniArchive.Ingestion
 
   @nudge_amount 10
+  @max_polygon_points 64
+  @max_crop_coordinate 20_000
+  @max_crop_dimension 20_000
+  @max_crop_pixels 100_000_000
+  @invalid_crop_message "クロップ範囲が不正です"
 
   @impl true
   def mount(
@@ -28,9 +33,19 @@ defmodule OmniArchiveWeb.InspectorLive.Crop do
         _session,
         socket
       ) do
-    {page_number, _} = Integer.parse(page_number_str)
-    pdf_source = Ingestion.get_pdf_source!(pdf_source_id, socket.assigns.current_user)
+    case parse_page_number(page_number_str) do
+      {:ok, page_number} ->
+        case Ingestion.get_pdf_source(pdf_source_id, socket.assigns.current_user) do
+          nil -> redirect_to_lab(socket, "指定されたPDFソースが見つかりません")
+          pdf_source -> mount_crop(socket, pdf_source, page_number)
+        end
 
+      :error ->
+        redirect_to_lab(socket, "指定されたページが見つかりません")
+    end
+  end
+
+  defp mount_crop(socket, pdf_source, page_number) do
     # この pdf_source_id + page_number に既存レコードがあるかチェック
     existing_image = Ingestion.find_extracted_image_by_page(pdf_source.id, page_number)
 
@@ -49,7 +64,7 @@ defmodule OmniArchiveWeb.InspectorLive.Crop do
     image_path = if page_filename, do: Path.join(pages_dir, page_filename), else: nil
 
     image_url =
-      if page_filename, do: "/uploads/pages/#{pdf_source.id}/#{page_filename}", else: nil
+      if page_filename, do: "/lab/uploads/pages/#{pdf_source.id}/#{page_filename}", else: nil
 
     # 既存レコードがある場合はそのクロップデータをロード
     # 矩形データとポリゴンデータの両方に対応
@@ -85,147 +100,124 @@ defmodule OmniArchiveWeb.InspectorLive.Crop do
      |> assign(:save_state, initial_state)}
   end
 
+  defp parse_page_number(page_number) do
+    case Integer.parse(to_string(page_number)) do
+      {parsed, ""} when parsed > 0 -> {:ok, parsed}
+      _ -> :error
+    end
+  end
+
+  defp redirect_to_lab(socket, message) do
+    {:ok,
+     socket
+     |> put_flash(:error, message)
+     |> push_navigate(to: ~p"/lab")}
+  end
+
   # JS Hook からのプレビューイベント（ポリゴン頂点配列）
   @impl true
   def handle_event("preview_crop", %{"points" => points} = _params, socket)
       when is_list(points) do
-    normalized_points = normalize_points(points)
+    case normalize_polygon_points(points) do
+      {:ok, normalized_points} ->
+        # 現在の値を Undo スタックに保存
+        undo_stack = push_undo(socket.assigns.polygon_points, socket.assigns.undo_stack)
 
-    # 現在の値を Undo スタックに保存
-    undo_stack = push_undo(socket.assigns.polygon_points, socket.assigns.undo_stack)
+        {:noreply,
+         socket
+         |> assign(:polygon_points, normalized_points)
+         |> assign(:crop_rect, nil)
+         |> assign(:undo_stack, undo_stack)
+         |> assign(:save_state, :draft)}
 
-    {:noreply,
-     socket
-     |> assign(:polygon_points, normalized_points)
-     |> assign(:crop_rect, nil)
-     |> assign(:undo_stack, undo_stack)
-     |> assign(:save_state, :draft)}
+      {:error, message} ->
+        invalid_crop(socket, message)
+    end
   end
 
   # 旧矩形フォーマットの preview_crop（後方互換性）
   @impl true
   def handle_event("preview_crop", params, socket) when is_map_key(params, "x") do
-    crop_rect = %{
-      "x" => to_int(params["x"]),
-      "y" => to_int(params["y"]),
-      "width" => to_int(params["width"]),
-      "height" => to_int(params["height"])
-    }
+    case normalize_crop_rect(params) do
+      {:ok, crop_rect} ->
+        undo_stack = push_undo(socket.assigns.crop_rect, socket.assigns.undo_stack)
 
-    undo_stack = push_undo(socket.assigns.crop_rect, socket.assigns.undo_stack)
+        {:noreply,
+         socket
+         |> assign(:crop_rect, crop_rect)
+         |> assign(:undo_stack, undo_stack)
+         |> assign(:save_state, :draft)}
 
-    {:noreply,
-     socket
-     |> assign(:crop_rect, crop_rect)
-     |> assign(:undo_stack, undo_stack)
-     |> assign(:save_state, :draft)}
+      {:error, message} ->
+        invalid_crop(socket, message)
+    end
   end
 
   # ダブルクリック/ダブルタップによる明示的保存（ポリゴン）
   @impl true
   def handle_event("save_crop", %{"points" => points} = _params, socket) when is_list(points) do
-    normalized_points = normalize_points(points)
-    geometry = %{"points" => normalized_points}
+    case normalize_polygon_points(points) do
+      {:ok, normalized_points} ->
+        geometry = %{"points" => normalized_points}
+        result = persist_crop(socket, geometry)
 
-    result =
-      case socket.assigns.extracted_image do
-        nil ->
-          # 新規作成（Write-on-Action: 初めてここでレコードを作成）
-          Ingestion.create_extracted_image(%{
-            pdf_source_id: socket.assigns.pdf_source.id,
-            page_number: socket.assigns.page_number,
-            image_path: socket.assigns.image_path,
-            geometry: geometry
-          })
+        case result do
+          {:ok, updated_image} ->
+            {:noreply,
+             socket
+             |> assign(:extracted_image, updated_image)
+             |> assign(:polygon_points, normalized_points)
+             |> assign(:crop_rect, nil)
+             |> assign(:save_state, :saved)
+             |> push_event("save_confirmed", %{})}
 
-        existing ->
-          # 既存レコードの更新
-          old_path = existing.image_path
+          {:error, :stale} ->
+            {:noreply,
+             put_flash(
+               socket,
+               :error,
+               "他ユーザーによって更新されました。ページをリロードしてください (Data conflict detected)."
+             )}
 
-          result =
-            Ingestion.update_extracted_image(existing, %{
-              geometry: geometry,
-              image_path: socket.assigns.image_path
-            })
+          {:error, _changeset} ->
+            {:noreply, put_flash(socket, :error, "保存に失敗しました")}
+        end
 
-          # 旧バージョンのファイルを削除（パスが異なる場合のみ）
-          if old_path && old_path != socket.assigns.image_path do
-            File.rm(old_path)
-          end
-
-          result
-      end
-
-    case result do
-      {:ok, updated_image} ->
-        {:noreply,
-         socket
-         |> assign(:extracted_image, updated_image)
-         |> assign(:polygon_points, normalized_points)
-         |> assign(:crop_rect, nil)
-         |> assign(:save_state, :saved)
-         |> push_event("save_confirmed", %{})}
-
-      {:error, :stale} ->
-        {:noreply,
-         put_flash(socket, :error, "他ユーザーによって更新されました。ページをリロードしてください (Data conflict detected).")}
-
-      {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "保存に失敗しました")}
+      {:error, message} ->
+        invalid_crop(socket, message)
     end
   end
 
   # 旧矩形フォーマットの save_crop（後方互換性）
   @impl true
   def handle_event("save_crop", params, socket) when is_map_key(params, "x") do
-    crop_rect = %{
-      "x" => to_int(params["x"]),
-      "y" => to_int(params["y"]),
-      "width" => to_int(params["width"]),
-      "height" => to_int(params["height"])
-    }
+    case normalize_crop_rect(params) do
+      {:ok, crop_rect} ->
+        result = persist_crop(socket, crop_rect)
 
-    result =
-      case socket.assigns.extracted_image do
-        nil ->
-          Ingestion.create_extracted_image(%{
-            pdf_source_id: socket.assigns.pdf_source.id,
-            page_number: socket.assigns.page_number,
-            image_path: socket.assigns.image_path,
-            geometry: crop_rect
-          })
+        case result do
+          {:ok, updated_image} ->
+            {:noreply,
+             socket
+             |> assign(:extracted_image, updated_image)
+             |> assign(:crop_rect, crop_rect)
+             |> assign(:save_state, :saved)
+             |> push_event("save_confirmed", %{})}
 
-        existing ->
-          old_path = existing.image_path
+          {:error, :stale} ->
+            {:noreply,
+             put_flash(
+               socket,
+               :error,
+               "他ユーザーによって更新されました。ページをリロードしてください (Data conflict detected)."
+             )}
 
-          result =
-            Ingestion.update_extracted_image(existing, %{
-              geometry: crop_rect,
-              image_path: socket.assigns.image_path
-            })
+          {:error, _changeset} ->
+            {:noreply, put_flash(socket, :error, "保存に失敗しました")}
+        end
 
-          if old_path && old_path != socket.assigns.image_path do
-            File.rm(old_path)
-          end
-
-          result
-      end
-
-    case result do
-      {:ok, updated_image} ->
-        {:noreply,
-         socket
-         |> assign(:extracted_image, updated_image)
-         |> assign(:crop_rect, crop_rect)
-         |> assign(:save_state, :saved)
-         |> push_event("save_confirmed", %{})}
-
-      {:error, :stale} ->
-        {:noreply,
-         put_flash(socket, :error, "他ユーザーによって更新されました。ページをリロードしてください (Data conflict detected).")}
-
-      {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "保存に失敗しました")}
+      {:error, message} ->
+        invalid_crop(socket, message)
     end
   end
 
@@ -252,13 +244,19 @@ defmodule OmniArchiveWeb.InspectorLive.Crop do
   # 旧イベント名の後方互換性（update_crop_data）
   @impl true
   def handle_event("update_crop_data", crop_rect, socket) do
-    undo_stack = push_undo(socket.assigns.crop_rect, socket.assigns.undo_stack)
+    case normalize_crop_rect(crop_rect) do
+      {:ok, crop_rect} ->
+        undo_stack = push_undo(socket.assigns.crop_rect, socket.assigns.undo_stack)
 
-    {:noreply,
-     socket
-     |> assign(:crop_rect, crop_rect)
-     |> assign(:undo_stack, undo_stack)
-     |> assign(:save_state, :draft)}
+        {:noreply,
+         socket
+         |> assign(:crop_rect, crop_rect)
+         |> assign(:undo_stack, undo_stack)
+         |> assign(:save_state, :draft)}
+
+      {:error, message} ->
+        invalid_crop(socket, message)
+    end
   end
 
   @impl true
@@ -342,41 +340,188 @@ defmodule OmniArchiveWeb.InspectorLive.Crop do
 
       true ->
         # クロップデータを最終保存してラベリング画面に遷移
-        geometry =
-          if polygon_points do
-            %{"points" => polygon_points}
-          else
-            crop_rect
+        with {:ok, geometry} <- geometry_from_selection(polygon_points, crop_rect) do
+          case Ingestion.update_extracted_image(extracted_image, %{
+                 geometry: geometry
+               }) do
+            {:ok, _updated_image} ->
+              {:noreply, push_navigate(socket, to: ~p"/lab/label/#{extracted_image.id}")}
+
+            {:error, :stale} ->
+              {:noreply,
+               put_flash(
+                 socket,
+                 :error,
+                 "他ユーザーによって更新されました。ページをリロードしてください (Data conflict detected)."
+               )}
+
+            {:error, _changeset} ->
+              {:noreply, put_flash(socket, :error, "保存に失敗しました")}
           end
-
-        case Ingestion.update_extracted_image(extracted_image, %{
-               geometry: geometry
-             }) do
-          {:ok, _updated_image} ->
-            {:noreply, push_navigate(socket, to: ~p"/lab/label/#{extracted_image.id}")}
-
-          {:error, :stale} ->
-            {:noreply,
-             put_flash(
-               socket,
-               :error,
-               "他ユーザーによって更新されました。ページをリロードしてください (Data conflict detected)."
-             )}
-
-          {:error, _changeset} ->
-            {:noreply, put_flash(socket, :error, "保存に失敗しました")}
+        else
+          {:error, message} -> invalid_crop(socket, message)
         end
     end
   end
 
-  # ポリゴン頂点配列の正規化（整数変換）
-  defp normalize_points(points) when is_list(points) do
-    Enum.map(points, fn p ->
-      %{
-        "x" => to_int(p["x"]),
-        "y" => to_int(p["y"])
-      }
+  defp persist_crop(socket, geometry) do
+    case socket.assigns.extracted_image do
+      nil ->
+        # 新規作成（Write-on-Action: 初めてここでレコードを作成）
+        Ingestion.create_extracted_image(%{
+          pdf_source_id: socket.assigns.pdf_source.id,
+          page_number: socket.assigns.page_number,
+          image_path: socket.assigns.image_path,
+          geometry: geometry
+        })
+
+      existing ->
+        old_path = existing.image_path
+
+        result =
+          Ingestion.update_extracted_image(existing, %{
+            geometry: geometry,
+            image_path: socket.assigns.image_path
+          })
+
+        # 旧バージョンのファイルを削除（パスが異なる場合のみ）
+        if old_path && old_path != socket.assigns.image_path do
+          File.rm(old_path)
+        end
+
+        result
+    end
+  end
+
+  defp geometry_from_selection(polygon_points, _crop_rect) when is_list(polygon_points) do
+    case normalize_polygon_points(polygon_points) do
+      {:ok, points} -> {:ok, %{"points" => points}}
+      {:error, message} -> {:error, message}
+    end
+  end
+
+  defp geometry_from_selection(_polygon_points, crop_rect) when is_map(crop_rect) do
+    normalize_crop_rect(crop_rect)
+  end
+
+  defp geometry_from_selection(_polygon_points, _crop_rect), do: {:error, @invalid_crop_message}
+
+  defp normalize_polygon_points(points) when is_list(points) do
+    with {:ok, normalized_points} <- normalize_points_with_limit(points),
+         {:ok, normalized_points} <- validate_polygon_bounds(normalized_points) do
+      {:ok, normalized_points}
+    end
+  end
+
+  defp normalize_points_with_limit(points) do
+    points
+    |> Enum.reduce_while({:ok, [], 0}, fn point, {:ok, acc, count} ->
+      count = count + 1
+
+      if count > @max_polygon_points do
+        {:halt, {:error, @invalid_crop_message}}
+      else
+        case normalize_point(point) do
+          {:ok, normalized} -> {:cont, {:ok, [normalized | acc], count}}
+          :error -> {:halt, {:error, @invalid_crop_message}}
+        end
+      end
     end)
+    |> case do
+      {:ok, _points, count} when count < 3 ->
+        {:error, @invalid_crop_message}
+
+      {:ok, points, _count} ->
+        {:ok, Enum.reverse(points)}
+
+      {:error, message} ->
+        {:error, message}
+    end
+  end
+
+  defp normalize_point(point) when is_map(point) do
+    with {:ok, x} <- normalize_coordinate(point["x"] || point[:x]),
+         {:ok, y} <- normalize_coordinate(point["y"] || point[:y]) do
+      {:ok, %{"x" => x, "y" => y}}
+    else
+      :error -> :error
+    end
+  end
+
+  defp normalize_point(_point), do: :error
+
+  defp validate_polygon_bounds(points) do
+    xs = Enum.map(points, & &1["x"])
+    ys = Enum.map(points, & &1["y"])
+    width = Enum.max(xs) - Enum.min(xs)
+    height = Enum.max(ys) - Enum.min(ys)
+
+    validate_dimensions(width, height)
+    |> case do
+      :ok -> {:ok, points}
+      :error -> {:error, @invalid_crop_message}
+    end
+  end
+
+  defp normalize_crop_rect(rect) when is_map(rect) do
+    with {:ok, x} <- normalize_coordinate(rect["x"] || rect[:x]),
+         {:ok, y} <- normalize_coordinate(rect["y"] || rect[:y]),
+         {:ok, width} <- normalize_dimension(rect["width"] || rect[:width]),
+         {:ok, height} <- normalize_dimension(rect["height"] || rect[:height]),
+         :ok <- validate_dimensions(width, height) do
+      {:ok, %{"x" => x, "y" => y, "width" => width, "height" => height}}
+    else
+      :error -> {:error, @invalid_crop_message}
+    end
+  end
+
+  defp normalize_crop_rect(_rect), do: {:error, @invalid_crop_message}
+
+  defp normalize_coordinate(value) when is_integer(value) do
+    if value >= 0 and value <= @max_crop_coordinate, do: {:ok, value}, else: :error
+  end
+
+  defp normalize_coordinate(value) when is_float(value) do
+    if value >= 0 and value <= @max_crop_coordinate, do: {:ok, round(value)}, else: :error
+  end
+
+  defp normalize_coordinate(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {parsed, ""} -> normalize_coordinate(parsed)
+      _ -> :error
+    end
+  end
+
+  defp normalize_coordinate(_value), do: :error
+
+  defp normalize_dimension(value) when is_integer(value) do
+    if value > 0 and value <= @max_crop_dimension, do: {:ok, value}, else: :error
+  end
+
+  defp normalize_dimension(value) when is_float(value) do
+    if value > 0 and value <= @max_crop_dimension, do: {:ok, round(value)}, else: :error
+  end
+
+  defp normalize_dimension(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {parsed, ""} -> normalize_dimension(parsed)
+      _ -> :error
+    end
+  end
+
+  defp normalize_dimension(_value), do: :error
+
+  defp validate_dimensions(width, height) do
+    cond do
+      width <= 0 or height <= 0 -> :error
+      width > @max_crop_dimension or height > @max_crop_dimension -> :error
+      width * height > @max_crop_pixels -> :error
+      true -> :ok
+    end
+  end
+
+  defp invalid_crop(socket, message) do
+    {:noreply, put_flash(socket, :error, message)}
   end
 
   # Undo スタックにプッシュ（最大20件）

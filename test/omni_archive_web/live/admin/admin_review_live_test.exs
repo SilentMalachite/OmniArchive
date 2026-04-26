@@ -187,6 +187,21 @@ defmodule OmniArchiveWeb.Admin.ReviewLiveTest do
       # インスペクターが非表示になる
       refute html =~ "inspector-open"
     end
+
+    test "不正な ID を送ってもクラッシュしない", %{conn: conn} do
+      insert_extracted_image(%{
+        ptif_path: "/path/to/inspect.tif",
+        status: "pending_review",
+        label: "fig-999-1"
+      })
+
+      {:ok, view, _html} = live(conn, ~p"/admin/review")
+
+      html = render_click(view, "select_image", %{"id" => "not-an-id"})
+
+      assert html =~ "画像を選択できません"
+      refute html =~ "インスペクター"
+    end
   end
 
   describe "reject イベント（Note 付き差し戻し）" do
@@ -214,6 +229,15 @@ defmodule OmniArchiveWeb.Admin.ReviewLiveTest do
       assert html =~ "レビュー待ち: 0 件"
       assert html =~ "レビュー待ちの図版はありません"
     end
+
+    test "不正な ID では差し戻しモーダルを開かずクラッシュしない", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/admin/review")
+
+      html = render_click(view, "open_reject_modal", %{"id" => "not-an-id"})
+
+      assert html =~ "画像を選択できません"
+      refute html =~ "差し戻し理由"
+    end
   end
 
   describe "delete イベント" do
@@ -235,6 +259,14 @@ defmodule OmniArchiveWeb.Admin.ReviewLiveTest do
       assert html =~ "レビュー待ちの図版はありません"
     end
 
+    test "不正な ID を送ってもクラッシュしない", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/admin/review")
+
+      html = render_click(view, "delete", %{"id" => "not-an-id"})
+
+      assert html =~ "画像を削除できません"
+    end
+
     test "draft ステータスの画像は削除できない", %{conn: conn} do
       image =
         insert_extracted_image(%{
@@ -254,6 +286,16 @@ defmodule OmniArchiveWeb.Admin.ReviewLiveTest do
       # pending_review 以外は soft_delete_image がエラーを返す
       assert Ingestion.soft_delete_image(%{image | status: "draft"}) ==
                {:error, :invalid_status_transition}
+    end
+  end
+
+  describe "approve イベントの入力検証" do
+    test "不正な ID を送ってもクラッシュしない", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/admin/review")
+
+      html = render_click(view, "approve", %{"id" => "not-an-id"})
+
+      assert html =~ "画像を承認できません"
     end
   end
 end

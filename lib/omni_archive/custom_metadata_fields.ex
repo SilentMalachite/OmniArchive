@@ -8,6 +8,8 @@ defmodule OmniArchive.CustomMetadataFields do
   alias OmniArchive.CustomMetadataFields.CustomMetadataField
   alias OmniArchive.Repo
 
+  @field_key_format ~r/^[a-z][a-z0-9_]{0,49}$/
+
   # --- CRUD ---
 
   def list_active_fields(profile_key) do
@@ -25,6 +27,14 @@ defmodule OmniArchive.CustomMetadataFields do
   end
 
   def get_field!(id), do: Repo.get!(CustomMetadataField, id)
+
+  def get_field(id) do
+    with {:ok, id} <- normalize_id(id) do
+      Repo.get(CustomMetadataField, id)
+    else
+      :error -> nil
+    end
+  end
 
   def create_field(attrs) do
     count =
@@ -112,8 +122,10 @@ defmodule OmniArchive.CustomMetadataFields do
   # --- プロファイル形式への変換 ---
 
   def to_profile_format(%CustomMetadataField{} = f) do
+    field_key = field_key!(f)
+
     %{
-      field: String.to_atom(f.field_key),
+      field: field_key,
       label: f.label,
       placeholder: f.placeholder || "",
       storage: :metadata
@@ -122,7 +134,7 @@ defmodule OmniArchive.CustomMetadataFields do
 
   def to_validation_rule(%CustomMetadataField{} = f) do
     rules = f.validation_rules || %{}
-    field_atom = String.to_atom(f.field_key)
+    field_key = field_key!(f)
 
     rule =
       case rules do
@@ -136,14 +148,39 @@ defmodule OmniArchive.CustomMetadataFields do
           %{}
       end
 
-    {field_atom, rule}
+    {field_key, rule}
   end
 
   def to_search_facet(%CustomMetadataField{} = f) do
+    field_key = field_key!(f)
+
     %{
-      field: String.to_atom(f.field_key),
-      param: f.field_key,
+      field: field_key,
+      param: field_key,
       label: f.label
     }
   end
+
+  defp field_key!(%CustomMetadataField{field_key: key}) when is_binary(key) do
+    if Regex.match?(@field_key_format, key) do
+      key
+    else
+      raise ArgumentError, "invalid metadata field key: #{inspect(key)}"
+    end
+  end
+
+  defp field_key!(%CustomMetadataField{field_key: key}) do
+    raise ArgumentError, "invalid metadata field key: #{inspect(key)}"
+  end
+
+  defp normalize_id(id) when is_integer(id) and id > 0, do: {:ok, id}
+
+  defp normalize_id(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {parsed, ""} when parsed > 0 -> {:ok, parsed}
+      _ -> :error
+    end
+  end
+
+  defp normalize_id(_id), do: :error
 end

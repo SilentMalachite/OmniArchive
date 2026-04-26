@@ -15,31 +15,38 @@ defmodule OmniArchiveWeb.InspectorLive.Finalize do
 
   @impl true
   def mount(%{"image_id" => image_id}, _session, socket) do
-    extracted_image = Ingestion.get_extracted_image!(image_id)
+    case fetch_authorized_image(image_id, socket.assigns.current_user) do
+      {:ok, extracted_image} ->
+        # パイプラインIDを生成してサブスクライブ
+        pipeline_id = Pipeline.generate_pipeline_id()
 
-    # パイプラインIDを生成してサブスクライブ
-    pipeline_id = Pipeline.generate_pipeline_id()
+        if connected?(socket) do
+          Phoenix.PubSub.subscribe(OmniArchive.PubSub, Pipeline.topic(pipeline_id))
+        end
 
-    if connected?(socket) do
-      Phoenix.PubSub.subscribe(OmniArchive.PubSub, Pipeline.topic(pipeline_id))
+        # システムリソース情報を取得
+        system_info = ResourceMonitor.system_info()
+
+        {:ok,
+         socket
+         |> assign(:page_title, "保存の確認")
+         |> assign(:current_step, 5)
+         |> assign(:extracted_image, extracted_image)
+         |> assign(:pipeline_id, pipeline_id)
+         |> assign(:system_info, system_info)
+         |> assign(:processing, false)
+         |> assign(:completed, false)
+         |> assign(:error_message, nil)
+         |> assign(:manifest_identifier, nil)
+         |> assign(:progress_tasks, %{})
+         |> assign(:overall_progress, 0)}
+
+      :error ->
+        {:ok,
+         socket
+         |> put_flash(:error, "指定された画像が見つかりません")
+         |> push_navigate(to: ~p"/lab")}
     end
-
-    # システムリソース情報を取得
-    system_info = ResourceMonitor.system_info()
-
-    {:ok,
-     socket
-     |> assign(:page_title, "保存の確認")
-     |> assign(:current_step, 5)
-     |> assign(:extracted_image, extracted_image)
-     |> assign(:pipeline_id, pipeline_id)
-     |> assign(:system_info, system_info)
-     |> assign(:processing, false)
-     |> assign(:completed, false)
-     |> assign(:error_message, nil)
-     |> assign(:manifest_identifier, nil)
-     |> assign(:progress_tasks, %{})
-     |> assign(:overall_progress, 0)}
   end
 
   @impl true
@@ -100,6 +107,15 @@ defmodule OmniArchiveWeb.InspectorLive.Finalize do
      socket
      |> assign(:processing, false)
      |> assign(:error_message, "処理中にエラーが発生しました: #{inspect(reason)}")}
+  end
+
+  defp fetch_authorized_image(image_id, current_user) do
+    with %{} = image <- Ingestion.get_extracted_image(image_id),
+         %{} <- Ingestion.get_pdf_source(image.pdf_source_id, current_user) do
+      {:ok, image}
+    else
+      _ -> :error
+    end
   end
 
   # 進捗イベントの処理

@@ -1,0 +1,41 @@
+metadata_fields:
+  - field: summary
+    label: Summary
+    storage: core
+  - field: label
+    label: Label
+    storage: core
+  - field: collection
+    label: Collection
+validation_rules:
+  attacker_controlled_key:
+    max_length: 10
+search_facets:
+  - field: collection
+    param: collection
+    label: Collection
+ui_texts:
+  search:
+    page_title: Search
+    heading: Search
+    description: Search
+    placeholder: Search
+    empty_filtered: Empty
+    empty_filtered_hint: Empty
+    empty_initial: Empty
+    empty_initial_hint: Empty
+    result_none: None
+    result_suffix: results
+    clear_filters: Clear
+  inspector_label:
+    heading: Label
+    description: Label
+    duplicate_warning: Warning
+    duplicate_blocked: Blocked
+    duplicate_title: Duplicate
+    duplicate_edit: Edit
+duplicate_identity:
+  profile_key: test_yaml
+  scope_field: collection
+  label_field: label
+  duplicate_label_error: Duplicate

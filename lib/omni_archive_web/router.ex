@@ -36,6 +36,8 @@ defmodule OmniArchiveWeb.Router do
   scope "/lab", OmniArchiveWeb do
     pipe_through [:browser, :require_authenticated_user]
 
+    get "/uploads/pages/:pdf_source_id/:filename", UploadAssetController, :page
+
     live_session :authenticated_lab,
       on_mount: [{OmniArchiveWeb.UserAuth, :ensure_authenticated}] do
       live "/", LabLive.Index, :index
@@ -47,7 +49,6 @@ defmodule OmniArchiveWeb.Router do
       live "/label/:image_id", InspectorLive.Label, :label
       live "/finalize/:image_id", InspectorLive.Finalize, :finalize
       live "/search", SearchLive, :index
-      live "/approval", ApprovalLive, :index
       live "/pipeline/:pipeline_id", PipelineLive, :show
     end
   end

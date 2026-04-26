@@ -19,7 +19,7 @@ defmodule OmniArchiveWeb do
 
   def static_paths,
     do:
-      ~w(assets fonts images uploads favicon.ico robots.txt apple-touch-icon.png apple-touch-icon-precomposed.png)
+      ~w(assets fonts images favicon.ico robots.txt apple-touch-icon.png apple-touch-icon-precomposed.png)
 
   def router do
     quote do

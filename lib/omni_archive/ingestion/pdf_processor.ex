@@ -19,14 +19,17 @@ defmodule OmniArchive.Ingestion.PdfProcessor do
 
   # OOM 防止のためのチャンクサイズ（2GB RAM VPS 向け）
   @chunk_size 10
+  @default_max_pages 200
+  @default_command_timeout_ms 120_000
+  @default_max_output_bytes 1_000_000_000
 
   @doc """
   PDFファイルの全ページを PNG に変換します。
   出力ディレクトリに page-001-{timestamp}.png, page-002-{timestamp}.png ... の形式で保存されます。
   タイムスタンプにより、再アップロード時にブラウザキャッシュを自動的にバイパスします。
 
-  大規模 PDF（200+ ページ）でも OOM を起こさないよう、10 ページ単位のチャンクに
-  分割して逐次処理します。
+  ページ数・生成画像サイズ・外部コマンド実行時間に上限を設け、許可範囲内の PDF を
+  10 ページ単位のチャンクに分割して逐次処理します。
 
   ## 引数
     - pdf_path: PDF ファイルのパス
@@ -45,9 +48,11 @@ defmodule OmniArchive.Ingestion.PdfProcessor do
     abs_output_prefix = Path.expand(Path.join(output_dir, "page"))
 
     # まずページ数を取得してチャンクリストを生成
-    case get_page_count(abs_pdf_path) do
+    case get_page_count(abs_pdf_path, opts) do
       {:ok, total_pages} ->
-        run_chunked_conversion(abs_pdf_path, abs_output_prefix, output_dir, total_pages, opts)
+        with :ok <- validate_page_count(total_pages, opts) do
+          run_chunked_conversion(abs_pdf_path, abs_output_prefix, output_dir, total_pages, opts)
+        end
 
       {:error, reason} ->
         Logger.error("[PdfProcessor] Command failed with exit code (pdfinfo): #{reason}")
@@ -60,15 +65,116 @@ defmodule OmniArchive.Ingestion.PdfProcessor do
   PDFのページ数を取得します。
   """
   def get_page_count(pdf_path) do
-    case System.cmd("pdfinfo", [pdf_path], stderr_to_stdout: true) do
-      {output, 0} ->
-        case Regex.run(~r/Pages:\s+(\d+)/, output) do
-          [_, count] -> {:ok, String.to_integer(count)}
-          _ -> {:error, "ページ数を取得できませんでした"}
-        end
+    get_page_count(pdf_path, %{})
+  end
 
-      {_error, _} ->
+  defp get_page_count(pdf_path, opts) do
+    case run_command("pdfinfo", [pdf_path], opts) do
+      {:ok, {output, 0}} ->
+        parse_page_count(output)
+
+      {:ok, {_error, _}} ->
         {:error, "PDF情報の取得に失敗しました"}
+
+      {:error, :timeout} ->
+        {:error, "PDF情報の取得がタイムアウトしました"}
+
+      {:error, reason} ->
+        {:error, "PDF情報の取得に失敗しました: #{inspect(reason)}"}
+    end
+  end
+
+  defp parse_page_count(output) do
+    case Regex.run(~r/Pages:\s+(\d+)/, output) do
+      [_, count] -> {:ok, String.to_integer(count)}
+      _ -> {:error, "ページ数を取得できませんでした"}
+    end
+  end
+
+  defp validate_page_count(total_pages, opts) do
+    max_pages = Map.get(opts, :max_pages, @default_max_pages)
+
+    if total_pages <= max_pages do
+      :ok
+    else
+      {:error, "ページ数上限（#{max_pages}ページ）を超えています: #{total_pages}ページ"}
+    end
+  end
+
+  defp run_command(command, args, opts) do
+    runner = Map.get(opts, :command_runner, &System.cmd/3)
+    timeout_ms = command_timeout_ms(opts)
+    command_opts = [stderr_to_stdout: true]
+
+    task =
+      Task.async(fn ->
+        runner.(command, args, command_opts)
+      end)
+
+    case Task.yield(task, timeout_ms) do
+      {:ok, result} ->
+        {:ok, result}
+
+      {:exit, reason} ->
+        {:error, reason}
+
+      nil ->
+        Task.shutdown(task, :brutal_kill)
+        {:error, :timeout}
+    end
+  end
+
+  defp command_timeout_ms(opts),
+    do: Map.get(opts, :command_timeout_ms, @default_command_timeout_ms)
+
+  defp collect_and_rename_images(output_dir, opts) do
+    timestamp = System.system_time(:second)
+
+    # Path.wildcard で確実に収集し、明示的にソート
+    image_paths =
+      Path.wildcard(Path.join(output_dir, "page*.png"))
+      |> Enum.sort()
+
+    with :ok <- validate_generated_output_size(image_paths, opts) do
+      renamed_paths =
+        Enum.map(image_paths, fn original_path ->
+          original_name = Path.basename(original_path)
+          # page-01.png → page-01-1708065543.png
+          versioned_name = String.replace(original_name, ~r/\.png$/, "-#{timestamp}.png")
+          versioned_path = Path.join(output_dir, versioned_name)
+          File.rename!(original_path, versioned_path)
+          versioned_path
+        end)
+
+      if Enum.empty?(renamed_paths) do
+        Logger.error("[PdfProcessor] No images generated despite successful conversion")
+        {:error, "画像が生成されませんでした (exit code 0)"}
+      else
+        Logger.info("[PdfProcessor] Successfully generated #{length(renamed_paths)} images")
+        {:ok, %{page_count: length(renamed_paths), image_paths: renamed_paths}}
+      end
+    else
+      {:error, reason} ->
+        Enum.each(image_paths, &File.rm/1)
+        {:error, reason}
+    end
+  end
+
+  defp validate_generated_output_size(image_paths, opts) do
+    max_output_bytes = Map.get(opts, :max_output_bytes, @default_max_output_bytes)
+
+    total_bytes =
+      Enum.reduce(image_paths, 0, fn path, acc ->
+        case File.stat(path) do
+          {:ok, %{size: size}} -> acc + size
+          {:error, _} -> acc
+        end
+      end)
+
+    if total_bytes <= max_output_bytes do
+      :ok
+    else
+      {:error, "生成画像サイズ上限（#{max_output_bytes} bytes）を超えています: #{total_bytes} bytes"}
     end
   end
 
@@ -98,7 +204,7 @@ defmodule OmniArchive.Ingestion.PdfProcessor do
             result
           end,
           max_concurrency: 1,
-          timeout: :infinity,
+          timeout: command_timeout_ms(opts) + 1_000,
           ordered: true
         )
         |> Enum.to_list()
@@ -106,7 +212,7 @@ defmodule OmniArchive.Ingestion.PdfProcessor do
       # チャンク処理結果を検証
       case find_chunk_error(results) do
         nil ->
-          collect_and_rename_images(output_dir)
+          collect_and_rename_images(output_dir, opts)
 
         error ->
           error
@@ -152,17 +258,25 @@ defmodule OmniArchive.Ingestion.PdfProcessor do
 
     Logger.info("[PdfProcessor] Chunk: pages #{first_page}-#{last_page}")
 
-    case System.cmd(cmd, args, stderr_to_stdout: true) do
-      {_output, 0} ->
+    case run_command(cmd, args, opts) do
+      {:ok, {_output, 0}} ->
         :ok
 
-      {error_output, exit_code} ->
+      {:ok, {error_output, exit_code}} ->
         Logger.error(
           "[PdfProcessor] Chunk failed (pages #{first_page}-#{last_page}), " <>
             "exit code #{exit_code}: #{error_output}"
         )
 
         {:error, "PDF変換に失敗しました (exit code #{exit_code}): #{error_output}"}
+
+      {:error, :timeout} ->
+        Logger.error("[PdfProcessor] Chunk timed out (pages #{first_page}-#{last_page})")
+        {:error, "PDF変換がタイムアウトしました (pages #{first_page}-#{last_page})"}
+
+      {:error, reason} ->
+        Logger.error("[PdfProcessor] Chunk failed with system error: #{inspect(reason)}")
+        {:error, "PDF変換に失敗しました: #{inspect(reason)}"}
     end
   end
 
@@ -173,32 +287,6 @@ defmodule OmniArchive.Ingestion.PdfProcessor do
       {:ok, {:error, _} = error} -> error
       {:exit, reason} -> {:error, "チャンク処理が異常終了しました: #{inspect(reason)}"}
     end)
-  end
-
-  # 生成された PNG をソートしてタイムスタンプ付きリネーム
-  defp collect_and_rename_images(output_dir) do
-    timestamp = System.system_time(:second)
-
-    # Path.wildcard で確実に収集し、明示的にソート
-    image_paths =
-      Path.wildcard(Path.join(output_dir, "page*.png"))
-      |> Enum.sort()
-      |> Enum.map(fn original_path ->
-        original_name = Path.basename(original_path)
-        # page-01.png → page-01-1708065543.png
-        versioned_name = String.replace(original_name, ~r/\.png$/, "-#{timestamp}.png")
-        versioned_path = Path.join(output_dir, versioned_name)
-        File.rename!(original_path, versioned_path)
-        versioned_path
-      end)
-
-    if Enum.empty?(image_paths) do
-      Logger.error("[PdfProcessor] No images generated despite successful conversion")
-      {:error, "画像が生成されませんでした (exit code 0)"}
-    else
-      Logger.info("[PdfProcessor] Successfully generated #{length(image_paths)} images")
-      {:ok, %{page_count: length(image_paths), image_paths: image_paths}}
-    end
   end
 
   # チャンク完了時の進捗ブロードキャスト（user_id が opts に含まれる場合のみ）

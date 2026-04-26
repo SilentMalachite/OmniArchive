@@ -71,24 +71,27 @@ defmodule OmniArchiveWeb.Admin.AdminUserLive.Index do
   @impl true
   def handle_event("delete", %{"id" => id}, socket) do
     current_user = socket.assigns.current_user
-    user = Accounts.get_user!(id)
 
-    # 自分自身の削除を防止
-    if user.id == current_user.id do
-      {:noreply, put_flash(socket, :error, "自分自身を削除することはできません。")}
-    else
-      case Accounts.delete_user(user) do
-        {:ok, _} ->
-          users = Accounts.list_users()
+    case Accounts.get_user(id) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "ユーザーが見つかりません。")}
 
-          {:noreply,
-           socket
-           |> put_flash(:info, "ユーザー #{user.email} を削除しました。")
-           |> assign(:users, users)}
+      user when user.id == current_user.id ->
+        {:noreply, put_flash(socket, :error, "自分自身を削除することはできません。")}
 
-        {:error, _reason} ->
-          {:noreply, put_flash(socket, :error, "ユーザーの削除に失敗しました。")}
-      end
+      user ->
+        case Accounts.delete_user(user) do
+          {:ok, _} ->
+            users = Accounts.list_users()
+
+            {:noreply,
+             socket
+             |> put_flash(:info, "ユーザー #{user.email} を削除しました。")
+             |> assign(:users, users)}
+
+          {:error, _reason} ->
+            {:noreply, put_flash(socket, :error, "ユーザーの削除に失敗しました。")}
+        end
     end
   end
 end

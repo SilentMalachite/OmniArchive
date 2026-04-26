@@ -61,9 +61,6 @@ defmodule OmniArchive.CustomMetadataFields.Cache do
       |> order_by([f], asc: f.sort_order, asc: f.id)
       |> OmniArchive.Repo.all()
 
-    # atom を事前作成（ランタイムフィールド用）
-    Enum.each(fields, fn f -> String.to_atom(f.field_key) end)
-
     # プロファイルキー別にグループ化してETSに格納
     grouped = Enum.group_by(fields, & &1.profile_key)
 

@@ -9,10 +9,10 @@ defmodule OmniArchive.DomainProfiles.YamlLoaderTest do
   test "loads a valid minimal profile" do
     assert {:ok, profile} = YamlLoader.load(fixture("valid_minimal.yaml"))
     assert is_list(profile.metadata_fields)
-    assert Enum.any?(profile.metadata_fields, &(&1.field == :summary))
-    assert Enum.any?(profile.metadata_fields, &(&1.field == :label))
+    assert Enum.any?(profile.metadata_fields, &(to_string(&1.field) == "summary"))
+    assert Enum.any?(profile.metadata_fields, &(to_string(&1.field) == "label"))
     assert profile.duplicate_identity.profile_key == "test_yaml"
-    assert profile.duplicate_identity.scope_field == :collection
+    assert to_string(profile.duplicate_identity.scope_field) == "collection"
   end
 
   @error_cases [
@@ -33,7 +33,7 @@ defmodule OmniArchive.DomainProfiles.YamlLoaderTest do
 
   test "validation_rules: compiles format into Regex" do
     {:ok, profile} = YamlLoader.load(fixture("valid_with_validation.yaml"))
-    assert %Regex{} = profile.validation_rules[:label][:format]
+    assert %Regex{} = profile.validation_rules["label"][:format]
   end
 
   test "validation_rules: rejects invalid regex" do
@@ -46,14 +46,19 @@ defmodule OmniArchive.DomainProfiles.YamlLoaderTest do
     assert reason =~ "unknown"
   end
 
+  test "validation_rules: rejects unknown field without accepting valid-looking dynamic keys" do
+    assert {:error, reason} = YamlLoader.load(fixture("bad_validation_valid_unknown_field.yaml"))
+    assert reason =~ "unknown"
+  end
+
   test "validation_rules: required_terms is parsed as list" do
     {:ok, profile} = YamlLoader.load(fixture("valid_with_validation.yaml"))
-    assert is_list(profile.validation_rules[:collection][:required_terms])
+    assert is_list(profile.validation_rules["collection"][:required_terms])
   end
 
   test "search_facets: references defined fields" do
     {:ok, profile} = YamlLoader.load(fixture("valid_minimal.yaml"))
-    assert [%{field: :collection, param: "collection"}] = profile.search_facets
+    assert [%{field: "collection", param: "collection"}] = profile.search_facets
   end
 
   test "search_facets: rejects unknown field reference" do
@@ -79,7 +84,7 @@ defmodule OmniArchive.DomainProfiles.YamlLoaderTest do
   test "loads priv/profiles/example_profile.yaml" do
     path = Application.app_dir(:omni_archive, "priv/profiles/example_profile.yaml")
     assert {:ok, profile} = YamlLoader.load(path)
-    assert Enum.any?(profile.metadata_fields, &(&1.field == :summary))
-    assert %Regex{} = profile.validation_rules[:label][:format]
+    assert Enum.any?(profile.metadata_fields, &(to_string(&1.field) == "summary"))
+    assert %Regex{} = profile.validation_rules["label"][:format]
   end
 end

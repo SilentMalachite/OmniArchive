@@ -98,6 +98,15 @@ defmodule OmniArchive.Ingestion do
   @doc "IDでPDFソースを取得"
   def get_pdf_source!(id), do: Repo.get!(PdfSource, id)
 
+  @doc "IDでPDFソースを取得。不正な ID や未存在 ID は nil を返す"
+  def get_pdf_source(id) do
+    with {:ok, id} <- normalize_id(id) do
+      Repo.get(PdfSource, id)
+    else
+      :error -> nil
+    end
+  end
+
   @doc """
   所有権チェック付きで PdfSource を取得。
   Admin は任意の PdfSource を取得可能。
@@ -111,6 +120,25 @@ defmodule OmniArchive.Ingestion do
     Repo.get_by!(PdfSource, id: id, user_id: user_id)
   end
 
+  @doc """
+  所有権チェック付きで PdfSource を取得。不正な ID や未存在 ID は nil を返す。
+  Admin は任意の PdfSource を取得可能。
+  一般ユーザーは自分が作成した PdfSource のみ取得可能（user_id ベース）。
+  """
+  def get_pdf_source(id, %User{role: "admin"}) do
+    get_pdf_source(id)
+  end
+
+  def get_pdf_source(id, %User{id: user_id}) do
+    with {:ok, id} <- normalize_id(id) do
+      Repo.get_by(PdfSource, id: id, user_id: user_id)
+    else
+      :error -> nil
+    end
+  end
+
+  def get_pdf_source(_id, _user), do: nil
+
   @doc "PDFソースを作成"
   def create_pdf_source(attrs \\ %{}) do
     %PdfSource{}
@@ -123,6 +151,24 @@ defmodule OmniArchive.Ingestion do
     pdf_source
     |> PdfSource.changeset(attrs)
     |> Repo.update()
+  end
+
+  @doc "ユーザーが処理中の PdfSource 件数を返します。"
+  def count_active_pdf_sources(%User{id: user_id}) do
+    from(p in PdfSource,
+      where:
+        p.user_id == ^user_id and p.status in ["uploading", "converting"] and
+          is_nil(p.deleted_at)
+    )
+    |> Repo.aggregate(:count, :id)
+  end
+
+  @doc "指定時刻以降にユーザーが作成した PdfSource 件数を返します。"
+  def count_recent_pdf_sources(%User{id: user_id}, %DateTime{} = since) do
+    from(p in PdfSource,
+      where: p.user_id == ^user_id and p.inserted_at >= ^since and is_nil(p.deleted_at)
+    )
+    |> Repo.aggregate(:count, :id)
   end
 
   @doc """
@@ -182,11 +228,15 @@ defmodule OmniArchive.Ingestion do
   deleted_at を nil に戻します。
   """
   def restore_pdf_source(id) do
-    pdf_source = Repo.get!(PdfSource, id)
+    case get_pdf_source(id) do
+      nil ->
+        {:error, :not_found}
 
-    pdf_source
-    |> PdfSource.changeset(%{deleted_at: nil})
-    |> Repo.update()
+      pdf_source ->
+        pdf_source
+        |> PdfSource.changeset(%{deleted_at: nil})
+        |> Repo.update()
+    end
   end
 
   @doc """
@@ -309,11 +359,33 @@ defmodule OmniArchive.Ingestion do
   @doc "IDで抽出画像を取得"
   def get_extracted_image!(id), do: Repo.get!(ExtractedImage, id)
 
+  @doc "IDで抽出画像を取得。不正な ID や未存在 ID は nil を返す"
+  def get_extracted_image(id) do
+    with {:ok, id} <- normalize_id(id) do
+      Repo.get(ExtractedImage, id)
+    else
+      :error -> nil
+    end
+  end
+
   @doc "IDで抽出画像を取得（iiif_manifest プリロード付き、nil 安全）"
   def get_extracted_image_with_manifest(id) do
-    case Repo.get(ExtractedImage, id) do
+    case get_extracted_image(id) do
       nil -> nil
       image -> Repo.preload(image, :iiif_manifest)
+    end
+  end
+
+  @doc "公開済みの抽出画像を ID で取得（iiif_manifest プリロード付き、nil 安全）"
+  def get_published_extracted_image_with_manifest(id) do
+    with {:ok, id} <- normalize_id(id) do
+      from(e in ExtractedImage,
+        where: e.id == ^id and e.status == "published",
+        preload: [:iiif_manifest]
+      )
+      |> Repo.one()
+    else
+      :error -> nil
     end
   end
 
@@ -630,6 +702,17 @@ defmodule OmniArchive.Ingestion do
   defp delete_file(nil), do: :ok
   defp delete_file(""), do: :ok
   defp delete_file(path), do: File.rm(path)
+
+  defp normalize_id(id) when is_integer(id) and id > 0, do: {:ok, id}
+
+  defp normalize_id(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {parsed, ""} when parsed > 0 -> {:ok, parsed}
+      _ -> :error
+    end
+  end
+
+  defp normalize_id(_id), do: :error
 
   # === バリデーション（Admin Review Dashboard 用） ===
 

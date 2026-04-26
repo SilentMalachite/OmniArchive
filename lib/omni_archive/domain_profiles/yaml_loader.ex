@@ -16,6 +16,12 @@ defmodule OmniArchive.DomainProfiles.YamlLoader do
     duplicate_warning duplicate_blocked
     duplicate_title duplicate_edit
   ]a
+  @allowed_storage_atoms %{"core" => :core, "metadata" => :metadata}
+  @allowed_rule_error_atoms %{
+    "max_length_error" => :max_length_error,
+    "format_error" => :format_error,
+    "required_terms_error" => :required_terms_error
+  }
 
   @spec load(Path.t()) :: {:ok, map()} | {:error, String.t()}
   def load(path) do
@@ -66,10 +72,10 @@ defmodule OmniArchive.DomainProfiles.YamlLoader do
       if storage in ["core", "metadata"] do
         {:ok,
          %{
-           field: String.to_atom(key),
+           field: key,
            label: label,
            placeholder: Map.get(f, "placeholder", ""),
-           storage: String.to_atom(storage)
+           storage: Map.fetch!(@allowed_storage_atoms, storage)
          }}
       else
         {:error, "invalid storage for #{key}: #{inspect(storage)}"}
@@ -83,7 +89,7 @@ defmodule OmniArchive.DomainProfiles.YamlLoader do
     do: {:error, "metadata_fields entry must have field/label: #{inspect(other)}"}
 
   defp ensure_unique_field_keys(fields) do
-    keys = Enum.map(fields, & &1.field)
+    keys = Enum.map(fields, &field_key(&1.field))
 
     case keys -- Enum.uniq(keys) do
       [] -> :ok
@@ -92,13 +98,13 @@ defmodule OmniArchive.DomainProfiles.YamlLoader do
   end
 
   defp ensure_core_fields_present(fields) do
-    required = [:summary, :label]
-    present = Enum.map(fields, & &1.field)
+    required = @core_allowed_fields
+    present = Enum.map(fields, &field_key(&1.field))
 
     case required -- present do
       [] ->
         Enum.reduce_while(required, :ok, fn field, _ ->
-          case Enum.find(fields, &(&1.field == field)) do
+          case Enum.find(fields, &(field_key(&1.field) == field)) do
             %{storage: :core} -> {:cont, :ok}
             _ -> {:halt, {:error, "#{field} must be defined with storage: core"}}
           end
@@ -112,7 +118,7 @@ defmodule OmniArchive.DomainProfiles.YamlLoader do
   defp ensure_core_allowed(fields) do
     bad =
       Enum.filter(fields, fn f ->
-        f.storage == :core and Atom.to_string(f.field) not in @core_allowed_fields
+        f.storage == :core and field_key(f.field) not in @core_allowed_fields
       end)
 
     case bad do
@@ -127,25 +133,28 @@ defmodule OmniArchive.DomainProfiles.YamlLoader do
     do: {:error, "validation_rules must be a mapping"}
 
   defp parse_validation_rules(raw, fields) do
-    field_atoms = Enum.map(fields, & &1.field)
+    fields_by_key = fields_by_key(fields)
 
     Enum.reduce_while(raw, {:ok, %{}}, fn {field_str, rules}, {:ok, acc} ->
-      atom = String.to_atom(field_str)
-
-      cond do
-        atom not in field_atoms ->
+      case Map.fetch(fields_by_key, field_str) do
+        :error ->
           {:halt, {:error, "validation_rules references unknown field: #{field_str}"}}
 
-        not is_map(rules) ->
-          {:halt, {:error, "validation_rules.#{field_str} must be a mapping"}}
-
-        true ->
-          case normalize_rule(rules) do
-            {:ok, normalized} -> {:cont, {:ok, Map.put(acc, atom, normalized)}}
-            {:error, _} = err -> {:halt, err}
+        {:ok, field} ->
+          if is_map(rules) do
+            case normalize_rule(rules) do
+              {:ok, normalized} -> {:cont, {:ok, Map.put(acc, field, normalized)}}
+              {:error, _} = err -> {:halt, err}
+            end
+          else
+            {:halt, {:error, "validation_rules.#{field_str} must be a mapping"}}
           end
       end
     end)
+  end
+
+  defp fields_by_key(fields) do
+    Map.new(fields, fn field -> {field_key(field.field), field.field} end)
   end
 
   defp normalize_rule(rules) do
@@ -177,9 +186,10 @@ defmodule OmniArchive.DomainProfiles.YamlLoader do
     do: {:ok, :max_length, v}
 
   defp normalize_rule_entry(k, v) when is_binary(v) and k != "" do
-    if String.ends_with?(k, "_error"),
-      do: {:ok, String.to_atom(k), v},
-      else: {:error, "invalid value for rule #{k}"}
+    case Map.fetch(@allowed_rule_error_atoms, k) do
+      {:ok, atom} -> {:ok, atom, v}
+      :error -> {:error, "invalid value for rule #{k}"}
+    end
   end
 
   defp normalize_rule_entry(k, _v),
@@ -189,16 +199,15 @@ defmodule OmniArchive.DomainProfiles.YamlLoader do
     do: {:error, "search_facets must be a list"}
 
   defp parse_search_facets(raw, fields) do
-    field_atoms = Enum.map(fields, & &1.field)
+    fields_by_key = fields_by_key(fields)
 
     map_while_ok(raw, fn
       %{"field" => f, "param" => p, "label" => l}
       when is_binary(f) and is_binary(p) and is_binary(l) ->
-        atom = String.to_atom(f)
-
-        if atom in field_atoms,
-          do: {:ok, %{field: atom, param: p, label: l}},
-          else: {:error, "search_facets references unknown field: #{f}"}
+        case Map.fetch(fields_by_key, f) do
+          {:ok, field} -> {:ok, %{field: field, param: p, label: l}}
+          :error -> {:error, "search_facets references unknown field: #{f}"}
+        end
 
       other ->
         {:error, "invalid facet entry: #{inspect(other)}"}
@@ -264,10 +273,11 @@ defmodule OmniArchive.DomainProfiles.YamlLoader do
   end
 
   defp fetch_field_ref(map, key, fields) do
+    fields_by_key = fields_by_key(fields)
+
     with v when is_binary(v) <- Map.get(map, key) || :missing,
-         atom <- String.to_atom(v),
-         true <- Enum.any?(fields, &(&1.field == atom)) do
-      {:ok, atom}
+         {:ok, field} <- Map.fetch(fields_by_key, v) do
+      {:ok, field}
     else
       _ -> {:error, "#{key} must reference a defined metadata field"}
     end
@@ -277,6 +287,9 @@ defmodule OmniArchive.DomainProfiles.YamlLoader do
     raw = Map.get(map, key, default)
     fetch_field_ref(%{key => raw}, key, fields)
   end
+
+  defp field_key(field) when is_atom(field), do: Atom.to_string(field)
+  defp field_key(field) when is_binary(field), do: field
 
   defp map_while_ok(list, fun) do
     Enum.reduce_while(list, {:ok, []}, fn elem, {:ok, acc} ->

@@ -79,6 +79,12 @@ defmodule OmniArchiveWeb.IIIF.PresentationControllerTest do
       assert json_response(conn, 404)["error"] =~ "見つかりません"
     end
 
+    test "不正な source_id で 404 を返す", %{conn: conn} do
+      conn = get(conn, "/iiif/presentation/not-an-id/manifest")
+      assert json_response(conn, 404)
+      assert json_response(conn, 404)["error"] =~ "見つかりません"
+    end
+
     test "公開済み画像がない場合は空の items を返す", %{conn: conn} do
       source = insert_pdf_source()
 

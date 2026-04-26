@@ -45,6 +45,13 @@ defmodule OmniArchiveWeb.InspectorLive.BrowseTest do
       assert flash["error"] =~ "指定されたPDFソースが見つかりません"
     end
 
+    test "不正な PDF Source ID でリダイレクトされる", %{conn: conn} do
+      assert {:error, {:live_redirect, %{to: "/lab", flash: flash}}} =
+               live(conn, ~p"/lab/browse/not-an-id")
+
+      assert flash["error"] =~ "指定されたPDFソースが見つかりません"
+    end
+
     test "ページ画像がない場合に警告が表示される", %{conn: conn, user: user} do
       pdf_source = insert_pdf_source(%{status: "ready", user_id: user.id})
 

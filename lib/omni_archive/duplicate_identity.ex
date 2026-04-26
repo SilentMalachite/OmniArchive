@@ -46,7 +46,7 @@ defmodule OmniArchive.DuplicateIdentity do
     fingerprint_from_values(
       config.profile_key,
       changeset_scope_value(changeset, config.scope_field, metadata),
-      get_field(changeset, config.label_field || :label)
+      changeset_field_value(changeset, config.label_field || :label)
     )
   end
 
@@ -107,14 +107,14 @@ defmodule OmniArchive.DuplicateIdentity do
 
   defp changeset_scope_value(changeset, scope_field, metadata) do
     metadata = normalize_map(metadata)
-    metadata_key = Atom.to_string(scope_field)
+    metadata_key = field_key(scope_field)
 
     cond do
       Map.has_key?(metadata, metadata_key) ->
         Map.get(metadata, metadata_key)
 
       ExtractedImageMetadata.schema_field?(scope_field) ->
-        get_field(changeset, scope_field)
+        changeset_field_value(changeset, scope_field)
 
       true ->
         nil
@@ -122,7 +122,7 @@ defmodule OmniArchive.DuplicateIdentity do
   end
 
   defp scope_value(scope_field, image, attrs, metadata) do
-    metadata_key = Atom.to_string(scope_field)
+    metadata_key = field_key(scope_field)
 
     if Map.has_key?(metadata, metadata_key) do
       Map.get(metadata, metadata_key)
@@ -138,18 +138,26 @@ defmodule OmniArchive.DuplicateIdentity do
   end
 
   defp attribute_value(attrs, field, fallback) do
+    key = field_key(field)
+
     cond do
       Map.has_key?(attrs, field) -> Map.get(attrs, field)
-      Map.has_key?(attrs, Atom.to_string(field)) -> Map.get(attrs, Atom.to_string(field))
+      Map.has_key?(attrs, key) -> Map.get(attrs, key)
       true -> fallback
     end
   end
 
   defp legacy_value(image, field) do
-    if ExtractedImageMetadata.schema_field?(field) do
-      Map.get(image, field)
-    else
-      nil
+    case ExtractedImageMetadata.schema_field_atom(field) do
+      nil -> nil
+      atom -> Map.get(image, atom)
+    end
+  end
+
+  defp changeset_field_value(changeset, field) do
+    case ExtractedImageMetadata.schema_field_atom(field) do
+      nil -> nil
+      atom -> get_field(changeset, atom)
     end
   end
 
@@ -179,4 +187,8 @@ defmodule OmniArchive.DuplicateIdentity do
   end
 
   defp normalize_map(_metadata), do: %{}
+
+  defp field_key(field) when is_atom(field), do: Atom.to_string(field)
+  defp field_key(field) when is_binary(field), do: field
+  defp field_key(field), do: to_string(field)
 end

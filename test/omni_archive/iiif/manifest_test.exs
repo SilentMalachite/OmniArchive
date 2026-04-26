@@ -1,8 +1,14 @@
 defmodule OmniArchive.Iiif.ManifestTest do
-  use OmniArchive.DataCase, async: true
+  use OmniArchive.DataCase, async: false
 
   alias OmniArchive.Iiif.Manifest
   import OmniArchive.Factory
+  import OmniArchive.DomainProfileTestHelper
+
+  setup do
+    put_domain_profile(OmniArchive.DomainProfiles.Archaeology)
+    :ok
+  end
 
   describe "changeset/2" do
     test "有効な属性でチェンジセットが正常に作成される" do

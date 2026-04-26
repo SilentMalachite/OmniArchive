@@ -17,12 +17,20 @@ defmodule OmniArchiveWeb.IIIF.ImageController do
   use OmniArchiveWeb, :controller
 
   alias OmniArchive.Iiif.Manifest
+  alias OmniArchive.Ingestion.ExtractedImage
   alias OmniArchive.Ingestion.ImageProcessor
   alias OmniArchive.Repo
 
   import Ecto.Query
 
   @cache_dir "priv/static/iiif_cache"
+  @allowed_formats ~w(jpg jpeg png webp)
+  @allowed_qualities ~w(default color gray)
+  @allowed_rotations [0, 90, 180, 270]
+  @max_output_dimension 4096
+  @max_output_pixels @max_output_dimension * @max_output_dimension
+  @max_region_dimension 20_000
+  @max_region_pixels 100_000_000
 
   @doc """
   IIIF Image API v3.0 リクエストを処理します。
@@ -37,47 +45,46 @@ defmodule OmniArchiveWeb.IIIF.ImageController do
         "rotation" => rotation_str,
         "quality" => quality_with_format
       }) do
-    # quality.format を分離
-    {quality, format} = parse_quality_format(quality_with_format)
+    with {:ok, {quality, format}} <- parse_quality_format(quality_with_format),
+         {:ok, region} <- parse_region(region_str),
+         {:ok, size} <- parse_size(size_str),
+         {:ok, rotation} <- parse_rotation(rotation_str),
+         {:ok, ptif_path} <- get_ptif_path(identifier) do
+      # キャッシュキーを生成
+      cache_key = cache_key(identifier, region_str, size_str, rotation_str, quality, format)
+      cache_path = Path.join(@cache_dir, cache_key)
 
-    # Manifest からPTIFパスを取得
-    case get_ptif_path(identifier) do
-      {:ok, ptif_path} ->
-        # キャッシュキーを生成
-        cache_key = "#{identifier}_#{region_str}_#{size_str}_#{rotation_str}_#{quality}.#{format}"
-        cache_path = Path.join(@cache_dir, cache_key)
+      # キャッシュが存在すればそれを返す
+      if File.exists?(cache_path) do
+        send_cached_file(conn, cache_path, format)
+      else
+        case ImageProcessor.extract_tile(ptif_path, region, size, rotation, quality, format) do
+          {:ok, image_data} ->
+            # キャッシュに保存
+            File.mkdir_p!(@cache_dir)
+            File.write!(cache_path, image_data)
 
-        # キャッシュが存在すればそれを返す
-        if File.exists?(cache_path) do
-          send_cached_file(conn, cache_path, format)
-        else
-          # パラメータをパース
-          region = parse_region(region_str)
-          size = parse_size(size_str)
-          rotation = parse_rotation(rotation_str)
+            conn
+            |> put_resp_content_type(format_to_mime(format))
+            |> put_resp_header("access-control-allow-origin", "*")
+            |> send_resp(200, image_data)
 
-          case ImageProcessor.extract_tile(ptif_path, region, size, rotation, quality, format) do
-            {:ok, image_data} ->
-              # キャッシュに保存
-              File.mkdir_p!(@cache_dir)
-              File.write!(cache_path, image_data)
-
-              conn
-              |> put_resp_content_type(format_to_mime(format))
-              |> put_resp_header("access-control-allow-origin", "*")
-              |> send_resp(200, image_data)
-
-            {:error, reason} ->
-              conn
-              |> put_status(:bad_request)
-              |> json(%{error: "画像処理エラー: #{inspect(reason)}"})
-          end
+          {:error, reason} ->
+            conn
+            |> put_status(:bad_request)
+            |> json(%{error: "画像処理エラー: #{inspect(reason)}"})
         end
-
+      end
+    else
       {:error, :not_found} ->
         conn
         |> put_status(:not_found)
         |> json(%{error: "指定された識別子の画像が見つかりません"})
+
+      {:error, :invalid_params} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{error: "不正な画像リクエストです"})
     end
   end
 
@@ -120,15 +127,22 @@ defmodule OmniArchiveWeb.IIIF.ImageController do
   # --- プライベート関数 ---
 
   defp get_ptif_path(identifier) do
-    case Repo.one(from m in Manifest, where: m.identifier == ^identifier) do
+    query =
+      from m in Manifest,
+        join: e in ExtractedImage,
+        on: e.id == m.extracted_image_id,
+        where:
+          m.identifier == ^identifier and e.status == "published" and
+            not is_nil(e.ptif_path) and e.ptif_path != "",
+        select: e.ptif_path
+
+    case Repo.one(query) do
       nil ->
         {:error, :not_found}
 
-      manifest ->
-        image = Repo.get!(OmniArchive.Ingestion.ExtractedImage, manifest.extracted_image_id)
-
-        if image.ptif_path && File.exists?(image.ptif_path) do
-          {:ok, image.ptif_path}
+      ptif_path ->
+        if File.exists?(ptif_path) do
+          {:ok, ptif_path}
         else
           {:error, :not_found}
         end
@@ -137,44 +151,96 @@ defmodule OmniArchiveWeb.IIIF.ImageController do
 
   defp parse_quality_format(quality_format) do
     case String.split(quality_format, ".") do
-      [quality, format] -> {quality, format}
-      [quality] -> {quality, "jpg"}
-    end
-  end
+      [quality, format] when quality in @allowed_qualities and format in @allowed_formats ->
+        {:ok, {quality, format}}
 
-  defp parse_region("full"), do: :full
-
-  defp parse_region(region_str) do
-    case String.split(region_str, ",") do
-      [x, y, w, h] ->
-        {String.to_integer(x), String.to_integer(y), String.to_integer(w), String.to_integer(h)}
+      [quality] when quality in @allowed_qualities ->
+        {:ok, {quality, "jpg"}}
 
       _ ->
-        :full
+        {:error, :invalid_params}
     end
   end
 
-  defp parse_size("max"), do: :max
-  defp parse_size("full"), do: :max
+  defp parse_region("full"), do: {:ok, :full}
+
+  defp parse_region(region_str) do
+    with [x, y, w, h] <- String.split(region_str, ","),
+         {:ok, x} <- parse_non_negative_integer(x),
+         {:ok, y} <- parse_non_negative_integer(y),
+         {:ok, w} <- parse_positive_integer(w),
+         {:ok, h} <- parse_positive_integer(h),
+         true <- w <= @max_region_dimension and h <= @max_region_dimension,
+         true <- w * h <= @max_region_pixels do
+      {:ok, {x, y, w, h}}
+    else
+      _ -> {:error, :invalid_params}
+    end
+  end
+
+  defp parse_size("max"), do: {:ok, :max}
+  defp parse_size("full"), do: {:ok, :max}
 
   defp parse_size(size_str) do
     case String.split(size_str, ",") do
       [w, h] when w != "" and h != "" ->
-        {String.to_integer(w), String.to_integer(h)}
+        with {:ok, w} <- parse_positive_integer(w),
+             {:ok, h} <- parse_positive_integer(h),
+             :ok <- validate_output_size(w, h) do
+          {:ok, {w, h}}
+        else
+          _ -> {:error, :invalid_params}
+        end
 
       [w, ""] when w != "" ->
-        {String.to_integer(w), nil}
+        with {:ok, w} <- parse_positive_integer(w),
+             :ok <- validate_output_size(w, nil) do
+          {:ok, {w, nil}}
+        else
+          _ -> {:error, :invalid_params}
+        end
 
       _ ->
-        :max
+        {:error, :invalid_params}
     end
   end
 
   defp parse_rotation(rotation_str) do
     case Integer.parse(rotation_str) do
-      {degrees, _} -> degrees
-      :error -> 0
+      {degrees, ""} when degrees in @allowed_rotations -> {:ok, degrees}
+      _ -> {:error, :invalid_params}
     end
+  end
+
+  defp parse_non_negative_integer(value) do
+    case Integer.parse(value) do
+      {integer, ""} when integer >= 0 -> {:ok, integer}
+      _ -> {:error, :invalid_params}
+    end
+  end
+
+  defp parse_positive_integer(value) do
+    case Integer.parse(value) do
+      {integer, ""} when integer > 0 -> {:ok, integer}
+      _ -> {:error, :invalid_params}
+    end
+  end
+
+  defp validate_output_size(width, nil) when width <= @max_output_dimension, do: :ok
+
+  defp validate_output_size(width, height)
+       when width <= @max_output_dimension and height <= @max_output_dimension and
+              width * height <= @max_output_pixels,
+       do: :ok
+
+  defp validate_output_size(_width, _height), do: {:error, :invalid_params}
+
+  defp cache_key(identifier, region, size, rotation, quality, format) do
+    key =
+      :crypto.hash(:sha256, [identifier, "\0", region, "\0", size, "\0", rotation, "\0", quality])
+      |> Base.url_encode64(padding: false)
+
+    "#{key}.#{format}"
   end
 
   defp format_to_mime("jpg"), do: "image/jpeg"

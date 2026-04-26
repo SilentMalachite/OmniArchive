@@ -17,6 +17,7 @@ defmodule OmniArchive.Search do
     クエリのみ実行することで、責任の境界を明確にしています。
   """
   import Ecto.Query
+  alias OmniArchive.Accounts.User
   alias OmniArchive.DomainProfiles
   alias OmniArchive.Ingestion.ExtractedImage
   alias OmniArchive.Ingestion.ExtractedImageMetadata
@@ -37,7 +38,25 @@ defmodule OmniArchive.Search do
   """
   def search_images(query_text \\ "", filters \\ %{}) do
     ExtractedImage
-    |> where([e], not is_nil(e.ptif_path))
+    |> searchable_images()
+    |> apply_text_search(query_text)
+    |> apply_filters(filters)
+    |> order_by([e], desc: e.inserted_at)
+    |> preload(:iiif_manifest)
+    |> Repo.all()
+  end
+
+  @doc """
+  Lab 用に、ログインユーザーがアクセスできる画像だけを検索します。
+
+  Admin は既存の管理者権限に合わせて全件を検索できます。一般ユーザーは
+  `owner_id` が一致する画像だけを返し、他ユーザーの非公開画像を検索結果や
+  フィルター経由で推測できないようにします。
+  """
+  def search_images_for_user(user, query_text \\ "", filters \\ %{}) do
+    ExtractedImage
+    |> searchable_images()
+    |> scope_to_user(user)
     |> apply_text_search(query_text)
     |> apply_filters(filters)
     |> order_by([e], desc: e.inserted_at)
@@ -70,6 +89,15 @@ defmodule OmniArchive.Search do
     end)
   end
 
+  @doc """
+  Lab 用に、ログインユーザーがアクセスできる画像だけからフィルター候補を取得します。
+  """
+  def list_filter_options_for_user(user) do
+    Enum.reduce(facet_definitions(), %{}, fn facet, acc ->
+      Map.put(acc, facet.field, list_distinct_values_for_user(facet.field, user))
+    end)
+  end
+
   @doc "有効な profile に定義された検索ファセット一覧を返します。"
   def facet_definitions, do: DomainProfiles.search_facets()
 
@@ -78,7 +106,7 @@ defmodule OmniArchive.Search do
   """
   def count_results(query_text \\ "", filters \\ %{}) do
     ExtractedImage
-    |> where([e], not is_nil(e.ptif_path))
+    |> searchable_images()
     |> apply_text_search(query_text)
     |> apply_filters(filters)
     |> Repo.aggregate(:count, :id)
@@ -97,6 +125,20 @@ defmodule OmniArchive.Search do
   end
 
   # --- プライベート関数 ---
+
+  defp searchable_images(query) do
+    where(query, [e], not is_nil(e.ptif_path))
+  end
+
+  defp scope_to_user(query, %User{role: "admin"}), do: query
+
+  defp scope_to_user(query, %User{id: user_id}) when not is_nil(user_id) do
+    where(query, [e], e.owner_id == ^user_id)
+  end
+
+  defp scope_to_user(query, _user) do
+    where(query, [e], is_nil(e.id) and not is_nil(e.id))
+  end
 
   # テキスト検索（PostgreSQL FTS）の適用
   defp apply_text_search(query, nil), do: query
@@ -144,7 +186,10 @@ defmodule OmniArchive.Search do
 
   # DISTINCT 値の取得
   defp list_distinct_values(field_name),
-    do: list_distinct_fragment_values(field_name, Atom.to_string(field_name))
+    do: list_distinct_fragment_values(field_name, field_key(field_name))
+
+  defp list_distinct_values_for_user(field_name, user),
+    do: list_distinct_fragment_values(field_name, field_key(field_name), user)
 
   # 検索テキストのサニタイズ（SQLインジェクション防止）
   defp sanitize_search_text(text) do
@@ -157,8 +202,9 @@ defmodule OmniArchive.Search do
     end)
   end
 
-  defp list_distinct_fragment_values(field_name, metadata_key) do
+  defp list_distinct_fragment_values(field_name, metadata_key, user \\ :all) do
     ExtractedImage
+    |> maybe_scope_distinct_values(user)
     |> where(^field_present_dynamic(field_name, metadata_key))
     |> select(^field_value_dynamic(field_name, metadata_key))
     |> distinct(true)
@@ -166,12 +212,15 @@ defmodule OmniArchive.Search do
     |> Enum.sort()
   end
 
+  defp maybe_scope_distinct_values(query, :all), do: query
+  defp maybe_scope_distinct_values(query, user), do: scope_to_user(query, user)
+
   defp metadata_text_search_dynamic(sanitized) do
     pattern = "%#{sanitized}%"
 
     Enum.reduce(ExtractedImageMetadata.metadata_field_names(), dynamic(false), fn metadata_field,
                                                                                   acc ->
-      metadata_key = Atom.to_string(metadata_field)
+      metadata_key = field_key(metadata_field)
 
       dynamic(
         [e],
@@ -182,7 +231,7 @@ defmodule OmniArchive.Search do
   end
 
   defp field_equals_dynamic(field_name, value) do
-    metadata_key = Atom.to_string(field_name)
+    metadata_key = field_key(field_name)
 
     dynamic([e], ^field_value_dynamic(field_name, metadata_key) == ^value)
   end
@@ -196,13 +245,19 @@ defmodule OmniArchive.Search do
   end
 
   defp field_value_dynamic(field_name, metadata_key) do
-    if ExtractedImageMetadata.schema_field?(field_name) do
-      dynamic(
-        [e],
-        fragment("COALESCE(?->>?, ?)", e.metadata, ^metadata_key, field(e, ^field_name))
-      )
-    else
-      dynamic([e], fragment("?->>?", e.metadata, ^metadata_key))
+    case ExtractedImageMetadata.schema_field_atom(field_name) do
+      nil ->
+        dynamic([e], fragment("?->>?", e.metadata, ^metadata_key))
+
+      field_atom ->
+        dynamic(
+          [e],
+          fragment("COALESCE(?->>?, ?)", e.metadata, ^metadata_key, field(e, ^field_atom))
+        )
     end
   end
+
+  defp field_key(field) when is_atom(field), do: Atom.to_string(field)
+  defp field_key(field) when is_binary(field), do: field
+  defp field_key(field), do: to_string(field)
 end

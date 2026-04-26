@@ -1,5 +1,5 @@
 defmodule OmniArchive.DomainProfilesTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias OmniArchive.DomainProfiles
   alias OmniArchive.DomainProfiles.GeneralArchive

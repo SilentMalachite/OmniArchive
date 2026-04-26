@@ -98,7 +98,7 @@ defmodule OmniArchiveWeb.GalleryLive do
 
   @impl true
   def handle_event("select_image", %{"id" => id}, socket) do
-    case Ingestion.get_extracted_image_with_manifest(id) do
+    case Ingestion.get_published_extracted_image_with_manifest(id) do
       nil ->
         {:noreply, socket}
 
@@ -267,7 +267,7 @@ defmodule OmniArchiveWeb.GalleryLive do
               phx-value-id={image.id}
             >
               <div class="result-card-link">
-                <%= if image.geometry do %>
+                <%= if image.geometry && is_nil(image.iiif_manifest) do %>
                   <% {orig_w, orig_h, poly_pts, card_bbox} =
                     Map.get(@preview_map, image.id, {0, 0, nil, nil}) %>
                   <%= if card_bbox do %>
@@ -551,14 +551,11 @@ defmodule OmniArchiveWeb.GalleryLive do
 
   defp safe_int(_), do: 0
 
-  # サムネイル URL の生成
-  # サムネイルは常に元画像の静的パスを使用する。
-  # SVG viewBox クロップは元画像のピクセル座標系で動作するため、
-  # IIIF 経由のリサイズ済み画像では座標が合わなくなる。
-  # IIIF Image API は OpenSeadragon Deep Zoom（モーダル）でのみ使用する。
   defp image_thumbnail_url(image) do
-    image.image_path
-    |> String.replace_leading("priv/static/", "/")
+    case image.iiif_manifest do
+      nil -> "#"
+      manifest -> "/iiif/image/#{manifest.identifier}/full/300,/0/default.jpg"
+    end
   end
 
   # IIIF Image API info.json URL の構築

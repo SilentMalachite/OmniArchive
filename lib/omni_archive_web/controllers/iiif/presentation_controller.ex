@@ -18,7 +18,7 @@ defmodule OmniArchiveWeb.IIIF.PresentationController do
   - page_number 昇順で Canvas を生成
   """
   def manifest(conn, %{"source_id" => source_id}) do
-    case Repo.get(OmniArchive.Ingestion.PdfSource, source_id) do
+    case Ingestion.get_pdf_source(source_id) do
       nil ->
         conn
         |> put_status(:not_found)
@@ -83,15 +83,12 @@ defmodule OmniArchiveWeb.IIIF.PresentationController do
 
   # 画像リソースの body を構築
   defp build_image_body(image, base_url, width, height) do
-    # image_path は "priv/static/uploads/..." 形式
-    # 静的ファイルとしての URL は "/uploads/..." 部分
-    image_url = build_image_url(image.image_path, base_url)
-    format = detect_format(image.image_path)
+    image_url = build_image_url(image, base_url)
 
     %{
       "id" => image_url,
       "type" => "Image",
-      "format" => format,
+      "format" => "image/jpeg",
       "width" => width,
       "height" => height
     }
@@ -105,30 +102,10 @@ defmodule OmniArchiveWeb.IIIF.PresentationController do
 
   defp extract_dimensions(_image), do: {1000, 1000}
 
-  # priv/static/uploads/... → 絶対 URL に変換
-  defp build_image_url(image_path, base_url) when is_binary(image_path) do
-    # "priv/static/uploads/pages/..." → "/uploads/pages/..."
-    relative =
-      image_path
-      |> String.replace_prefix("priv/static", "")
-
-    base_url <> relative
-  end
-
-  defp build_image_url(_, base_url), do: base_url <> "/placeholder.png"
-
-  # ファイル拡張子から MIME タイプを推定
-  defp detect_format(path) when is_binary(path) do
-    case Path.extname(path) |> String.downcase() do
-      ".png" -> "image/png"
-      ".jpg" -> "image/jpeg"
-      ".jpeg" -> "image/jpeg"
-      ".webp" -> "image/webp"
-      ".tif" -> "image/tiff"
-      ".tiff" -> "image/tiff"
-      _ -> "image/png"
+  defp build_image_url(image, base_url) do
+    case Repo.preload(image, :iiif_manifest).iiif_manifest do
+      nil -> base_url <> "/placeholder.png"
+      manifest -> "#{base_url}/iiif/image/#{manifest.identifier}/full/max/0/default.jpg"
     end
   end
-
-  defp detect_format(_), do: "image/png"
 end

@@ -6,16 +6,16 @@ defmodule OmniArchiveWeb.DownloadController do
   """
   use OmniArchiveWeb, :controller
 
+  alias OmniArchive.Ingestion
   alias OmniArchive.Ingestion.ExtractedImage
   alias OmniArchive.Ingestion.ExtractedImageMetadata
   alias OmniArchive.Ingestion.ImageProcessor
-  alias OmniArchive.Repo
 
   @doc """
   GET /download/:id — クロップ済み画像をダウンロードとして送信します。
   """
   def show(conn, %{"id" => id}) do
-    case Repo.get(ExtractedImage, id) do
+    case Ingestion.get_extracted_image(id) do
       nil ->
         conn
         |> put_status(:not_found)

@@ -24,9 +24,9 @@ defmodule OmniArchiveWeb.SearchLiveTest do
       assert html =~ "サマリー、ラベル、遺跡名で検索..."
     end
 
-    test "初期状態で結果件数が表示される", %{conn: conn} do
+    test "初期状態で結果件数が表示される", %{conn: conn, user: user} do
       # テストデータを作成
-      insert_extracted_image(%{ptif_path: "/path/to/test.tif", status: "published"})
+      owned_search_image(user, %{ptif_path: "/path/to/test.tif", status: "published"})
 
       {:ok, _view, html} = live(conn, ~p"/lab/search")
 
@@ -41,8 +41,8 @@ defmodule OmniArchiveWeb.SearchLiveTest do
   end
 
   describe "search イベント" do
-    test "テキスト検索が実行される", %{conn: conn} do
-      insert_extracted_image(%{
+    test "テキスト検索が実行される", %{conn: conn, user: user} do
+      owned_search_image(user, %{
         ptif_path: "/path/to/test.tif",
         summary: "テスト土器の出土状況",
         label: "fig-50-1"
@@ -59,8 +59,8 @@ defmodule OmniArchiveWeb.SearchLiveTest do
       assert html =~ "fig-50-1" or html =~ "件の図版"
     end
 
-    test "空の検索で全件表示に戻る", %{conn: conn} do
-      insert_extracted_image(%{
+    test "空の検索で全件表示に戻る", %{conn: conn, user: user} do
+      owned_search_image(user, %{
         ptif_path: "/path/to/test.tif",
         summary: "テスト"
       })
@@ -78,8 +78,8 @@ defmodule OmniArchiveWeb.SearchLiveTest do
   end
 
   describe "toggle_filter イベント" do
-    test "フィルターがトグルされる", %{conn: conn} do
-      insert_extracted_image(%{
+    test "フィルターがトグルされる", %{conn: conn, user: user} do
+      owned_search_image(user, %{
         ptif_path: "/path/to/test.tif",
         site: "テスト市遺跡A"
       })
@@ -92,8 +92,8 @@ defmodule OmniArchiveWeb.SearchLiveTest do
       assert html =~ "件の図版" or html =~ "結果なし"
     end
 
-    test "同じフィルターを再クリックでクリアされる", %{conn: conn} do
-      insert_extracted_image(%{
+    test "同じフィルターを再クリックでクリアされる", %{conn: conn, user: user} do
+      owned_search_image(user, %{
         ptif_path: "/path/to/test.tif",
         site: "テスト市遺跡B"
       })
@@ -110,9 +110,12 @@ defmodule OmniArchiveWeb.SearchLiveTest do
   end
 
   describe "metadata 表示" do
-    test "profile metadata field を loop 描画し metadata の値を優先表示する", %{conn: conn} do
+    test "profile metadata field を loop 描画し metadata の値を優先表示する", %{
+      conn: conn,
+      user: user
+    } do
       image =
-        insert_extracted_image(%{
+        owned_search_image(user, %{
           ptif_path: "/path/to/test.tif",
           site: "旧検索市遺跡",
           period: "旧検索時代",
@@ -138,8 +141,8 @@ defmodule OmniArchiveWeb.SearchLiveTest do
   end
 
   describe "clear_filters イベント" do
-    test "全フィルターがクリアされる", %{conn: conn} do
-      insert_extracted_image(%{
+    test "全フィルターがクリアされる", %{conn: conn, user: user} do
+      owned_search_image(user, %{
         ptif_path: "/path/to/test.tif",
         site: "テスト市遺跡"
       })
@@ -160,8 +163,8 @@ defmodule OmniArchiveWeb.SearchLiveTest do
       :ok
     end
 
-    test "placeholder と facet が GeneralArchive 定義に切り替わる", %{conn: conn} do
-      insert_extracted_image(%{
+    test "placeholder と facet が GeneralArchive 定義に切り替わる", %{conn: conn, user: user} do
+      owned_search_image(user, %{
         ptif_path: "/path/to/general-live.tif",
         label: "photo-001",
         metadata: %{
@@ -179,8 +182,8 @@ defmodule OmniArchiveWeb.SearchLiveTest do
       assert html =~ "📅 年代メモ"
     end
 
-    test "metadata-only field の値が結果カードに表示される", %{conn: conn} do
-      insert_extracted_image(%{
+    test "metadata-only field の値が結果カードに表示される", %{conn: conn, user: user} do
+      owned_search_image(user, %{
         ptif_path: "/path/to/general-live-card.tif",
         label: "photo-002",
         metadata: %{
@@ -196,5 +199,67 @@ defmodule OmniArchiveWeb.SearchLiveTest do
       assert html =~ "ポスター"
       assert html =~ "1972年ごろ"
     end
+  end
+
+  describe "SEC-005 owner scoping" do
+    test "Lab 検索は他ユーザの非公開画像を表示しない", %{conn: conn, user: user} do
+      other_user = insert_user()
+
+      owned_search_image(user, %{
+        ptif_path: "/path/to/own-search.tif",
+        label: "fig-500-1",
+        summary: "自分の検索対象",
+        site: "自分市遺跡"
+      })
+
+      owned_search_image(other_user, %{
+        ptif_path: "/path/to/private-search.tif",
+        label: "fig-501-1",
+        summary: "他人の非公開検索対象",
+        site: "他人市遺跡"
+      })
+
+      {:ok, view, html} = live(conn, ~p"/lab/search")
+
+      assert html =~ "fig-500-1"
+      assert html =~ "自分市遺跡"
+      refute html =~ "fig-501-1"
+      refute html =~ "他人市遺跡"
+
+      search_html =
+        view
+        |> element("#search-input")
+        |> render_keyup(%{"query" => "他人の非公開検索対象"})
+
+      refute search_html =~ "fig-501-1"
+      assert search_html =~ "結果なし"
+    end
+
+    test "フィルター候補はログインユーザの画像だけから作られる", %{conn: conn, user: user} do
+      other_user = insert_user()
+
+      owned_search_image(user, %{
+        ptif_path: "/path/to/own-filter.tif",
+        site: "自分市だけの遺跡"
+      })
+
+      owned_search_image(other_user, %{
+        ptif_path: "/path/to/private-filter.tif",
+        site: "他人市だけの遺跡"
+      })
+
+      {:ok, _view, html} = live(conn, ~p"/lab/search")
+
+      assert html =~ "自分市だけの遺跡"
+      refute html =~ "他人市だけの遺跡"
+    end
+  end
+
+  defp owned_search_image(user, attrs) do
+    pdf_source = insert_pdf_source(%{user_id: user.id})
+
+    attrs
+    |> Map.merge(%{pdf_source_id: pdf_source.id, owner_id: user.id})
+    |> insert_extracted_image()
   end
 end

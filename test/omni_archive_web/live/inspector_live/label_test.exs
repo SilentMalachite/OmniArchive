@@ -75,6 +75,13 @@ defmodule OmniArchiveWeb.InspectorLive.LabelTest do
       assert has_element?(view, "#artifact_type-input")
     end
 
+    test "不正な画像 ID では Lab に戻る", %{conn: conn} do
+      assert {:error, {:live_redirect, %{to: "/lab", flash: flash}}} =
+               live(conn, ~p"/lab/label/not-an-id")
+
+      assert flash["error"] =~ "指定された画像が見つかりません"
+    end
+
     test "metadata の値を優先して表示する", %{conn: conn, user: user} do
       image =
         create_user_image(user, %{

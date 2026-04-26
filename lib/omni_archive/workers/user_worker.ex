@@ -19,7 +19,7 @@ defmodule OmniArchive.Workers.UserWorker do
   end
 
   def process_pdf(user_id, pdf_source, pdf_path, pipeline_id, color_mode \\ "mono") do
-    GenServer.cast(
+    GenServer.call(
       via_tuple(user_id),
       {:process_pdf, pdf_source, pdf_path, pipeline_id, color_mode}
     )
@@ -38,29 +38,49 @@ defmodule OmniArchive.Workers.UserWorker do
   @impl true
   def init(state) do
     Logger.info("✅ UserWorker started safely for user_id: #{state.user_id}")
-    {:ok, state}
+    {:ok, Map.put(state, :active_pdf_job, false)}
   end
 
   @impl true
-  def handle_cast({:process_pdf, pdf_source, pdf_path, pipeline_id, color_mode}, state) do
+  def handle_call(
+        {:process_pdf, _pdf_source, _pdf_path, _pipeline_id, _color_mode},
+        _from,
+        %{active_pdf_job: true} = state
+      ) do
+    {:reply, {:error, :pdf_job_in_progress}, state}
+  end
+
+  def handle_call({:process_pdf, pdf_source, pdf_path, pipeline_id, color_mode}, _from, state) do
     Logger.info("⚙️ ユーザー(#{state.user_id})のPDF(ID:#{pdf_source.id})の裏側処理を開始します...")
+
+    worker = self()
 
     # Run the heavy processing in a separate Task
     Task.start(fn ->
-      # Use the correct extraction function（カラーモードを opts に含める）
-      OmniArchive.Pipeline.run_pdf_extraction(pdf_source, pdf_path, pipeline_id, %{
-        owner_id: state.user_id,
-        color_mode: color_mode
-      })
+      try do
+        # Use the correct extraction function（カラーモードを opts に含める）
+        OmniArchive.Pipeline.run_pdf_extraction(pdf_source, pdf_path, pipeline_id, %{
+          owner_id: state.user_id,
+          color_mode: color_mode
+        })
 
-      # Notify the UI that processing is complete
-      Phoenix.PubSub.broadcast(
-        OmniArchive.PubSub,
-        "pdf_source_#{pdf_source.id}",
-        {:pdf_processed, pdf_source.id}
-      )
+        # Notify the UI that processing is complete
+        Phoenix.PubSub.broadcast(
+          OmniArchive.PubSub,
+          "pdf_source_#{pdf_source.id}",
+          {:pdf_processed, pdf_source.id}
+        )
+      after
+        send(worker, {:pdf_job_finished, pdf_source.id})
+      end
     end)
 
-    {:noreply, state}
+    {:reply, :ok, %{state | active_pdf_job: true}}
+  end
+
+  @impl true
+  def handle_info({:pdf_job_finished, pdf_source_id}, state) do
+    Logger.info("✅ ユーザー(#{state.user_id})のPDF(ID:#{pdf_source_id})の裏側処理が終了しました")
+    {:noreply, %{state | active_pdf_job: false}}
   end
 end

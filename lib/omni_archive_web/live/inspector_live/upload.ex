@@ -10,6 +10,11 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
 
   alias OmniArchive.Ingestion
   alias OmniArchive.Pipeline
+  alias OmniArchive.Workers.UserWorker
+
+  @max_pdf_file_size 100_000_000
+  @daily_upload_limit 20
+  @upload_quota_window_seconds 24 * 60 * 60
 
   @impl true
   def mount(_params, _session, socket) do
@@ -37,7 +42,7 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
      |> assign(:current_page, 0)
      |> assign(:total_pages, 0)
      |> assign(:color_mode, "mono")
-     |> allow_upload(:pdf, accept: ~w(.pdf), max_entries: 1, max_file_size: 500_000_000)}
+     |> allow_upload(:pdf, accept: ~w(.pdf), max_entries: 1, max_file_size: @max_pdf_file_size)}
   end
 
   @impl true
@@ -48,7 +53,11 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
 
   @impl true
   def handle_event("switch_tab", %{"tab" => tab}, socket) do
-    {:noreply, assign(socket, :active_tab, String.to_existing_atom(tab))}
+    case tab do
+      "upload" -> {:noreply, assign(socket, :active_tab, :upload)}
+      "rejected" -> {:noreply, assign(socket, :active_tab, :rejected)}
+      _ -> {:noreply, socket}
+    end
   end
 
   @impl true
@@ -56,63 +65,19 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
   # path は Phoenix LiveView の一時ファイル、dest は内部生成で安全。
   def handle_event("upload_pdf", params, socket) do
     color_mode = get_in(params, ["color_mode"]) || socket.assigns.color_mode
-    socket = assign(socket, uploading: true, color_mode: color_mode)
 
-    uploaded_files =
-      consume_uploaded_entries(socket, :pdf, fn %{path: path}, entry ->
-        # アップロードディレクトリの作成
-        upload_dir = Path.join(["priv", "static", "uploads", "pdfs"])
-        File.mkdir_p!(upload_dir)
+    case validate_upload_quota(socket.assigns.current_user) do
+      :ok ->
+        socket = assign(socket, uploading: true, color_mode: color_mode)
+        handle_pdf_upload(socket)
 
-        # ファイル名にタイムスタンプを付与して衝突を防止
-        timestamp = System.system_time(:second)
-        ext = Path.extname(entry.client_name)
-        base = Path.basename(entry.client_name, ext)
-        versioned_name = "#{base}-#{timestamp}#{ext}"
-        dest = Path.join(upload_dir, versioned_name)
-        File.cp!(path, dest)
-        {:ok, dest}
-      end)
-
-    case uploaded_files do
-      [pdf_path] ->
-        # PDFソースレコードを作成
-        {:ok, pdf_source} =
-          Ingestion.create_pdf_source(%{
-            filename: Path.basename(pdf_path),
-            status: "converting",
-            user_id: socket.assigns.current_user.id
-          })
-
-        # パイプラインIDを生成
-        pipeline_id = Pipeline.generate_pipeline_id()
-
-        owner_id = socket.assigns.current_user.id
-
-        # ユーザーに紐付くWorkerに処理を委譲（カラーモードを渡す）
-        OmniArchive.Workers.UserWorker.process_pdf(
-          owner_id,
-          pdf_source,
-          pdf_path,
-          pipeline_id,
-          socket.assigns.color_mode
-        )
-
-        # 完了メッセージを購読する
-        Phoenix.PubSub.subscribe(OmniArchive.PubSub, "pdf_source_#{pdf_source.id}")
-
-        # 処理中のUI状態を維持
-        {:noreply,
-         socket
-         |> assign(:uploading, true)
-         |> assign(:processing_pdf_id, pdf_source.id)
-         |> put_flash(:info, "裏側でPDF処理を開始しました。完了するまでこの画面でお待ちください...")}
-
-      _ ->
+      {:error, message} ->
         {:noreply,
          socket
          |> assign(:uploading, false)
-         |> assign(:error_message, "PDFファイルを選択してください")}
+         |> assign(:color_mode, color_mode)
+         |> assign(:error_message, message)
+         |> put_flash(:error, message)}
     end
   end
 
@@ -327,7 +292,100 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
   end
 
   # アップロードエラーを日本語に変換するヘルパー
-  defp translate_upload_error(:too_large), do: "ファイルサイズが上限（500MB）を超えています。"
+  defp handle_pdf_upload(socket) do
+    uploaded_files =
+      consume_uploaded_entries(socket, :pdf, fn %{path: path}, entry ->
+        # アップロードディレクトリの作成
+        upload_dir = Path.join(["priv", "static", "uploads", "pdfs"])
+        File.mkdir_p!(upload_dir)
+
+        # ファイル名にタイムスタンプを付与して衝突を防止
+        timestamp = System.system_time(:second)
+        ext = Path.extname(entry.client_name)
+        base = Path.basename(entry.client_name, ext)
+        versioned_name = "#{base}-#{timestamp}#{ext}"
+        dest = Path.join(upload_dir, versioned_name)
+        File.cp!(path, dest)
+        {:ok, dest}
+      end)
+
+    case uploaded_files do
+      [pdf_path] ->
+        start_pdf_processing(socket, pdf_path)
+
+      _ ->
+        {:noreply,
+         socket
+         |> assign(:uploading, false)
+         |> assign(:error_message, "PDFファイルを選択してください")}
+    end
+  end
+
+  defp start_pdf_processing(socket, pdf_path) do
+    # PDFソースレコードを作成
+    {:ok, pdf_source} =
+      Ingestion.create_pdf_source(%{
+        filename: Path.basename(pdf_path),
+        status: "converting",
+        user_id: socket.assigns.current_user.id
+      })
+
+    # パイプラインIDを生成
+    pipeline_id = Pipeline.generate_pipeline_id()
+    owner_id = socket.assigns.current_user.id
+
+    case UserWorker.process_pdf(
+           owner_id,
+           pdf_source,
+           pdf_path,
+           pipeline_id,
+           socket.assigns.color_mode
+         ) do
+      :ok ->
+        # 完了メッセージを購読する
+        Phoenix.PubSub.subscribe(OmniArchive.PubSub, "pdf_source_#{pdf_source.id}")
+
+        # 処理中のUI状態を維持
+        {:noreply,
+         socket
+         |> assign(:uploading, true)
+         |> assign(:processing_pdf_id, pdf_source.id)
+         |> put_flash(:info, "裏側でPDF処理を開始しました。完了するまでこの画面でお待ちください...")}
+
+      {:error, :pdf_job_in_progress} ->
+        Ingestion.update_pdf_source(pdf_source, %{status: "error"})
+        File.rm(pdf_path)
+
+        message = "処理中のPDFがあります。完了してから次のPDFをアップロードしてください。"
+
+        {:noreply,
+         socket
+         |> assign(:uploading, false)
+         |> assign(:error_message, message)
+         |> put_flash(:error, message)}
+    end
+  end
+
+  defp validate_upload_quota(current_user) do
+    cond do
+      Ingestion.count_active_pdf_sources(current_user) > 0 ->
+        {:error, "処理中のPDFがあります。完了してから次のPDFをアップロードしてください。"}
+
+      Ingestion.count_recent_pdf_sources(current_user, upload_quota_window_start()) >=
+          @daily_upload_limit ->
+        {:error, "1日のアップロード上限（#{@daily_upload_limit}件）に達しました。時間をおいて再試行してください。"}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp upload_quota_window_start do
+    DateTime.utc_now(:second)
+    |> DateTime.add(-@upload_quota_window_seconds, :second)
+  end
+
+  defp translate_upload_error(:too_large), do: "ファイルサイズが上限（100MB）を超えています。"
   defp translate_upload_error(:too_many_files), do: "アップロードできるファイルは1つだけです。"
   defp translate_upload_error(:not_accepted), do: "PDFファイルのみアップロード可能です。"
   defp translate_upload_error(err), do: "アップロードエラー: #{inspect(err)}"

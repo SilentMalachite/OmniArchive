@@ -12,14 +12,23 @@ defmodule OmniArchiveWeb.LabLive.Show do
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     current_user = socket.assigns.current_user
-    pdf_source = Ingestion.get_pdf_source!(id, current_user)
-    images = Ingestion.list_extracted_images(pdf_source.id)
 
-    {:ok,
-     socket
-     |> assign(:page_title, pdf_source.filename)
-     |> assign(:pdf_source, pdf_source)
-     |> assign(:images, images)}
+    case Ingestion.get_pdf_source(id, current_user) do
+      nil ->
+        {:ok,
+         socket
+         |> put_flash(:error, "プロジェクトが見つかりません。")
+         |> push_navigate(to: ~p"/lab")}
+
+      pdf_source ->
+        images = Ingestion.list_extracted_images(pdf_source.id)
+
+        {:ok,
+         socket
+         |> assign(:page_title, pdf_source.filename)
+         |> assign(:pdf_source, pdf_source)
+         |> assign(:images, images)}
+    end
   end
 
   @impl true
@@ -94,7 +103,7 @@ defmodule OmniArchiveWeb.LabLive.Show do
                 <%= if image.image_path do %>
                   <div class="image-card-thumbnail">
                     <img
-                      src={String.replace_leading(image.image_path, "priv/static/", "/")}
+                      src={OmniArchiveWeb.UploadUrls.page_image_url(image.image_path)}
                       alt={image.label || "画像 #{image.page_number}"}
                       loading="lazy"
                     />

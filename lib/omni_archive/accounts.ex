@@ -60,6 +60,19 @@ defmodule OmniArchive.Accounts do
   """
   def get_user!(id), do: Repo.get!(User, id)
 
+  @doc """
+  Gets a single user.
+
+  Returns nil when the id is invalid or the user does not exist.
+  """
+  def get_user(id) do
+    with {:ok, id} <- normalize_id(id) do
+      Repo.get(User, id)
+    else
+      :error -> nil
+    end
+  end
+
   ## User registration
 
   @doc """
@@ -264,4 +277,15 @@ defmodule OmniArchive.Accounts do
       end
     end)
   end
+
+  defp normalize_id(id) when is_integer(id) and id > 0, do: {:ok, id}
+
+  defp normalize_id(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {parsed, ""} when parsed > 0 -> {:ok, parsed}
+      _ -> :error
+    end
+  end
+
+  defp normalize_id(_id), do: :error
 end

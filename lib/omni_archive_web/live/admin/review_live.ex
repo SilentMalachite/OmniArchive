@@ -67,54 +67,51 @@ defmodule OmniArchiveWeb.Admin.ReviewLive do
 
   @impl true
   def handle_event("select_image", %{"id" => id}, socket) do
-    image_id = String.to_integer(id)
+    with {:ok, image_id} <- parse_id(id),
+         {:ok, selected} <- pending_item(socket, image_id) do
+      # 元画像の寸法を取得（SVG viewBox クロップ表示用）
+      dims = read_source_dimensions(selected.image.image_path)
 
-    selected =
-      Enum.find(socket.assigns.pending_images, fn item ->
-        item.image.id == image_id
-      end)
+      # ジオメトリからポリゴン/バウンディングボックスを抽出
+      {polygon_points, bbox} = extract_preview_data(selected.image.geometry)
 
-    # 元画像の寸法を取得（SVG viewBox クロップ表示用）
-    dims = read_source_dimensions(selected.image.image_path)
-
-    # ジオメトリからポリゴン/バウンディングボックスを抽出
-    {polygon_points, bbox} = extract_preview_data(selected.image.geometry)
-
-    {:noreply,
-     socket
-     |> assign(:selected_image, selected)
-     |> assign(:selected_image_dims, dims)
-     |> assign(:selected_polygon_points, polygon_points)
-     |> assign(:selected_bbox, bbox)}
+      {:noreply,
+       socket
+       |> assign(:selected_image, selected)
+       |> assign(:selected_image_dims, dims)
+       |> assign(:selected_polygon_points, polygon_points)
+       |> assign(:selected_bbox, bbox)}
+    else
+      :error -> {:noreply, put_flash(socket, :error, "画像を選択できません")}
+    end
   end
 
   @impl true
   def handle_event("delete", %{"id" => id}, socket) do
-    image = Ingestion.get_extracted_image!(id)
+    with {:ok, image_id} <- parse_id(id),
+         %{} = image <- Ingestion.get_extracted_image(image_id),
+         {:ok, _deleted} <- Ingestion.soft_delete_image(image) do
+      updated_images =
+        Enum.reject(socket.assigns.pending_images, fn item ->
+          item.image.id == image_id
+        end)
 
-    case Ingestion.soft_delete_image(image) do
-      {:ok, _deleted} ->
-        # リストから即座に削除
-        image_id = String.to_integer(id)
+      # preview_map から該当IDを削除
+      updated_preview_map = Map.delete(socket.assigns.preview_map, image_id)
 
-        updated_images =
-          Enum.reject(socket.assigns.pending_images, fn item ->
-            item.image.id == image_id
-          end)
-
-        # preview_map から該当IDを削除
-        updated_preview_map = Map.delete(socket.assigns.preview_map, image_id)
-
-        {:noreply,
-         socket
-         |> assign(:pending_images, updated_images)
-         |> assign(:pending_count, length(updated_images))
-         |> assign(:preview_map, updated_preview_map)
-         |> close_inspector_if_selected(image_id)
-         |> put_flash(:info, "「#{image.label || "名称未設定"}」を削除しました。")}
-
+      {:noreply,
+       socket
+       |> assign(:pending_images, updated_images)
+       |> assign(:pending_count, length(updated_images))
+       |> assign(:preview_map, updated_preview_map)
+       |> close_inspector_if_selected(image_id)
+       |> put_flash(:info, "「#{image.label || "名称未設定"}」を削除しました。")}
+    else
       {:error, :invalid_status_transition} ->
         {:noreply, put_flash(socket, :error, "この画像は削除できません。")}
+
+      _ ->
+        {:noreply, put_flash(socket, :error, "画像を削除できません")}
     end
   end
 
@@ -130,38 +127,44 @@ defmodule OmniArchiveWeb.Admin.ReviewLive do
 
   @impl true
   def handle_event("approve", %{"id" => id}, socket) do
-    image = Ingestion.get_extracted_image!(id)
+    with {:ok, image_id} <- parse_id(id),
+         %{} = image <- Ingestion.get_extracted_image(image_id),
+         {:ok, _updated} <- Ingestion.approve_and_publish(image) do
+      # Optimistic UI: フェードアウト対象に追加
+      fading_ids = MapSet.put(socket.assigns.fading_ids, image_id)
 
-    case Ingestion.approve_and_publish(image) do
-      {:ok, _updated} ->
-        # Optimistic UI: フェードアウト対象に追加
-        image_id = String.to_integer(id)
-        fading_ids = MapSet.put(socket.assigns.fading_ids, image_id)
+      # 500ms 後にリストから削除（アニメーション完了後）
+      Process.send_after(self(), {:remove_faded, image_id}, 500)
 
-        # 500ms 後にリストから削除（アニメーション完了後）
-        Process.send_after(self(), {:remove_faded, image_id}, 500)
-
-        {:noreply,
-         socket
-         |> assign(:fading_ids, fading_ids)
-         |> close_inspector_if_selected(image_id)
-         |> put_flash(:info, "「#{image.label || "名称未設定"}」を公開しました！ 🎉")}
-
+      {:noreply,
+       socket
+       |> assign(:fading_ids, fading_ids)
+       |> close_inspector_if_selected(image_id)
+       |> put_flash(:info, "「#{image.label || "名称未設定"}」を公開しました！ 🎉")}
+    else
       {:error, {:ptiff_generation_failed, reason}} ->
         {:noreply, put_flash(socket, :error, "PTIFF 生成に失敗しました: #{inspect(reason)}")}
 
       {:error, :invalid_status_transition} ->
         {:noreply, put_flash(socket, :error, "この画像は承認できません。")}
+
+      _ ->
+        {:noreply, put_flash(socket, :error, "画像を承認できません")}
     end
   end
 
   @impl true
   def handle_event("open_reject_modal", %{"id" => id}, socket) do
-    {:noreply,
-     socket
-     |> assign(:show_reject_modal, true)
-     |> assign(:reject_target_id, id)
-     |> assign(:reject_note, "")}
+    with {:ok, image_id} <- parse_id(id),
+         {:ok, _selected} <- pending_item(socket, image_id) do
+      {:noreply,
+       socket
+       |> assign(:show_reject_modal, true)
+       |> assign(:reject_target_id, image_id)
+       |> assign(:reject_note, "")}
+    else
+      :error -> {:noreply, put_flash(socket, :error, "画像を選択できません")}
+    end
   end
 
   @impl true
@@ -182,39 +185,45 @@ defmodule OmniArchiveWeb.Admin.ReviewLive do
   def handle_event("confirm_reject", _params, socket) do
     id = socket.assigns.reject_target_id
     note = socket.assigns.reject_note
-    image = Ingestion.get_extracted_image!(id)
 
-    case Ingestion.reject_to_draft_with_note(image, note) do
-      {:ok, _updated} ->
-        # リストを再取得
-        pending_images = Ingestion.list_pending_review_images()
+    with {:ok, image_id} <- parse_id(id),
+         %{} = image <- Ingestion.get_extracted_image(image_id),
+         {:ok, _updated} <- Ingestion.reject_to_draft_with_note(image, note) do
+      # リストを再取得
+      pending_images = Ingestion.list_pending_review_images()
 
-        images_with_validation =
-          Enum.map(pending_images, fn img ->
-            validation = Ingestion.validate_image_data(img)
-            %{image: img, validation: validation}
-          end)
+      images_with_validation =
+        Enum.map(pending_images, fn img ->
+          validation = Ingestion.validate_image_data(img)
+          %{image: img, validation: validation}
+        end)
 
-        # preview_map を再構築
-        preview_map = build_preview_map(images_with_validation)
-        image_id = String.to_integer(id)
+      # preview_map を再構築
+      preview_map = build_preview_map(images_with_validation)
 
-        {:noreply,
-         socket
-         |> assign(:pending_images, images_with_validation)
-         |> assign(:pending_count, length(images_with_validation))
-         |> assign(:preview_map, preview_map)
-         |> assign(:show_reject_modal, false)
-         |> assign(:reject_target_id, nil)
-         |> assign(:reject_note, "")
-         |> close_inspector_if_selected(image_id)
-         |> put_flash(:info, "「#{image.label || "名称未設定"}」を差し戻しました。")}
-
+      {:noreply,
+       socket
+       |> assign(:pending_images, images_with_validation)
+       |> assign(:pending_count, length(images_with_validation))
+       |> assign(:preview_map, preview_map)
+       |> assign(:show_reject_modal, false)
+       |> assign(:reject_target_id, nil)
+       |> assign(:reject_note, "")
+       |> close_inspector_if_selected(image_id)
+       |> put_flash(:info, "「#{image.label || "名称未設定"}」を差し戻しました。")}
+    else
       {:error, :invalid_status_transition} ->
         {:noreply,
          socket
          |> assign(:show_reject_modal, false)
          |> put_flash(:error, "この画像は差し戻しできません。")}
+
+      _ ->
+        {:noreply,
+         socket
+         |> assign(:show_reject_modal, false)
+         |> assign(:reject_target_id, nil)
+         |> put_flash(:error, "画像を差し戻しできません")}
     end
   end
 
@@ -648,8 +657,7 @@ defmodule OmniArchiveWeb.Admin.ReviewLive do
   defp image_thumbnail_url(image) do
     case image.iiif_manifest do
       nil ->
-        (image.image_path || "")
-        |> String.replace_leading("priv/static/", "/")
+        OmniArchiveWeb.UploadUrls.page_image_url(image.image_path)
 
       manifest ->
         "/iiif/image/#{manifest.identifier}/full/400,/0/default.jpg"
@@ -660,8 +668,7 @@ defmodule OmniArchiveWeb.Admin.ReviewLive do
   defp image_full_url(image) do
     case image.iiif_manifest do
       nil ->
-        (image.image_path || "")
-        |> String.replace_leading("priv/static/", "/")
+        OmniArchiveWeb.UploadUrls.page_image_url(image.image_path)
 
       manifest ->
         "/iiif/image/#{manifest.identifier}/full/max/0/default.jpg"
@@ -732,6 +739,24 @@ defmodule OmniArchiveWeb.Admin.ReviewLive do
   end
 
   defp safe_int(_), do: 0
+
+  defp parse_id(id) when is_integer(id) and id > 0, do: {:ok, id}
+
+  defp parse_id(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {parsed, ""} when parsed > 0 -> {:ok, parsed}
+      _ -> :error
+    end
+  end
+
+  defp parse_id(_id), do: :error
+
+  defp pending_item(socket, image_id) do
+    case Enum.find(socket.assigns.pending_images, &(&1.image.id == image_id)) do
+      nil -> :error
+      item -> {:ok, item}
+    end
+  end
 
   # バリデーション項目のラベル
   defp validation_issue_label(:image_file), do: "画像ファイルパスが未設定です"

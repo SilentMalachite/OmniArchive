@@ -29,15 +29,18 @@ defmodule OmniArchiveWeb.Admin.DashboardLive do
 
   @impl true
   def handle_event("toggle_selection", %{"id" => id_str}, socket) do
-    id = String.to_integer(id_str)
-    selected = socket.assigns.selected_ids
+    with {:ok, id} <- parse_id(id_str) do
+      selected = socket.assigns.selected_ids
 
-    updated =
-      if MapSet.member?(selected, id),
-        do: MapSet.delete(selected, id),
-        else: MapSet.put(selected, id)
+      updated =
+        if MapSet.member?(selected, id),
+          do: MapSet.delete(selected, id),
+          else: MapSet.put(selected, id)
 
-    {:noreply, assign(socket, :selected_ids, updated)}
+      {:noreply, assign(socket, :selected_ids, updated)}
+    else
+      :error -> {:noreply, put_flash(socket, :error, "不正な画像 ID です")}
+    end
   end
 
   @impl true
@@ -86,28 +89,34 @@ defmodule OmniArchiveWeb.Admin.DashboardLive do
 
   @impl true
   def handle_event("delete", %{"id" => id}, socket) do
-    image = Ingestion.get_extracted_image!(id)
+    case Ingestion.get_extracted_image(id) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "画像を削除できません")}
 
-    # 公開済み画像は通常削除不可（force_delete を使用）
-    if image.status == "published" do
-      {:noreply, put_flash(socket, :error, "公開済みの画像は削除できません")}
-    else
-      do_delete_image(image, id, socket)
+      image ->
+        # 公開済み画像は通常削除不可（force_delete を使用）
+        if image.status == "published" do
+          {:noreply, put_flash(socket, :error, "公開済みの画像は削除できません")}
+        else
+          do_delete_image(image, socket)
+        end
     end
   end
 
   @impl true
   def handle_event("force_delete", %{"id" => id}, socket) do
-    image = Ingestion.get_extracted_image!(id)
-    do_delete_image(image, id, socket)
+    case Ingestion.get_extracted_image(id) do
+      nil -> {:noreply, put_flash(socket, :error, "画像を削除できません")}
+      image -> do_delete_image(image, socket)
+    end
   end
 
   # --- 削除共通ヘルパー ---
 
-  defp do_delete_image(image, id, socket) do
+  defp do_delete_image(image, socket) do
     case Ingestion.delete_extracted_image(image) do
       {:ok, _} ->
-        image_id = String.to_integer(id)
+        image_id = image.id
         updated_images = Enum.reject(socket.assigns.images, &(&1.id == image_id))
 
         {:noreply,
@@ -120,6 +129,17 @@ defmodule OmniArchiveWeb.Admin.DashboardLive do
         {:noreply, put_flash(socket, :error, "削除に失敗しました")}
     end
   end
+
+  defp parse_id(id) when is_integer(id) and id > 0, do: {:ok, id}
+
+  defp parse_id(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {parsed, ""} when parsed > 0 -> {:ok, parsed}
+      _ -> :error
+    end
+  end
+
+  defp parse_id(_id), do: :error
 
   # --- 非同期データロード ---
 
@@ -377,11 +397,10 @@ defmodule OmniArchiveWeb.Admin.DashboardLive do
 
   # --- プライベート関数 ---
 
-  # サムネイル URL の生成（priv/static/ プレフィックスを除去）
   defp thumbnail_url(nil), do: nil
   defp thumbnail_url(""), do: nil
 
   defp thumbnail_url(image_path) do
-    String.replace_leading(image_path, "priv/static/", "/")
+    OmniArchiveWeb.UploadUrls.page_image_url(image_path)
   end
 end

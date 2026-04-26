@@ -78,7 +78,7 @@ defmodule OmniArchive.CustomMetadataFields.CustomMetadataField do
     try do
       profile.metadata_fields()
       |> Enum.map(& &1.field)
-      |> Enum.map(&Atom.to_string/1)
+      |> Enum.map(&to_string/1)
     rescue
       _ -> []
     end

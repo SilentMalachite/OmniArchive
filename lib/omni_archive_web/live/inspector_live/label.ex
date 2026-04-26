@@ -16,15 +16,21 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
 
   @impl true
   def mount(%{"image_id" => image_id}, _session, socket) do
-    extracted_image = Ingestion.get_extracted_image!(image_id)
+    case fetch_authorized_image(image_id, socket.assigns.current_user) do
+      {:ok, extracted_image, pdf_source} ->
+        mount_label(socket, extracted_image, pdf_source)
 
-    pdf_source =
-      Ingestion.get_pdf_source!(extracted_image.pdf_source_id, socket.assigns.current_user)
+      :error ->
+        {:ok,
+         socket
+         |> put_flash(:error, "指定された画像が見つかりません")
+         |> push_navigate(to: ~p"/lab")}
+    end
+  end
 
+  defp mount_label(socket, extracted_image, pdf_source) do
     # 画像のURLを生成（プレビュー用）
-    image_url =
-      extracted_image.image_path
-      |> String.replace_leading("priv/static/", "/")
+    image_url = OmniArchiveWeb.UploadUrls.page_image_url(extracted_image.image_path)
 
     # 元画像の寸法を取得（Vix はヘッダーのみ遅延読み込み）
     {orig_w, orig_h} = read_source_dimensions(extracted_image.image_path)
@@ -62,6 +68,15 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
        :is_rejected,
        extracted_image.status == "rejected" || pdf_source.workflow_status == "returned"
      )}
+  end
+
+  defp fetch_authorized_image(image_id, current_user) do
+    with %{} = extracted_image <- Ingestion.get_extracted_image(image_id),
+         %{} = pdf_source <- Ingestion.get_pdf_source(extracted_image.pdf_source_id, current_user) do
+      {:ok, extracted_image, pdf_source}
+    else
+      _ -> :error
+    end
   end
 
   # --- メタデータ更新イベント ---
@@ -241,7 +256,7 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
       errors =
         Map.put(
           socket.assigns.validation_errors,
-          field_atom(field),
+          validation_error_key(field),
           "#{max_len}文字以内で入力してください"
         )
 
@@ -421,8 +436,8 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
 
   defp validate_field(errors, field, value) do
     case DomainMetadataValidation.validate_field(field, value) do
-      nil -> Map.delete(errors, field_atom(field))
-      error -> Map.put(errors, field_atom(field), error)
+      nil -> Map.delete(errors, validation_error_key(field))
+      error -> Map.put(errors, validation_error_key(field), error)
     end
   end
 
@@ -649,7 +664,7 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
                   "form-input form-input-large",
                   @validation_errors[field.field] && "input-error"
                 ]}
-                value={Map.get(@metadata_values, Atom.to_string(field.field), "")}
+                value={Map.get(@metadata_values, field_key(field.field), "")}
                 phx-blur="blur_save_field"
                 phx-value-field={field.field}
                 placeholder={field.placeholder}
@@ -735,7 +750,7 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
 
   defp updated_metadata_values(socket, params) do
     Enum.reduce(socket.assigns.metadata_fields, socket.assigns.metadata_values, fn field, acc ->
-      key = Atom.to_string(field.field)
+      key = field_key(field.field)
       Map.put(acc, key, Map.get(params, key, Map.get(acc, key, "")))
     end)
   end
@@ -770,9 +785,19 @@ defmodule OmniArchiveWeb.InspectorLive.Label do
 
   defp duplicate_scope_field do
     DomainMetadataValidation.duplicate_scope_field()
-    |> Atom.to_string()
+    |> to_string()
   end
 
-  defp field_atom(field) when is_atom(field), do: field
-  defp field_atom(field) when is_binary(field), do: String.to_existing_atom(field)
+  defp field_atom("summary"), do: :summary
+  defp field_atom("label"), do: :label
+
+  defp validation_error_key(field) do
+    DomainProfiles.metadata_field!(field).field
+  rescue
+    ArgumentError -> field
+  end
+
+  defp field_key(field) when is_atom(field), do: Atom.to_string(field)
+  defp field_key(field) when is_binary(field), do: field
+  defp field_key(field), do: to_string(field)
 end

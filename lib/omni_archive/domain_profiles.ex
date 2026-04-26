@@ -24,7 +24,9 @@ defmodule OmniArchive.DomainProfiles do
   end
 
   def metadata_field!(field) do
-    Enum.find(metadata_fields(), &(&1.field == field)) ||
+    key = field_key(field)
+
+    Enum.find(metadata_fields(), &(field_key(&1.field) == key)) ||
       raise ArgumentError, "unknown metadata field: #{inspect(field)}"
   end
 
@@ -35,11 +37,16 @@ defmodule OmniArchive.DomainProfiles do
   end
 
   def validation_rule!(field) do
-    Map.fetch!(validation_rules(), field)
+    validation_rule(field) || raise KeyError, key: field, term: validation_rules()
   end
 
   def validation_rule(field) do
-    Map.get(validation_rules(), field)
+    rules = validation_rules()
+    key = field_key(field)
+
+    Enum.find_value(rules, fn {rule_field, rule} ->
+      if field_key(rule_field) == key, do: rule
+    end)
   end
 
   def search_facets do
@@ -89,4 +96,8 @@ defmodule OmniArchive.DomainProfiles do
     |> Enum.filter(& &1.searchable)
     |> Enum.map(&CustomMetadataFields.to_search_facet/1)
   end
+
+  defp field_key(field) when is_atom(field), do: Atom.to_string(field)
+  defp field_key(field) when is_binary(field), do: field
+  defp field_key(field), do: to_string(field)
 end

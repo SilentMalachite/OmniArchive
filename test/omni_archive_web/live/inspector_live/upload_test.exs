@@ -11,6 +11,7 @@ defmodule OmniArchiveWeb.InspectorLive.UploadTest do
 
   import Phoenix.LiveViewTest
   import OmniArchive.AccountsFixtures
+  import OmniArchive.Factory
 
   describe "security: uploads are isolated between users" do
     test "User A のアップロードファイルが User B に見えないこと" do
@@ -54,6 +55,63 @@ defmodule OmniArchiveWeb.InspectorLive.UploadTest do
 
       refute html_b =~ "secret_plan.pdf",
              "セキュリティ違反: User A のアップロード (secret_plan.pdf) が User B のセッションに漏洩しています"
+    end
+  end
+
+  describe "security: upload quotas" do
+    test "処理中の PDF があるユーザーは追加アップロードを開始できない" do
+      user = user_fixture()
+      insert_pdf_source(%{user_id: user.id, status: "converting"})
+
+      conn =
+        build_conn()
+        |> log_in_user(user)
+
+      {:ok, view, _html} = live(conn, ~p"/lab/upload")
+
+      html =
+        view
+        |> form("#upload-form", %{"color_mode" => "mono"})
+        |> render_submit()
+
+      assert html =~ "処理中のPDFがあります"
+    end
+
+    test "24時間のアップロード上限を超えたユーザーは追加アップロードを開始できない" do
+      user = user_fixture()
+
+      for _ <- 1..20 do
+        insert_pdf_source(%{user_id: user.id, status: "ready"})
+      end
+
+      conn =
+        build_conn()
+        |> log_in_user(user)
+
+      {:ok, view, _html} = live(conn, ~p"/lab/upload")
+
+      html =
+        view
+        |> form("#upload-form", %{"color_mode" => "mono"})
+        |> render_submit()
+
+      assert html =~ "1日のアップロード上限"
+    end
+  end
+
+  describe "security: event parameter validation" do
+    test "不正なタブ名を送っても LiveView がクラッシュしない" do
+      user = user_fixture()
+
+      conn =
+        build_conn()
+        |> log_in_user(user)
+
+      {:ok, view, _html} = live(conn, ~p"/lab/upload")
+
+      html = render_click(view, "switch_tab", %{"tab" => "not_a_tab"})
+
+      assert html =~ "PDFファイルをアップロード"
     end
   end
 end

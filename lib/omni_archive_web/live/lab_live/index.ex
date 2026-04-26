@@ -26,51 +26,61 @@ defmodule OmniArchiveWeb.LabLive.Index do
   @impl true
   def handle_event("delete_project", %{"id" => id}, socket) do
     current_user = socket.assigns.current_user
-    pdf_source = Ingestion.get_pdf_source!(id, current_user)
 
-    case Ingestion.soft_delete_pdf_source(pdf_source) do
-      {:ok, _} ->
-        # ローカルステートから削除
-        projects = Enum.reject(socket.assigns.projects, &(&1.id == pdf_source.id))
+    case Ingestion.get_pdf_source(id, current_user) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "プロジェクトが見つかりません。")}
 
-        {:noreply,
-         socket
-         |> assign(:projects, projects)
-         |> put_flash(:info, "プロジェクト「#{pdf_source.filename}」をゴミ箱に移動しました。")}
+      pdf_source ->
+        case Ingestion.soft_delete_pdf_source(pdf_source) do
+          {:ok, _} ->
+            # ローカルステートから削除
+            projects = Enum.reject(socket.assigns.projects, &(&1.id == pdf_source.id))
 
-      {:error, :published_project} ->
-        {:noreply, put_flash(socket, :error, "公開中のプロジェクトは削除できません。")}
+            {:noreply,
+             socket
+             |> assign(:projects, projects)
+             |> put_flash(:info, "プロジェクト「#{pdf_source.filename}」をゴミ箱に移動しました。")}
 
-      {:error, _} ->
-        {:noreply, put_flash(socket, :error, "ゴミ箱への移動に失敗しました。")}
+          {:error, :published_project} ->
+            {:noreply, put_flash(socket, :error, "公開中のプロジェクトは削除できません。")}
+
+          {:error, _} ->
+            {:noreply, put_flash(socket, :error, "ゴミ箱への移動に失敗しました。")}
+        end
     end
   end
 
   @impl true
   def handle_event("submit_project", %{"id" => id}, socket) do
     current_user = socket.assigns.current_user
-    pdf_source = Ingestion.get_pdf_source!(id, current_user)
 
-    case Ingestion.submit_project(pdf_source) do
-      {:ok, updated} ->
-        # ローカルステートを更新
-        projects =
-          Enum.map(socket.assigns.projects, fn p ->
-            if p.id == updated.id,
-              do: %{p | workflow_status: updated.workflow_status, return_message: nil},
-              else: p
-          end)
+    case Ingestion.get_pdf_source(id, current_user) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "プロジェクトが見つかりません。")}
 
-        {:noreply,
-         socket
-         |> assign(:projects, projects)
-         |> put_flash(:info, "プロジェクト「#{pdf_source.filename}」を作業完了として提出しました。")}
+      pdf_source ->
+        case Ingestion.submit_project(pdf_source) do
+          {:ok, updated} ->
+            # ローカルステートを更新
+            projects =
+              Enum.map(socket.assigns.projects, fn p ->
+                if p.id == updated.id,
+                  do: %{p | workflow_status: updated.workflow_status, return_message: nil},
+                  else: p
+              end)
 
-      {:error, :invalid_status_transition} ->
-        {:noreply, put_flash(socket, :error, "このステータスからは提出できません。")}
+            {:noreply,
+             socket
+             |> assign(:projects, projects)
+             |> put_flash(:info, "プロジェクト「#{pdf_source.filename}」を作業完了として提出しました。")}
 
-      {:error, _} ->
-        {:noreply, put_flash(socket, :error, "提出に失敗しました。")}
+          {:error, :invalid_status_transition} ->
+            {:noreply, put_flash(socket, :error, "このステータスからは提出できません。")}
+
+          {:error, _} ->
+            {:noreply, put_flash(socket, :error, "提出に失敗しました。")}
+        end
     end
   end
 

@@ -6,6 +6,7 @@ defmodule OmniArchive.DomainMetadataValidation do
   import Ecto.Changeset
 
   alias OmniArchive.DomainProfiles
+  alias OmniArchive.Ingestion.ExtractedImageMetadata
 
   def validate_changeset(changeset) do
     Enum.reduce(validated_fields(), changeset, fn field, acc ->
@@ -53,7 +54,7 @@ defmodule OmniArchive.DomainMetadataValidation do
 
   defp validate_changeset_field(changeset, field) do
     rule = DomainProfiles.validation_rule!(field)
-    value = get_field(changeset, field)
+    value = changeset_field_value(changeset, field)
 
     changeset
     |> maybe_validate_max_length(field, value, rule)
@@ -63,7 +64,7 @@ defmodule OmniArchive.DomainMetadataValidation do
 
   defp maybe_validate_max_length(changeset, field, value, rule) do
     if max_length_exceeded?(rule, value) do
-      add_error(changeset, field, rule.max_length_error)
+      add_error(changeset, error_field(field), rule.max_length_error)
     else
       changeset
     end
@@ -71,7 +72,7 @@ defmodule OmniArchive.DomainMetadataValidation do
 
   defp maybe_validate_format(changeset, field, value, rule) do
     if format_invalid?(rule, value) do
-      add_error(changeset, field, rule.format_error)
+      add_error(changeset, error_field(field), rule.format_error)
     else
       changeset
     end
@@ -79,7 +80,7 @@ defmodule OmniArchive.DomainMetadataValidation do
 
   defp maybe_validate_required_terms(changeset, field, value, rule) do
     if required_terms_invalid?(rule, value) do
-      add_error(changeset, field, rule.required_terms_error)
+      add_error(changeset, error_field(field), rule.required_terms_error)
     else
       changeset
     end
@@ -101,16 +102,50 @@ defmodule OmniArchive.DomainMetadataValidation do
   defp required_terms_invalid?(_, _), do: false
 
   defp validated_fields do
+    rules = DomainProfiles.validation_rules()
+
     DomainProfiles.metadata_fields()
     |> Enum.map(& &1.field)
-    |> Enum.filter(&Map.has_key?(DomainProfiles.validation_rules(), &1))
+    |> Enum.filter(fn field ->
+      Enum.any?(rules, fn {rule_field, _rule} ->
+        field_key(rule_field) == field_key(field)
+      end)
+    end)
   end
 
-  defp normalize_field(field) when is_atom(field), do: field
+  defp normalize_field(field) do
+    key = field_key(field)
 
-  defp normalize_field(field) when is_binary(field) do
-    String.to_existing_atom(field)
-  rescue
-    ArgumentError -> String.to_atom(field)
+    DomainProfiles.metadata_fields()
+    |> Enum.find(&(field_key(&1.field) == key))
+    |> case do
+      nil -> field
+      metadata_field -> metadata_field.field
+    end
   end
+
+  defp changeset_field_value(changeset, field) do
+    case ExtractedImageMetadata.schema_field_atom(field) do
+      nil ->
+        changeset
+        |> get_field(:metadata)
+        |> metadata_value(field)
+
+      atom ->
+        get_field(changeset, atom)
+    end
+  end
+
+  defp metadata_value(metadata, field) when is_map(metadata) do
+    Map.get(metadata, field_key(field))
+  end
+
+  defp metadata_value(_metadata, _field), do: nil
+
+  defp error_field(field) when is_atom(field), do: field
+  defp error_field(_field), do: :metadata
+
+  defp field_key(field) when is_atom(field), do: Atom.to_string(field)
+  defp field_key(field) when is_binary(field), do: field
+  defp field_key(field), do: to_string(field)
 end

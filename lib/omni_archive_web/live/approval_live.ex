@@ -28,44 +28,52 @@ defmodule OmniArchiveWeb.ApprovalLive do
 
   @impl true
   def handle_event("approve", %{"id" => id}, socket) do
-    image = Ingestion.get_extracted_image!(id)
+    case Ingestion.get_extracted_image(id) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "画像が見つかりません。")}
 
-    case Ingestion.approve_and_publish(image) do
-      {:ok, _updated} ->
-        # リストを再取得
-        pending_images = Ingestion.list_pending_review_images()
+      image ->
+        case Ingestion.approve_and_publish(image) do
+          {:ok, _updated} ->
+            # リストを再取得
+            pending_images = Ingestion.list_pending_review_images()
 
-        {:noreply,
-         socket
-         |> assign(:pending_images, pending_images)
-         |> assign(:pending_count, length(pending_images))
-         |> put_flash(:info, "「#{image.label || "名称未設定"}」を公開しました！")}
+            {:noreply,
+             socket
+             |> assign(:pending_images, pending_images)
+             |> assign(:pending_count, length(pending_images))
+             |> put_flash(:info, "「#{image.label || "名称未設定"}」を公開しました！")}
 
-      {:error, {:ptiff_generation_failed, reason}} ->
-        {:noreply, put_flash(socket, :error, "PTIFF 生成に失敗しました: #{inspect(reason)}")}
+          {:error, {:ptiff_generation_failed, reason}} ->
+            {:noreply, put_flash(socket, :error, "PTIFF 生成に失敗しました: #{inspect(reason)}")}
 
-      {:error, :invalid_status_transition} ->
-        {:noreply, put_flash(socket, :error, "この画像は承認できません。")}
+          {:error, :invalid_status_transition} ->
+            {:noreply, put_flash(socket, :error, "この画像は承認できません。")}
+        end
     end
   end
 
   @impl true
   def handle_event("reject", %{"id" => id}, socket) do
-    image = Ingestion.get_extracted_image!(id)
+    case Ingestion.get_extracted_image(id) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "画像が見つかりません。")}
 
-    case Ingestion.reject_to_draft(image) do
-      {:ok, _updated} ->
-        # リストを再取得
-        pending_images = Ingestion.list_pending_review_images()
+      image ->
+        case Ingestion.reject_to_draft(image) do
+          {:ok, _updated} ->
+            # リストを再取得
+            pending_images = Ingestion.list_pending_review_images()
 
-        {:noreply,
-         socket
-         |> assign(:pending_images, pending_images)
-         |> assign(:pending_count, length(pending_images))
-         |> put_flash(:info, "「#{image.label || "名称未設定"}」を差し戻しました。")}
+            {:noreply,
+             socket
+             |> assign(:pending_images, pending_images)
+             |> assign(:pending_count, length(pending_images))
+             |> put_flash(:info, "「#{image.label || "名称未設定"}」を差し戻しました。")}
 
-      {:error, :invalid_status_transition} ->
-        {:noreply, put_flash(socket, :error, "この画像は差し戻しできません。")}
+          {:error, :invalid_status_transition} ->
+            {:noreply, put_flash(socket, :error, "この画像は差し戻しできません。")}
+        end
     end
   end
 

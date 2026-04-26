@@ -17,11 +17,13 @@ defmodule OmniArchiveWeb.SearchLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    # 利用可能なフィルターオプションを取得
-    filter_options = Search.list_filter_options()
+    current_user = socket.assigns.current_user
 
-    # 初期表示: 全ての公開済み画像を表示
-    results = Search.search_images()
+    # 利用可能なフィルターオプションを取得
+    filter_options = Search.list_filter_options_for_user(current_user)
+
+    # 初期表示: ログインユーザーがアクセスできる画像を表示
+    results = Search.search_images_for_user(current_user)
     result_count = length(results)
 
     {:ok,
@@ -37,7 +39,12 @@ defmodule OmniArchiveWeb.SearchLive do
 
   @impl true
   def handle_event("search", %{"query" => query}, socket) do
-    results = Search.search_images(query, socket.assigns.filters)
+    results =
+      Search.search_images_for_user(
+        socket.assigns.current_user,
+        query,
+        socket.assigns.filters
+      )
 
     {:noreply,
      socket
@@ -58,7 +65,12 @@ defmodule OmniArchiveWeb.SearchLive do
         Map.put(filters, type, value)
       end
 
-    results = Search.search_images(socket.assigns.query, updated_filters)
+    results =
+      Search.search_images_for_user(
+        socket.assigns.current_user,
+        socket.assigns.query,
+        updated_filters
+      )
 
     {:noreply,
      socket
@@ -69,7 +81,12 @@ defmodule OmniArchiveWeb.SearchLive do
 
   @impl true
   def handle_event("clear_filters", _params, socket) do
-    results = Search.search_images(socket.assigns.query, %{})
+    results =
+      Search.search_images_for_user(
+        socket.assigns.current_user,
+        socket.assigns.query,
+        %{}
+      )
 
     {:noreply,
      socket
@@ -244,9 +261,7 @@ defmodule OmniArchiveWeb.SearchLive do
   defp image_thumbnail_url(image) do
     case image.iiif_manifest do
       nil ->
-        # PTIF なし：元画像を使用
-        image.image_path
-        |> String.replace_leading("priv/static/", "/")
+        OmniArchiveWeb.UploadUrls.page_image_url(image.image_path)
 
       manifest ->
         # IIIF Image API でサムネイルを取得
