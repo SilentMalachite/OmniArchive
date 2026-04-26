@@ -30,6 +30,7 @@ defmodule OmniArchiveWeb.Admin.ReviewLive do
   use OmniArchiveWeb, :live_view
 
   alias OmniArchive.Ingestion
+  alias OmniArchive.Ingestion.ExtractedImageMetadata
   alias OmniArchive.Ingestion.ImageProcessor
 
   @impl true
@@ -493,20 +494,14 @@ defmodule OmniArchiveWeb.Admin.ReviewLive do
                 <span class="inspector-detail-label">サマリー</span>
                 <span class="inspector-detail-value">{@selected_image.image.summary || "—"}</span>
               </div>
-              <div class="inspector-detail-item">
-                <span class="inspector-detail-label">遺跡名</span>
-                <span class="inspector-detail-value">{@selected_image.image.site || "—"}</span>
-              </div>
-              <div class="inspector-detail-item">
-                <span class="inspector-detail-label">時代</span>
-                <span class="inspector-detail-value">{@selected_image.image.period || "—"}</span>
-              </div>
-              <div class="inspector-detail-item">
-                <span class="inspector-detail-label">遺物種別</span>
-                <span class="inspector-detail-value">
-                  {@selected_image.image.artifact_type || "—"}
-                </span>
-              </div>
+              <%= for field <- metadata_display_fields() do %>
+                <div class="inspector-detail-item">
+                  <span class="inspector-detail-label">{field.label}</span>
+                  <span class="inspector-detail-value">
+                    {metadata_value(@selected_image.image, field.field) || "—"}
+                  </span>
+                </div>
+              <% end %>
               <div class="inspector-detail-item">
                 <span class="inspector-detail-label">ページ番号</span>
                 <span class="inspector-detail-value">P.{@selected_image.image.page_number}</span>
@@ -635,6 +630,9 @@ defmodule OmniArchiveWeb.Admin.ReviewLive do
   end
 
   # --- プライベート関数 ---
+
+  defp metadata_value(image, field), do: ExtractedImageMetadata.read(image, field)
+  defp metadata_display_fields, do: ExtractedImageMetadata.metadata_fields()
 
   # インスペクターが選択中の画像なら閉じる
   defp close_inspector_if_selected(socket, image_id) do
