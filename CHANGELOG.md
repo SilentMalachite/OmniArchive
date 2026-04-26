@@ -8,6 +8,84 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.24] - 2026-04-26
+
+_Summary: Switches the built-in default domain profile from `Archaeology` to
+`GeneralArchive` so a fresh install starts with a profile suited to general
+archives. `Archaeology` remains available as an opt-in profile. The factory
+becomes profile-aware and Archaeology-flavored tests opt in via
+`put_domain_profile/1` to preserve coverage of both profiles._
+
+### 🔄 デフォルトドメインプロファイルの切替 (Archaeology → GeneralArchive)
+
+- **`config/config.exs` のデフォルト変更**
+  - `domain_profile` を `OmniArchive.DomainProfiles.Archaeology` から
+    `OmniArchive.DomainProfiles.GeneralArchive` に変更。
+  - 汎用アーカイブ向けメタデータ（summary / label / collection / item_type /
+    date_note）が新規プロジェクトのデフォルトに。
+- **`OmniArchive.DomainProfiles` の `@default_profile` 更新 (`domain_profiles.ex`)**
+  - alias と `@default_profile` を `GeneralArchive` に切替。`@compile_time_default_profile`
+    は `@default_profile` を参照しているため自動的に追従。
+- **`CustomMetadataField` の予約キーフォールバック更新 (`custom_metadata_field.ex`)**
+  - `Application.get_env(:omni_archive, :domain_profile, ...)` のフォールバックを
+    `GeneralArchive` に変更。
+
+### ✅ テストスイートの GeneralArchive 既定対応
+
+- **`test/support/factory.ex` のプロファイル対応化**
+  - `extracted_image_attrs/1` のデフォルト `label` がアクティブプロファイルの
+    検証ルールに合わせて自動選択（Archaeology は `fig-N-N`、それ以外は
+    `item-N-N` slug）。`default_factory_label/0` プライベートヘルパーを追加。
+- **Archaeology 前提テストの opt-in 化（13 ファイル）**
+  - `OmniArchive.DomainProfileTestHelper.put_domain_profile/1` を module-level
+    `setup` ブロックで呼び出すパターンを採用。
+  - 対象: `extracted_image_test`, `extracted_image_metadata_test`,
+    `duplicate_lookup_test`, `duplicate_identity_test`,
+    `extracted_image_dedupe_test`, `inspector_live/label_test`,
+    `inspector_live/finalize_test`, `admin/admin_review_live_test`,
+    `gallery_live_test`, `approval_live_test`, `search_live_test`,
+    `iiif/presentation_controller_test`, `search_test`。
+  - `put_domain_profile` が global Application env を変更するため、対象の
+    LiveView / Controller テスト 5 ファイルを `async: true → false` に変更。
+- **デフォルト検証テストの反転**
+  - `domain_profiles_test.exs` を完全書き換えし、`current() == GeneralArchive`、
+    `search_facets()` の `[:collection, :item_type, :date_note]`、
+    `profile_key() == "general_archive"` を検証。
+  - `general_archive_test.exs` の「Archaeology デフォルトは維持される」を
+    「デフォルトは GeneralArchive」に反転。Archaeology は明示 opt-in テストで
+    別途検証。
+- **CRUD/検索テストの label 機械置換**
+  - `ingestion_test.exs` の `fig-N-N` ラベルを `item-N-N` に置換
+    （label が assertion の主対象でない CRUD テスト）。
+
+### 📚 ドキュメント更新
+
+- **`README.md`**: 利用可能 profile 一覧で「(デフォルト)」マーカーを
+  `GeneralArchive` 側に移動。Archaeology を使う場合の `config/config.exs`
+  追記方法を明記。
+- **`CLAUDE.md`**: 設定例と「Built-in」リストを `GeneralArchive` 中心の
+  記述に更新。
+
+### ⚙️ その他
+
+- **`mix.exs` バージョン更新 (0.2.23 → 0.2.24)**
+- **`mix review` 全 phase pass**: db version / compile --warnings-as-errors /
+  credo --strict / sobelow / dialyzer すべて緑。`mix test` 402 件 0 failures。
+
+### ⚠️ 移行ガイド
+
+既存の Archaeology 利用ユーザーがアップグレードする場合、`config/config.exs` に
+以下を明示的に追加して従来挙動を維持してください:
+
+```elixir
+config :omni_archive, domain_profile: OmniArchive.DomainProfiles.Archaeology
+```
+
+DB データは profile 非依存（`metadata` は `:map` 型 JSONB）のため、マイグレーション
+不要。テスト側は本リリースで Archaeology 前提テストへの opt-in が完了済み。
+
+---
+
 ## [0.2.23] - 2026-04-16
 
 _Summary: Introduces YAML-based domain profiles so institutions can define metadata
