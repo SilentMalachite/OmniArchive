@@ -7,6 +7,7 @@ defmodule OmniArchive.DuplicateLookupTest do
 
   describe "find_duplicate_extracted_image/2" do
     test "Archaeology で duplicate fingerprint を使って重複を見つける" do
+      put_domain_profile(OmniArchive.DomainProfiles.Archaeology)
       existing =
         insert_extracted_image(%{
           site: "新潟市中野遺跡",

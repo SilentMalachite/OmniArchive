@@ -7,6 +7,7 @@ defmodule OmniArchive.Ingestion.ExtractedImageDedupeTest do
 
   describe "changeset / unique constraint" do
     test "Archaeology で dedupe_fingerprint を自動計算する" do
+      put_domain_profile(OmniArchive.DomainProfiles.Archaeology)
       pdf_source = insert_pdf_source()
 
       changeset =
