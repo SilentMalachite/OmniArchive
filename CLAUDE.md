@@ -57,10 +57,10 @@ implement `OmniArchive.DomainProfile`
 `duplicate_identity/0`). The active profile is set in config:
 
 ```elixir
-config :omni_archive, domain_profile: OmniArchive.DomainProfiles.Archaeology
+config :omni_archive, domain_profile: OmniArchive.DomainProfiles.GeneralArchive
 ```
 
-Built-in: `Archaeology` (default), `GeneralArchive`. A YAML-driven profile
+Built-in: `GeneralArchive` (default), `Archaeology`. A YAML-driven profile
 (`OmniArchive.DomainProfiles.Yaml`) activates when `OMNI_ARCHIVE_PROFILE_YAML`
 points to a YAML file; this also starts `YamlCache` (ETS-backed GenServer) at
 boot — see `config/runtime.exs`. Details in `PROFILES.md`.

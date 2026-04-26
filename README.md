@@ -87,9 +87,11 @@ faceted filtering based on domain profile metadata fields.
 - **ファセット検索**: active profile で定義されたメタデータ項目によるフィルタリング
 
 利用可能な profile:
-- `OmniArchive.DomainProfiles.Archaeology` (デフォルト)
-- `OmniArchive.DomainProfiles.GeneralArchive`
+- `OmniArchive.DomainProfiles.GeneralArchive` (デフォルト)
+- `OmniArchive.DomainProfiles.Archaeology`
 - **YAML 定義プロファイル** (v0.2.23 以降): `OMNI_ARCHIVE_PROFILE_YAML` 環境変数で YAML ファイルを指定
+
+> デフォルト profile は汎用アーカイブ向けの `GeneralArchive` です。考古学向け `Archaeology` を使う場合は、`config/config.exs` に明示的に `config :omni_archive, domain_profile: OmniArchive.DomainProfiles.Archaeology` を追加してください。
 
 切り替え方法:
 - **組み込みプロファイル**: `config/config.exs` の `config :omni_archive, domain_profile: ...` で指定
