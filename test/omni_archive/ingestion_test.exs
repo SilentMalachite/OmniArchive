@@ -530,8 +530,17 @@ defmodule OmniArchive.IngestionTest do
       pdf1 = insert_pdf_source(%{filename: "shared.pdf"})
       pdf2 = insert_pdf_source(%{filename: "other.pdf"})
 
-      insert_extracted_image(%{pdf_source_id: pdf1.id, owner_id: user_a.id, label: "item-10002-1"})
-      insert_extracted_image(%{pdf_source_id: pdf2.id, owner_id: user_b.id, label: "item-10002-2"})
+      insert_extracted_image(%{
+        pdf_source_id: pdf1.id,
+        owner_id: user_a.id,
+        label: "item-10002-1"
+      })
+
+      insert_extracted_image(%{
+        pdf_source_id: pdf2.id,
+        owner_id: user_b.id,
+        label: "item-10002-2"
+      })
 
       result = Ingestion.list_pdf_sources(user_a)
       ids = Enum.map(result, & &1.id)
