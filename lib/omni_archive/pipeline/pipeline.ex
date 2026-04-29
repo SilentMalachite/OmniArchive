@@ -72,8 +72,10 @@ defmodule OmniArchive.Pipeline do
     )
 
     try do
-      # カラーモードを PdfProcessor に伝搬（デフォルト: "mono"）
-      processor_opts = %{user_id: opts[:owner_id], color_mode: opts[:color_mode] || "mono"}
+      # カラーモードとページ数上限を PdfProcessor に伝搬（デフォルト: "mono"）
+      processor_opts =
+        %{user_id: opts[:owner_id], color_mode: opts[:color_mode] || "mono"}
+        |> put_if_present(:max_pages, opts[:max_pages])
 
       case PdfProcessor.convert_to_images(pdf_path, tmp_dir, processor_opts) do
         {:ok, %{page_count: page_count, image_paths: tmp_image_paths}} ->
@@ -247,6 +249,9 @@ defmodule OmniArchive.Pipeline do
 
     {:ok, %{total: total, succeeded: succeeded, failed: failed, results: results}}
   end
+
+  defp put_if_present(map, _key, nil), do: map
+  defp put_if_present(map, key, value), do: Map.put(map, key, value)
 
   @doc """
   単一画像のクロップ → PTIF → Manifest 生成を実行します。

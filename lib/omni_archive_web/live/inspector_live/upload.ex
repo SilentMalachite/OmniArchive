@@ -15,6 +15,9 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
   @max_pdf_file_size 100_000_000
   @daily_upload_limit 20
   @upload_quota_window_seconds 24 * 60 * 60
+  @default_estimated_page_count 200
+  @min_estimated_page_count 1
+  @max_estimated_page_count 200
 
   @impl true
   def mount(_params, _session, socket) do
@@ -42,13 +45,21 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
      |> assign(:current_page, 0)
      |> assign(:total_pages, 0)
      |> assign(:color_mode, "mono")
+     |> assign(:estimated_page_count, @default_estimated_page_count)
+     |> assign(:min_estimated_page_count, @min_estimated_page_count)
+     |> assign(:max_estimated_page_count, @max_estimated_page_count)
      |> allow_upload(:pdf, accept: ~w(.pdf), max_entries: 1, max_file_size: @max_pdf_file_size)}
   end
 
   @impl true
   def handle_event("validate", params, socket) do
     color_mode = get_in(params, ["color_mode"]) || socket.assigns.color_mode
-    {:noreply, assign(socket, :color_mode, color_mode)}
+    estimated_page_count = parse_estimated_page_count(params["estimated_page_count"])
+
+    {:noreply,
+     socket
+     |> assign(:color_mode, color_mode)
+     |> assign(:estimated_page_count, estimated_page_count)}
   end
 
   @impl true
@@ -65,10 +76,17 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
   # path は Phoenix LiveView の一時ファイル、dest は内部生成で安全。
   def handle_event("upload_pdf", params, socket) do
     color_mode = get_in(params, ["color_mode"]) || socket.assigns.color_mode
+    estimated_page_count = parse_estimated_page_count(params["estimated_page_count"])
 
     case validate_upload_quota(socket.assigns.current_user) do
       :ok ->
-        socket = assign(socket, uploading: true, color_mode: color_mode)
+        socket =
+          assign(socket,
+            uploading: true,
+            color_mode: color_mode,
+            estimated_page_count: estimated_page_count
+          )
+
         handle_pdf_upload(socket)
 
       {:error, message} ->
@@ -76,6 +94,7 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
          socket
          |> assign(:uploading, false)
          |> assign(:color_mode, color_mode)
+         |> assign(:estimated_page_count, estimated_page_count)
          |> assign(:error_message, message)
          |> put_flash(:error, message)}
     end
@@ -165,6 +184,25 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
                   checked={@color_mode == "color"}
                 /> 🎨 カラーモード（標準）
               </label>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 rounded-xl border border-base-300 bg-base-100 p-4 mb-6 sm:grid-cols-[max-content_minmax(7rem,10rem)_1fr] sm:items-center">
+              <label for="estimated-page-count" class="text-sm font-bold text-base-content">
+                PDFページ数の目安
+              </label>
+              <input
+                type="number"
+                id="estimated-page-count"
+                name="estimated_page_count"
+                min={@min_estimated_page_count}
+                max={@max_estimated_page_count}
+                step="1"
+                value={@estimated_page_count}
+                class="input input-bordered w-full font-semibold"
+              />
+              <span class="text-xs text-base-content/60">
+                実際のページ数がこの値を超えるPDFは処理を止めます。
+              </span>
             </div>
 
             <div class="upload-dropzone" phx-drop-target={@uploads.pdf.ref}>
@@ -339,7 +377,8 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
            pdf_source,
            pdf_path,
            pipeline_id,
-           socket.assigns.color_mode
+           socket.assigns.color_mode,
+           socket.assigns.estimated_page_count
          ) do
       :ok ->
         # 完了メッセージを購読する
@@ -383,6 +422,18 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
   defp upload_quota_window_start do
     DateTime.utc_now(:second)
     |> DateTime.add(-@upload_quota_window_seconds, :second)
+  end
+
+  defp parse_estimated_page_count(value) do
+    case Integer.parse(to_string(value || @default_estimated_page_count)) do
+      {page_count, ""} ->
+        page_count
+        |> max(@min_estimated_page_count)
+        |> min(@max_estimated_page_count)
+
+      _ ->
+        @default_estimated_page_count
+    end
   end
 
   defp translate_upload_error(:too_large), do: "ファイルサイズが上限（100MB）を超えています。"

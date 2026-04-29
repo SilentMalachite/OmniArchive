@@ -18,10 +18,17 @@ defmodule OmniArchive.Workers.UserWorker do
     DynamicSupervisor.start_child(@supervisor, {__MODULE__, [user_id: user_id, name: name]})
   end
 
-  def process_pdf(user_id, pdf_source, pdf_path, pipeline_id, color_mode \\ "mono") do
+  def process_pdf(
+        user_id,
+        pdf_source,
+        pdf_path,
+        pipeline_id,
+        color_mode \\ "mono",
+        max_pages \\ nil
+      ) do
     GenServer.call(
       via_tuple(user_id),
-      {:process_pdf, pdf_source, pdf_path, pipeline_id, color_mode}
+      {:process_pdf, pdf_source, pdf_path, pipeline_id, color_mode, max_pages}
     )
   end
 
@@ -43,14 +50,18 @@ defmodule OmniArchive.Workers.UserWorker do
 
   @impl true
   def handle_call(
-        {:process_pdf, _pdf_source, _pdf_path, _pipeline_id, _color_mode},
+        {:process_pdf, _pdf_source, _pdf_path, _pipeline_id, _color_mode, _max_pages},
         _from,
         %{active_pdf_job: true} = state
       ) do
     {:reply, {:error, :pdf_job_in_progress}, state}
   end
 
-  def handle_call({:process_pdf, pdf_source, pdf_path, pipeline_id, color_mode}, _from, state) do
+  def handle_call(
+        {:process_pdf, pdf_source, pdf_path, pipeline_id, color_mode, max_pages},
+        _from,
+        state
+      ) do
     Logger.info("⚙️ ユーザー(#{state.user_id})のPDF(ID:#{pdf_source.id})の裏側処理を開始します...")
 
     worker = self()
@@ -61,7 +72,8 @@ defmodule OmniArchive.Workers.UserWorker do
         # Use the correct extraction function（カラーモードを opts に含める）
         OmniArchive.Pipeline.run_pdf_extraction(pdf_source, pdf_path, pipeline_id, %{
           owner_id: state.user_id,
-          color_mode: color_mode
+          color_mode: color_mode,
+          max_pages: max_pages
         })
 
         # Notify the UI that processing is complete

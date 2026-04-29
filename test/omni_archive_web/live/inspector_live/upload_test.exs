@@ -114,4 +114,30 @@ defmodule OmniArchiveWeb.InspectorLive.UploadTest do
       assert html =~ "PDFファイルをアップロード"
     end
   end
+
+  describe "PDF page estimate" do
+    test "PDF読み込みページ数の目安を入力できる" do
+      user = user_fixture()
+
+      conn =
+        build_conn()
+        |> log_in_user(user)
+
+      {:ok, view, _html} = live(conn, ~p"/lab/upload")
+
+      html = render(view)
+
+      assert html =~ "PDFページ数の目安"
+      assert html =~ ~s(id="estimated-page-count")
+      assert html =~ ~s(name="estimated_page_count")
+      assert html =~ ~s(value="200")
+
+      html =
+        view
+        |> form("#upload-form", %{"color_mode" => "mono", "estimated_page_count" => "120"})
+        |> render_change()
+
+      assert html =~ ~s(value="120")
+    end
+  end
 end
