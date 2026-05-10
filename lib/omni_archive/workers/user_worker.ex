@@ -26,9 +26,28 @@ defmodule OmniArchive.Workers.UserWorker do
         color_mode \\ "mono",
         max_pages \\ nil
       ) do
+    process_source(user_id, pdf_source, pdf_path, pipeline_id, %{
+      color_mode: color_mode,
+      max_pages: max_pages
+    })
+  end
+
+  @doc """
+  汎用ソース（PDF / ZIP）処理を起動する。Pipeline.run_source_extraction を
+  バックグラウンドで実行し、完了通知を PubSub でブロードキャストする。
+
+  ## 引数
+    - user_id: アクセス制御の owner
+    - pdf_source: PdfSource レコード（source_type を含む）
+    - source_path: 物理ファイルパス
+    - pipeline_id: パイプライン識別子
+    - opts: マップ。color_mode / max_pages / max_extracted_bytes を許容
+  """
+  def process_source(user_id, pdf_source, source_path, pipeline_id, opts \\ %{})
+      when is_map(opts) do
     GenServer.call(
       via_tuple(user_id),
-      {:process_pdf, pdf_source, pdf_path, pipeline_id, color_mode, max_pages}
+      {:process_source, pdf_source, source_path, pipeline_id, opts}
     )
   end
 
@@ -50,7 +69,7 @@ defmodule OmniArchive.Workers.UserWorker do
 
   @impl true
   def handle_call(
-        {:process_pdf, _pdf_source, _pdf_path, _pipeline_id, _color_mode, _max_pages},
+        {:process_source, _pdf_source, _source_path, _pipeline_id, _opts},
         _from,
         %{active_pdf_job: true} = state
       ) do
@@ -58,23 +77,32 @@ defmodule OmniArchive.Workers.UserWorker do
   end
 
   def handle_call(
-        {:process_pdf, pdf_source, pdf_path, pipeline_id, color_mode, max_pages},
+        {:process_source, pdf_source, source_path, pipeline_id, opts},
         _from,
         state
       ) do
-    Logger.info("⚙️ ユーザー(#{state.user_id})のPDF(ID:#{pdf_source.id})の裏側処理を開始します...")
+    source_type = pdf_source.source_type || "pdf"
+
+    Logger.info(
+      "⚙️ ユーザー(#{state.user_id})の#{String.upcase(source_type)}(ID:#{pdf_source.id})の裏側処理を開始します..."
+    )
 
     worker = self()
 
     # Run the heavy processing in a separate Task
     Task.start(fn ->
       try do
-        # Use the correct extraction function（カラーモードを opts に含める）
-        OmniArchive.Pipeline.run_pdf_extraction(pdf_source, pdf_path, pipeline_id, %{
-          owner_id: state.user_id,
-          color_mode: color_mode,
-          max_pages: max_pages
-        })
+        run_opts =
+          opts
+          |> Map.put(:owner_id, state.user_id)
+          |> Map.put_new(:color_mode, "mono")
+
+        OmniArchive.Pipeline.run_source_extraction(
+          pdf_source,
+          source_path,
+          pipeline_id,
+          run_opts
+        )
 
         # Notify the UI that processing is complete
         Phoenix.PubSub.broadcast(

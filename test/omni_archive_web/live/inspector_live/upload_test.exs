@@ -28,7 +28,7 @@ defmodule OmniArchiveWeb.InspectorLive.UploadTest do
 
       # PDF ファイルを選択（file_input でエントリを登録）
       pdf_input =
-        file_input(view_a, "#upload-form", :pdf, [
+        file_input(view_a, "#upload-form", :source, [
           %{
             name: "secret_plan.pdf",
             content: <<0, 1, 2, 3, 4>>,
@@ -74,7 +74,7 @@ defmodule OmniArchiveWeb.InspectorLive.UploadTest do
         |> form("#upload-form", %{"color_mode" => "mono"})
         |> render_submit()
 
-      assert html =~ "処理中のPDFがあります"
+      assert html =~ "処理中のソースがあります"
     end
 
     test "24時間のアップロード上限を超えたユーザーは追加アップロードを開始できない" do
@@ -111,7 +111,29 @@ defmodule OmniArchiveWeb.InspectorLive.UploadTest do
 
       html = render_click(view, "switch_tab", %{"tab" => "not_a_tab"})
 
-      assert html =~ "PDFファイルをアップロード"
+      assert html =~ "ソースファイルをアップロード"
+    end
+  end
+
+  describe "ZIP source upload" do
+    test ".zip ファイルがアップロードキューに登録できる" do
+      user = user_fixture()
+
+      conn = build_conn() |> log_in_user(user)
+      {:ok, view, _html} = live(conn, ~p"/lab/upload")
+
+      zip_input =
+        file_input(view, "#upload-form", :source, [
+          %{
+            name: "pages.zip",
+            content: <<80, 75, 5, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>>,
+            type: "application/zip"
+          }
+        ])
+
+      render_upload(zip_input, "pages.zip")
+
+      assert render(view) =~ "pages.zip"
     end
   end
 

@@ -21,11 +21,11 @@ defmodule OmniArchiveWeb.StaticUploadsAccessTest do
     setup %{conn: conn} do
       user = OmniArchive.AccountsFixtures.user_fixture()
       pdf_source = insert_pdf_source(%{user_id: user.id, status: "ready"})
-      pages_dir = Path.join(["priv", "static", "uploads", "pages", "#{pdf_source.id}"])
+      pages_dir = OmniArchive.Ingestion.PdfSource.pages_dir(pdf_source)
       File.mkdir_p!(pages_dir)
       File.write!(Path.join(pages_dir, "page-001.png"), "private page")
 
-      on_exit(fn -> File.rm_rf!("priv/static/uploads/pages/#{pdf_source.id}") end)
+      on_exit(fn -> File.rm_rf!(pages_dir) end)
 
       %{conn: log_in_user(conn, user), user: user, pdf_source: pdf_source}
     end
