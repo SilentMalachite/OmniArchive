@@ -9,6 +9,7 @@ defmodule OmniArchiveWeb.InspectorLive.Browse do
   import OmniArchiveWeb.WizardComponents
 
   alias OmniArchive.Ingestion
+  alias OmniArchive.Ingestion.PdfSource
 
   @impl true
   def mount(%{"pdf_source_id" => pdf_source_id}, _session, socket) do
@@ -20,7 +21,7 @@ defmodule OmniArchiveWeb.InspectorLive.Browse do
        |> put_flash(:error, "指定されたPDFソースが見つかりません（ID: #{pdf_source_id}）")
        |> push_navigate(to: ~p"/lab")}
     else
-      pages_dir = Path.join(["priv", "static", "uploads", "pages", "#{pdf_source.id}"])
+      pages_dir = PdfSource.pages_dir(pdf_source)
 
       # ページ画像のリストを取得
       page_images =

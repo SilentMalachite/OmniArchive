@@ -3,6 +3,9 @@ defmodule OmniArchiveWeb.UploadUrls do
   Builds authenticated URLs for files stored under priv/static/uploads.
   """
 
+  alias OmniArchive.Ingestion.PdfSource
+  alias OmniArchive.Repo
+
   @pages_prefix "priv/static/uploads/pages/"
 
   def page_image_url(nil), do: nil
@@ -10,8 +13,8 @@ defmodule OmniArchiveWeb.UploadUrls do
 
   def page_image_url(@pages_prefix <> rest) do
     case String.split(rest, "/", parts: 2) do
-      [pdf_source_id, filename] when pdf_source_id != "" and filename != "" ->
-        "/lab/uploads/pages/#{pdf_source_id}/#{filename}"
+      [pages_dir_key, filename] when pages_dir_key != "" and filename != "" ->
+        "/lab/uploads/pages/#{route_source_id(pages_dir_key)}/#{filename}"
 
       _ ->
         nil
@@ -19,4 +22,17 @@ defmodule OmniArchiveWeb.UploadUrls do
   end
 
   def page_image_url(_path), do: nil
+
+  defp route_source_id(pages_dir_key) do
+    case Integer.parse(pages_dir_key) do
+      {_id, ""} ->
+        pages_dir_key
+
+      _ ->
+        case Repo.get_by(PdfSource, storage_key: pages_dir_key) do
+          %PdfSource{id: id} -> to_string(id)
+          nil -> pages_dir_key
+        end
+    end
+  end
 end

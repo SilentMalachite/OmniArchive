@@ -23,6 +23,7 @@ defmodule OmniArchive.Ingestion.PdfSource do
 
   @workflow_statuses ["wip", "pending_review", "returned", "approved"]
   @source_types ["pdf", "zip"]
+  @pages_root Path.join(["priv", "static", "uploads", "pages"])
 
   schema "pdf_sources" do
     # ソースのファイル名
@@ -100,13 +101,22 @@ defmodule OmniArchive.Ingestion.PdfSource do
   ページ画像ディレクトリの絶対パス（priv/static/uploads/pages/<storage_key>）を返す。
   storage_key が未設定の場合は id ベースのフォールバック（後方互換）を返す。
   """
-  def pages_dir(%__MODULE__{storage_key: key}) when is_binary(key) and key != "" do
-    Path.join(["priv", "static", "uploads", "pages", key])
+  def pages_dir(%__MODULE__{storage_key: key, id: id}) when is_binary(key) and key != "" do
+    storage_key_dir = page_dir_for(key)
+    legacy_id_dir = if id, do: page_dir_for(id)
+
+    cond do
+      File.dir?(storage_key_dir) -> storage_key_dir
+      legacy_id_dir && File.dir?(legacy_id_dir) -> legacy_id_dir
+      true -> storage_key_dir
+    end
   end
 
   def pages_dir(%__MODULE__{id: id}) when not is_nil(id) do
-    Path.join(["priv", "static", "uploads", "pages", "#{id}"])
+    page_dir_for(id)
   end
+
+  defp page_dir_for(value), do: Path.join(@pages_root, to_string(value))
 
   # 新規 changeset で storage_key が未指定なら UUID ベースの値を自動付与する。
   # 既存レコードの更新では既存値を尊重する。

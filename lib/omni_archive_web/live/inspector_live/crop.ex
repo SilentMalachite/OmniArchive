@@ -19,6 +19,7 @@ defmodule OmniArchiveWeb.InspectorLive.Crop do
   import OmniArchiveWeb.WizardComponents
 
   alias OmniArchive.Ingestion
+  alias OmniArchive.Ingestion.PdfSource
 
   @nudge_amount 10
   @max_polygon_points 64
@@ -50,7 +51,7 @@ defmodule OmniArchiveWeb.InspectorLive.Crop do
     existing_image = Ingestion.find_extracted_image_by_page(pdf_source.id, page_number)
 
     # ページ画像のパスとURLを構築
-    pages_dir = Path.join(["priv", "static", "uploads", "pages", "#{pdf_source.id}"])
+    pages_dir = PdfSource.pages_dir(pdf_source)
 
     page_filename =
       if File.dir?(pages_dir) do
