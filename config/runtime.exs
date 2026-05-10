@@ -129,3 +129,29 @@ if yaml_path = System.get_env("OMNI_ARCHIVE_PROFILE_YAML") do
   config :omni_archive, domain_profile: OmniArchive.DomainProfiles.Yaml
   config :omni_archive, domain_profile_yaml_path: yaml_path
 end
+
+# --- 取り込み容量保護（PDF / ZIP 共通）---
+# 環境変数で上書き可能。負値・非整数は起動時にクラッシュさせ、誤設定の早期検知を行う。
+ingestion_int = fn name, default ->
+  case System.get_env(name) do
+    nil ->
+      default
+
+    value ->
+      case Integer.parse(value) do
+        {n, ""} when n > 0 ->
+          n
+
+        _ ->
+          raise """
+          環境変数 #{name} は正の整数で指定してください: 受信値=#{inspect(value)}
+          """
+      end
+  end
+end
+
+config :omni_archive, :ingestion,
+  max_source_upload_bytes: ingestion_int.("MAX_SOURCE_UPLOAD_BYTES", 500_000_000),
+  zip_max_extracted_bytes: ingestion_int.("ZIP_MAX_EXTRACTED_BYTES", 1_000_000_000),
+  pdf_max_pages: ingestion_int.("PDF_MAX_PAGES", 1500),
+  zip_max_pages: ingestion_int.("ZIP_MAX_PAGES", 1500)

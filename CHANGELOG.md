@@ -8,6 +8,76 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.3.0] - 2026-05-10
+
+_Summary: AlchemIIIF v0.3.0 と機能等価の取り込みパイプライン更新。
+PNG コレクションを ZIP として投入できるようにし、ポリゴンクロップの
+境界処理を境界色サンプリング + Gaussian feathering に切り替え、
+ダウンロード出力を PNG ロスレスで統一し、容量上限を環境変数で集約。_
+
+### 🆕 ZIP ソース対応
+
+- **`PdfSource` に `source_type` (`pdf` | `zip`) と `storage_key` を追加**
+  - 物理ディレクトリは `priv/static/uploads/pages/<storage_key>` で解決。新規行は UUID
+    ベース、既存行は migration で `src-<id>` を backfill して後方互換を維持。
+  - `OmniArchive.Ingestion.PdfSource.pdf?/1` `zip?/1` `pages_dir/1` の helper を提供。
+- **`OmniArchive.Ingestion.ZipProcessor` を追加**
+  - PNG コレクションを抽出。AppleDouble (`__MACOSX/`, `._*`) を除外し、自然順ソート、
+    ネストディレクトリ平坦化、`page-NNN-{ts}.png` 形式へ統一リネーム。
+  - **3 層防御**: zip-slip 防止 (`Path.expand` で出力 dir 配下確認)、
+    PNG マジックバイト検証、`zip_max_extracted_bytes` / `zip_max_pages` ガード。
+  - OTP 標準 `:zip` のみで実装し、新規依存を追加しない。
+- **`Pipeline.run_source_extraction/4`（dispatcher）を追加**
+  - `source_type` に応じて `PdfProcessor.convert_to_images/3` か
+    `ZipProcessor.extract_pngs/3` をディスパッチ。
+  - 既存 `run_pdf_extraction/4` は新 API への薄いラッパに変更（後方互換）。
+- **Inspector Upload UI を `.pdf` + `.zip` 受付に拡張**
+  - upload エントリ key が `:pdf` → `:source` に、submit イベントが
+    `upload_pdf` → `upload_source` に変更。
+  - `UserWorker.process_source/5` を導入（`process_pdf/6` は委譲）。
+  - 旧 `/lab/uploads/pages/:pdf_source_id/:filename` は内部解決を
+    `PdfSource.pages_dir/1` に切り替え（URL 構造は維持）。
+
+### 🎨 ポリゴンクロップ境界リファインメント
+
+- ポリゴン外を**純白塗りつぶしから「境界辺サンプリング平均色 + Gaussian feathering」**に
+  変更。`ifthenelse(blend: true)` で連続マスクを使い、エッジでの白縁取りや
+  色バンディングを軽減。
+- 既存の RGB 3 バンド正規化・SVG マスク戦略は維持。フォールバック時は純白に縮退。
+
+### 💾 ダウンロード出力の PNG 統一
+
+- `/download/:id` のレスポンスを **`image/png`** に統一し、ファイル名拡張子も `.png` に。
+- `ImageProcessor.crop_to_binary/2` の矩形ケースが PNG ロスレスで返却（ポリゴン経路は既に PNG）。
+- 中間 JPEG を排除し、ロスレスでアーカイブ／ギャラリー間の品質を揃える。
+
+### 🛡️ 取り込み容量保護（env var 集約）
+
+- `config :omni_archive, :ingestion` キーに以下を集約。`config/runtime.exs` で
+  環境変数からロードし、不正値はクラッシュさせる:
+  - `MAX_SOURCE_UPLOAD_BYTES` (default 500MB) — 単一アップロードサイズ上限
+  - `ZIP_MAX_EXTRACTED_BYTES` (default 1GB) — ZIP 展開後合計サイズ上限
+  - `PDF_MAX_PAGES` (default 1500) — PDF 変換ページ数上限
+  - `ZIP_MAX_PAGES` (default 1500) — ZIP 展開ページ数上限
+- `PdfProcessor.validate_page_count` と Inspector Upload LiveView の `allow_upload`
+  / 目安スライダ / `:too_large` エラー表示はすべてこの設定経由に。
+
+### ✅ テスト
+
+- `test/omni_archive/ingestion/zip_processor_test.exs` — 正常系（自然順、ネスト、
+  `page-NNN-{ts}` リネーム）、セキュリティ（zip-slip、マジックバイト、AppleDouble、
+  PNG なし）、容量（max_pages / max_extracted_bytes）。
+- `test/omni_archive/ingestion/image_processor_test.exs` — PNG マジックバイト検証付きで
+  矩形・ポリゴン双方を検証。
+- `test/omni_archive_web/controllers/download_controller_test.exs` — `image/png`
+  Content-Type と `.png` Content-Disposition を確認。
+- `test/omni_archive_web/live/inspector_live/upload_test.exs` — `.zip` 受付
+  シナリオを追加し、新エラー文言に追従。
+- `test/omni_archive_web/controllers/static_uploads_access_test.exs` — `pages_dir/1`
+  経由のパス解決を使用。
+
+---
+
 ## [0.2.25] - 2026-04-27
 
 _Summary: Hardens security-sensitive routes, LiveView events, private upload delivery,

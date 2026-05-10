@@ -16,7 +16,7 @@ Then route to code by task:
 
 | Task | Start here |
 |---|---|
-| PDF ingestion / pipeline | `lib/omni_archive/ingestion/pdf_processor.ex`, `extracted_image.ex`, `lib/omni_archive/application.ex` |
+| PDF / ZIP ingestion / pipeline | `lib/omni_archive/ingestion/pdf_processor.ex`, `lib/omni_archive/ingestion/zip_processor.ex`, `extracted_image.ex`, `lib/omni_archive/pipeline/pipeline.ex`, `lib/omni_archive/application.ex` |
 | Search / facets | `lib/omni_archive/search.ex`, `lib/omni_archive_web/live/search_live.ex` |
 | Lab wizard (5 steps) | `lib/omni_archive_web/live/inspector_live/{upload,browse,crop,label,finalize}.ex` |
 | IIIF delivery | `lib/omni_archive_web/controllers/iiif/`, `lib/omni_archive/iiif/` |
@@ -30,9 +30,18 @@ Then route to code by task:
 figures, IIIF v3.0 serves them. Three top-level concerns share the codebase but
 have hard module boundaries:
 
-- **Ingestion** (`OmniArchive.Ingestion`) — PDF upload → `pdftoppm` chunked
-  conversion (10-page chunks, 300 DPI) → manual polygon crop → libvips PTIF
-  generation. Schemas: `PdfSource`, `ExtractedImage`, `ExtractedImageMetadata`.
+- **Ingestion** (`OmniArchive.Ingestion`) — PDF or PNG-ZIP upload →
+  `pdftoppm` chunked conversion (10-page chunks, 300 DPI) **or**
+  `:zip`-based PNG extraction (zip-slip + magic-byte + size guards)
+  → manual polygon crop (boundary-color sampled, Gaussian-feathered)
+  → libvips PTIF generation. Schemas: `PdfSource` (with
+  `source_type` ∈ {"pdf","zip"} and unique `storage_key`),
+  `ExtractedImage`, `ExtractedImageMetadata`. The dispatcher is
+  `Pipeline.run_source_extraction/4`; physical page directories are
+  resolved via `PdfSource.pages_dir/1`. Capacity caps live in
+  `config :omni_archive, :ingestion` and are sourced from
+  `MAX_SOURCE_UPLOAD_BYTES` / `ZIP_MAX_EXTRACTED_BYTES` /
+  `PDF_MAX_PAGES` / `ZIP_MAX_PAGES`.
 - **Search** (`OmniArchive.Search`) — PostgreSQL full-text search
   (tsvector + GIN) over captions; facets come from the active domain profile.
 - **Delivery** (`OmniArchive.IIIF` + `OmniArchiveWeb.IIIF.*`) — IIIF Image API

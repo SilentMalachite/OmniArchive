@@ -17,6 +17,12 @@ defmodule OmniArchive.Ingestion.ImageProcessor do
 
   require Logger
 
+  # ポリゴンクロップ境界処理のチューニング
+  # - boundary_samples: ポリゴン辺上から平均色を取るサンプル点数
+  # - feather_radius: SVG マスクへ適用する Gaussian blur の半径（ピクセル）
+  @polygon_boundary_samples 32
+  @polygon_feather_radius 1.5
+
   @doc """
   画像をクロップして保存します。
   ポリゴンデータ（points 配列）がある場合は SVG マスク戦略で多角形クロップを実行します。
@@ -60,7 +66,7 @@ defmodule OmniArchive.Ingestion.ImageProcessor do
   def crop_to_binary(image_path, %{"x" => x, "y" => y, "width" => w, "height" => h}) do
     with {:ok, image} <- Image.new_from_file(image_path),
          {:ok, cropped} <- Operation.extract_area(image, round(x), round(y), round(w), round(h)) do
-      Image.write_to_buffer(cropped, ".jpg")
+      Image.write_to_buffer(cropped, ".png")
     end
   end
 
@@ -122,16 +128,16 @@ defmodule OmniArchive.Ingestion.ImageProcessor do
 
   # --- プライベート関数 ---
 
-  # ポリゴンクロップ: ifthenelse 白背景合成戦略
+  # ポリゴンクロップ: 境界色サンプリング + Gaussian feathering 戦略
   #
   # 1. バウンディングボックスを計算し、元画像からその領域を extract_area で切り出す
-  # 2. SVG マスク（白ポリゴン/黒背景）を生成し、1バンドマスクを抽出
-  # 3. 白背景RGB画像を作成
-  # 4. ifthenelse でマスク白部分=元画像、マスク黒部分=白背景 に合成
-  # 5. ポリゴン外が純白(255,255,255)の RGB 画像を保存
+  # 2. ポリゴン辺上の N サンプル点から平均 RGB を算出（境界色）
+  # 3. SVG マスク（白ポリゴン/黒背景）を生成 → Gaussian blur で feathering
+  # 4. ifthenelse で連続マスクを使い、境界色背景と元画像をブレンド
+  # 5. ポリゴン外が境界平均色でフェザリングされた RGB 画像を保存
   defp crop_polygon(image_path, points, output_path) do
     with {:ok, masked} <- apply_polygon_mask(image_path, points) do
-      # 白背景マスキング済みRGB画像として保存（透過不要）
+      # PNG ロスレスで保存（透過不要、境界色マスキング済み）
       Image.write_to_file(masked, output_path)
     end
   end
@@ -143,10 +149,12 @@ defmodule OmniArchive.Ingestion.ImageProcessor do
     end
   end
 
-  # ポリゴンマスキングのコアロジック（ifthenelse 白背景合成）
+  # ポリゴンマスキングのコアロジック（境界色 + Gaussian feathering 合成）
   #
-  # JPEG はアルファチャンネルを持てないため、ポリゴン外を物理的に
-  # 純白 [255,255,255] で塗りつぶし、3バンド RGB 画像として返す。
+  # ポリゴン外を、境界辺上ピクセルの平均色で塗りつぶし、Gaussian blur で
+  # マスクをぼかすことで色バンディング・エッジアーティファクトを軽減する。
+  # 純白背景時に発生していた「白縁取り」を抑制し、ギャラリー表示や
+  # ダウンロード画像の連続性を改善する。
   defp apply_polygon_mask(image_path, points) do
     with {:ok, image} <- Image.new_from_file(image_path) do
       # 1. バウンディングボックスを計算
@@ -161,7 +169,7 @@ defmodule OmniArchive.Ingestion.ImageProcessor do
       bbox_h = min(bbox_h, img_h - min_y)
 
       Logger.info(
-        "[ImageProcessor] Polygon crop (white mask): bbox=#{min_x},#{min_y},#{bbox_w}x#{bbox_h} points=#{length(points)}"
+        "[ImageProcessor] Polygon crop (boundary+feather): bbox=#{min_x},#{min_y},#{bbox_w}x#{bbox_h} points=#{length(points)}"
       )
 
       # 2. バウンディングボックスで矩形クロップ（メモリ節約）
@@ -169,7 +177,13 @@ defmodule OmniArchive.Ingestion.ImageProcessor do
         width = Image.width(cropped_img)
         height = Image.height(cropped_img)
 
-        # 3. オフセット済みポリゴン座標で SVG マスクを生成（白ポリゴン/黒背景）
+        # 3. クロップ画像を 3バンド RGB に正規化（バンドミスマッチ防止）
+        {:ok, rgb_img} = Operation.extract_band(cropped_img, 0, n: 3)
+
+        # 4. ポリゴン辺上から境界平均色を算出（失敗時は純白フォールバック）
+        boundary_rgb = sample_boundary_color(rgb_img, points, min_x, min_y, width, height)
+
+        # 5. オフセット済みポリゴン座標で SVG マスク（白ポリゴン/黒背景）を生成
         offset_points =
           Enum.map(points, fn p ->
             x = round(p["x"] || p[:x] || 0) - min_x
@@ -187,25 +201,107 @@ defmodule OmniArchive.Ingestion.ImageProcessor do
 
         {:ok, {svg_img, _}} = Operation.svgload_buffer(svg_mask)
         # 1バンドマスクを抽出（白=255, 黒=0）
-        {:ok, mask} = Operation.extract_band(svg_img, 0)
+        {:ok, mask_raw} = Operation.extract_band(svg_img, 0)
 
-        # 4. 純白 RGB 背景画像を作成（black → invert で全ピクセル 255）
-        {:ok, black} = Operation.black(width, height)
-        {:ok, white} = Operation.invert(black)
-        {:ok, white_bg} = Operation.bandjoin([white, white, white])
+        # 6. Gaussian blur でマスクをフェザリング（連続値マスクへ）
+        mask = blur_mask(mask_raw)
 
-        # 5. クロップ画像を正確に 3バンド RGB に正規化（バンドミスマッチ防止）
-        {:ok, rgb_img} = Operation.extract_band(cropped_img, 0, n: 3)
+        # 7. 境界色 RGB 背景画像を作成
+        {:ok, bg_rgb} = build_boundary_background(width, height, boundary_rgb)
 
-        # 6. ifthenelse 合成:
-        #    マスクが白(>0)の箇所 → rgb_img（元画像）
-        #    マスクが黒(0)の箇所 → white_bg（純白背景）
-        {:ok, final_img} = Operation.ifthenelse(mask, rgb_img, white_bg)
+        # 8. ifthenelse 合成:
+        #    マスク白部分(>0) → rgb_img（元画像）
+        #    マスク黒部分(0)   → bg_rgb（境界色背景）
+        #    中間値           → 線形ブレンド（フェザリング効果）
+        {:ok, final_img} = Operation.ifthenelse(mask, rgb_img, bg_rgb, blend: true)
 
         {:ok, final_img}
       end
     end
   end
+
+  # SVG マスクに Gaussian blur を適用してフェザリング。失敗時は元マスクをそのまま返す。
+  defp blur_mask(mask) do
+    case Operation.gaussblur(mask, @polygon_feather_radius) do
+      {:ok, blurred} -> blurred
+      _ -> mask
+    end
+  end
+
+  # 境界平均色で塗りつぶした幅×高さの RGB 画像を作成
+  defp build_boundary_background(width, height, {r, g, b}) do
+    with {:ok, black} <- Operation.black(width, height),
+         {:ok, r_band} <- Operation.linear(black, [1.0], [r * 1.0]),
+         {:ok, g_band} <- Operation.linear(black, [1.0], [g * 1.0]),
+         {:ok, b_band} <- Operation.linear(black, [1.0], [b * 1.0]),
+         {:ok, rgb} <- Operation.bandjoin([r_band, g_band, b_band]) do
+      # 念のため uchar (0-255) にキャスト
+      Operation.cast(rgb, :VIPS_FORMAT_UCHAR)
+    end
+  end
+
+  # ポリゴン辺上のサンプル点から平均 RGB を算出。
+  # サンプルが取れない場合は純白 {255, 255, 255} にフォールバック。
+  defp sample_boundary_color(rgb_img, points, min_x, min_y, width, height)
+       when is_list(points) and length(points) >= 3 do
+    samples =
+      points
+      |> edge_segments()
+      |> Stream.flat_map(&interpolate_segment(&1, @polygon_boundary_samples))
+      |> Stream.map(fn {x, y} -> {round(x) - min_x, round(y) - min_y} end)
+      |> Stream.map(fn {x, y} -> {clamp(x, 0, width - 1), clamp(y, 0, height - 1)} end)
+      |> Enum.uniq()
+      |> Enum.take(@polygon_boundary_samples)
+
+    rgbs =
+      Enum.flat_map(samples, fn {x, y} ->
+        case Operation.getpoint(rgb_img, x, y) do
+          {:ok, [r, g, b | _]} -> [{r, g, b}]
+          {:ok, [r, g]} -> [{r, g, g}]
+          {:ok, [v]} -> [{v, v, v}]
+          _ -> []
+        end
+      end)
+
+    case rgbs do
+      [] ->
+        {255, 255, 255}
+
+      list ->
+        n = length(list)
+
+        {sr, sg, sb} =
+          Enum.reduce(list, {0.0, 0.0, 0.0}, fn {r, g, b}, {ar, ag, ab} ->
+            {ar + r, ag + g, ab + b}
+          end)
+
+        {round(sr / n), round(sg / n), round(sb / n)}
+    end
+  end
+
+  defp sample_boundary_color(_rgb_img, _points, _min_x, _min_y, _w, _h), do: {255, 255, 255}
+
+  # 連続するポリゴン頂点ペアを `[{p1, p2}, …]` で返す（最後は最初に戻る閉路）
+  defp edge_segments(points) do
+    rotated = tl(points) ++ [hd(points)]
+    Enum.zip(points, rotated)
+  end
+
+  # 1辺を samples_per_polygon / 辺数 個の点に等間隔で内分
+  defp interpolate_segment({a, b}, total_samples) do
+    n = max(div(total_samples, 8), 2)
+    ax = a["x"] || a[:x] || 0
+    ay = a["y"] || a[:y] || 0
+    bx = b["x"] || b[:x] || 0
+    by = b["y"] || b[:y] || 0
+
+    for i <- 0..(n - 1) do
+      t = i / max(n - 1, 1)
+      {ax + (bx - ax) * t, ay + (by - ay) * t}
+    end
+  end
+
+  defp clamp(v, lo, hi), do: v |> max(lo) |> min(hi)
 
   # ポリゴン頂点配列からバウンディングボックスを計算
   # 戻り値: {min_x, min_y, width, height}

@@ -1,8 +1,9 @@
 defmodule OmniArchiveWeb.InspectorLive.Upload do
   @moduledoc """
-  ウィザード Step 1: PDF アップロード画面 + 要修正タブ。
-  PDFファイルをアップロードし、並列パイプラインで自動的にPNG画像に変換します。
-  差し戻された画像の一覧も表示し、修正・再提出ワークフローを提供します。
+  ウィザード Step 1: ソース（PDF / ZIP）アップロード画面 + 要修正タブ。
+  PDF または PNG 入り ZIP をアップロードし、並列パイプラインで自動的に
+  ページ画像へ展開します。差し戻された画像の一覧も表示し、修正・再提出
+  ワークフローを提供します。
   """
   use OmniArchiveWeb, :live_view
 
@@ -12,12 +13,13 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
   alias OmniArchive.Pipeline
   alias OmniArchive.Workers.UserWorker
 
-  @max_pdf_file_size 100_000_000
   @daily_upload_limit 20
   @upload_quota_window_seconds 24 * 60 * 60
   @default_estimated_page_count 200
   @min_estimated_page_count 1
-  @max_estimated_page_count 200
+  # 取り込み容量・ページ上限のフォールバック（runtime.exs で上書き）
+  @fallback_max_source_upload_bytes 500_000_000
+  @fallback_max_pages 1500
 
   @impl true
   def mount(_params, _session, socket) do
@@ -33,9 +35,12 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
 
     rejected_images = Ingestion.list_rejected_images(current_user)
 
+    max_estimated_page_count = ingestion_max_pages()
+    max_source_upload_bytes = ingestion_max_upload_bytes()
+
     {:ok,
      socket
-     |> assign(:page_title, "PDF をアップロード")
+     |> assign(:page_title, "ソースをアップロード")
      |> assign(:current_step, 1)
      |> assign(:uploading, false)
      |> assign(:error_message, nil)
@@ -45,10 +50,15 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
      |> assign(:current_page, 0)
      |> assign(:total_pages, 0)
      |> assign(:color_mode, "mono")
-     |> assign(:estimated_page_count, @default_estimated_page_count)
+     |> assign(:estimated_page_count, default_estimated_page_count(max_estimated_page_count))
      |> assign(:min_estimated_page_count, @min_estimated_page_count)
-     |> assign(:max_estimated_page_count, @max_estimated_page_count)
-     |> allow_upload(:pdf, accept: ~w(.pdf), max_entries: 1, max_file_size: @max_pdf_file_size)}
+     |> assign(:max_estimated_page_count, max_estimated_page_count)
+     |> assign(:max_source_upload_bytes, max_source_upload_bytes)
+     |> allow_upload(:source,
+       accept: ~w(.pdf .zip),
+       max_entries: 1,
+       max_file_size: max_source_upload_bytes
+     )}
   end
 
   @impl true
@@ -72,9 +82,10 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
   end
 
   @impl true
-  # セキュリティ注記: upload_dir は固定パス（priv/static/uploads/pdfs）、
-  # path は Phoenix LiveView の一時ファイル、dest は内部生成で安全。
-  def handle_event("upload_pdf", params, socket) do
+  # セキュリティ注記: upload_dir は固定パス（PDF: priv/static/uploads/pdfs,
+  # ZIP: priv/static/uploads/sources）、path は Phoenix LiveView の一時ファイル、
+  # dest は内部生成で安全。
+  def handle_event("upload_source", params, socket) do
     color_mode = get_in(params, ["color_mode"]) || socket.assigns.color_mode
     estimated_page_count = parse_estimated_page_count(params["estimated_page_count"])
 
@@ -87,7 +98,7 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
             estimated_page_count: estimated_page_count
           )
 
-        handle_pdf_upload(socket)
+        handle_source_upload(socket)
 
       {:error, message} ->
         {:noreply,
@@ -161,10 +172,12 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
       <%!-- アップロードタブ --%>
       <%= if @active_tab == :upload do %>
         <div class="upload-area">
-          <h2 class="section-title">PDFファイルをアップロード</h2>
-          <p class="section-description">アーカイブする PDF ファイルを選択してください。</p>
+          <h2 class="section-title">ソースファイルをアップロード</h2>
+          <p class="section-description">
+            アーカイブする PDF または PNG 入り ZIP ファイルを選択してください。
+          </p>
 
-          <form id="upload-form" phx-submit="upload_pdf" phx-change="validate">
+          <form id="upload-form" phx-submit="upload_source" phx-change="validate">
             <%!-- カラーモード切替ラジオボタン --%>
             <div class="color-mode-selector">
               <span class="color-mode-label">変換モード:</span>
@@ -201,19 +214,21 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
                 class="input input-bordered w-full font-semibold"
               />
               <span class="text-xs text-base-content/60">
-                実際のページ数がこの値を超えるPDFは処理を止めます。
+                実際のページ数がこの値を超えるソースは処理を止めます。
               </span>
             </div>
 
-            <div class="upload-dropzone" phx-drop-target={@uploads.pdf.ref}>
-              <.live_file_input upload={@uploads.pdf} class="file-input" />
+            <div class="upload-dropzone" phx-drop-target={@uploads.source.ref}>
+              <.live_file_input upload={@uploads.source} class="file-input" />
               <div class="dropzone-content">
                 <span class="dropzone-icon">📄</span>
-                <span class="dropzone-text">ここにPDFをドラッグ、またはクリックして選択</span>
+                <span class="dropzone-text">
+                  ここに PDF または ZIP をドラッグ、またはクリックして選択
+                </span>
               </div>
             </div>
 
-            <%= for entry <- @uploads.pdf.entries do %>
+            <%= for entry <- @uploads.source.entries do %>
               <div class="upload-entry">
                 <span class="entry-name">{entry.client_name}</span>
                 <progress value={entry.progress} max="100" class="upload-progress">
@@ -222,7 +237,7 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
               </div>
 
               <%!-- エントリ単位のアップロードエラー表示 --%>
-              <%= for err <- upload_errors(@uploads.pdf, entry) do %>
+              <%= for err <- upload_errors(@uploads.source, entry) do %>
                 <div class="error-message" role="alert">
                   <span class="error-icon">⚠️</span>
                   {translate_upload_error(err)}
@@ -231,7 +246,7 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
             <% end %>
 
             <%!-- 全体のアップロードエラー表示 --%>
-            <%= for err <- upload_errors(@uploads.pdf) do %>
+            <%= for err <- upload_errors(@uploads.source) do %>
               <div class="error-message" role="alert">
                 <span class="error-icon">⚠️</span>
                 {translate_upload_error(err)}
@@ -248,7 +263,7 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
             <button
               type="submit"
               class="btn-primary btn-large"
-              disabled={@uploading || @uploads.pdf.entries == []}
+              disabled={@uploading || @uploads.source.entries == []}
             >
               <%= if @uploading do %>
                 <span class="spinner"></span> アップロード中...
@@ -260,7 +275,7 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
             <%= if @uploading && @total_pages > 0 do %>
               <div class="mt-4">
                 <div class="flex justify-between mb-1">
-                  <span class="text-sm font-medium text-gray-700">PDFを読み込み中...</span>
+                  <span class="text-sm font-medium text-gray-700">ソースを読み込み中...</span>
                   <span class="text-sm font-medium text-gray-700">
                     {@current_page} / {@total_pages} ページ
                   </span>
@@ -329,73 +344,82 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
     """
   end
 
-  # アップロードエラーを日本語に変換するヘルパー
-  defp handle_pdf_upload(socket) do
-    uploaded_files =
-      consume_uploaded_entries(socket, :pdf, fn %{path: path}, entry ->
-        # アップロードディレクトリの作成
-        upload_dir = Path.join(["priv", "static", "uploads", "pdfs"])
+  # アップロードされたソース（PDF / ZIP）を保存ディレクトリに永続化し、
+  # source_type をファイル拡張子から判定してパイプラインを起動する。
+  defp handle_source_upload(socket) do
+    uploaded =
+      consume_uploaded_entries(socket, :source, fn %{path: path}, entry ->
+        ext = entry.client_name |> Path.extname() |> String.downcase()
+        source_type = source_type_for_extension(ext)
+        upload_dir = upload_dir_for(source_type)
         File.mkdir_p!(upload_dir)
 
-        # ファイル名にタイムスタンプを付与して衝突を防止
         timestamp = System.system_time(:second)
-        ext = Path.extname(entry.client_name)
         base = Path.basename(entry.client_name, ext)
         versioned_name = "#{base}-#{timestamp}#{ext}"
         dest = Path.join(upload_dir, versioned_name)
         File.cp!(path, dest)
-        {:ok, dest}
+        {:ok, {source_type, dest}}
       end)
 
-    case uploaded_files do
-      [pdf_path] ->
-        start_pdf_processing(socket, pdf_path)
+    case uploaded do
+      [{source_type, source_path}] ->
+        start_source_processing(socket, source_type, source_path)
 
       _ ->
         {:noreply,
          socket
          |> assign(:uploading, false)
-         |> assign(:error_message, "PDFファイルを選択してください")}
+         |> assign(:error_message, "PDF または ZIP ファイルを選択してください")}
     end
   end
 
-  defp start_pdf_processing(socket, pdf_path) do
-    # PDFソースレコードを作成
+  defp source_type_for_extension(".zip"), do: "zip"
+  defp source_type_for_extension(_), do: "pdf"
+
+  defp upload_dir_for("zip"), do: Path.join(["priv", "static", "uploads", "sources"])
+  defp upload_dir_for(_), do: Path.join(["priv", "static", "uploads", "pdfs"])
+
+  defp start_source_processing(socket, source_type, source_path) do
+    # ソースレコードを作成
     {:ok, pdf_source} =
       Ingestion.create_pdf_source(%{
-        filename: Path.basename(pdf_path),
+        filename: Path.basename(source_path),
+        source_type: source_type,
         status: "converting",
         user_id: socket.assigns.current_user.id
       })
 
-    # パイプラインIDを生成
     pipeline_id = Pipeline.generate_pipeline_id()
     owner_id = socket.assigns.current_user.id
 
-    case UserWorker.process_pdf(
+    case UserWorker.process_source(
            owner_id,
            pdf_source,
-           pdf_path,
+           source_path,
            pipeline_id,
-           socket.assigns.color_mode,
-           socket.assigns.estimated_page_count
+           %{
+             color_mode: socket.assigns.color_mode,
+             max_pages: socket.assigns.estimated_page_count
+           }
          ) do
       :ok ->
-        # 完了メッセージを購読する
         Phoenix.PubSub.subscribe(OmniArchive.PubSub, "pdf_source_#{pdf_source.id}")
 
-        # 処理中のUI状態を維持
         {:noreply,
          socket
          |> assign(:uploading, true)
          |> assign(:processing_pdf_id, pdf_source.id)
-         |> put_flash(:info, "裏側でPDF処理を開始しました。完了するまでこの画面でお待ちください...")}
+         |> put_flash(
+           :info,
+           "裏側でソース処理を開始しました。完了するまでこの画面でお待ちください..."
+         )}
 
       {:error, :pdf_job_in_progress} ->
         Ingestion.update_pdf_source(pdf_source, %{status: "error"})
-        File.rm(pdf_path)
+        File.rm(source_path)
 
-        message = "処理中のPDFがあります。完了してから次のPDFをアップロードしてください。"
+        message = "処理中のソースがあります。完了してから次のソースをアップロードしてください。"
 
         {:noreply,
          socket
@@ -408,7 +432,7 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
   defp validate_upload_quota(current_user) do
     cond do
       Ingestion.count_active_pdf_sources(current_user) > 0 ->
-        {:error, "処理中のPDFがあります。完了してから次のPDFをアップロードしてください。"}
+        {:error, "処理中のソースがあります。完了してから次のソースをアップロードしてください。"}
 
       Ingestion.count_recent_pdf_sources(current_user, upload_quota_window_start()) >=
           @daily_upload_limit ->
@@ -425,19 +449,49 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
   end
 
   defp parse_estimated_page_count(value) do
-    case Integer.parse(to_string(value || @default_estimated_page_count)) do
+    max_pages = ingestion_max_pages()
+    fallback = default_estimated_page_count(max_pages)
+
+    case Integer.parse(to_string(value || fallback)) do
       {page_count, ""} ->
         page_count
         |> max(@min_estimated_page_count)
-        |> min(@max_estimated_page_count)
+        |> min(max_pages)
 
       _ ->
-        @default_estimated_page_count
+        fallback
     end
   end
 
-  defp translate_upload_error(:too_large), do: "ファイルサイズが上限（100MB）を超えています。"
+  # 集約された取り込み設定（config :omni_archive, :ingestion）から最大ページ数を取得
+  defp ingestion_max_pages do
+    case Application.get_env(:omni_archive, :ingestion) do
+      nil -> @fallback_max_pages
+      ingestion -> Keyword.get(ingestion, :pdf_max_pages, @fallback_max_pages)
+    end
+  end
+
+  defp ingestion_max_upload_bytes do
+    case Application.get_env(:omni_archive, :ingestion) do
+      nil ->
+        @fallback_max_source_upload_bytes
+
+      ingestion ->
+        Keyword.get(ingestion, :max_source_upload_bytes, @fallback_max_source_upload_bytes)
+    end
+  end
+
+  # UI 上の「目安」初期値は、最大値が小さいときは最大値を、十分大きければ既定 200 を返す。
+  defp default_estimated_page_count(max_pages) do
+    min(@default_estimated_page_count, max_pages)
+  end
+
+  defp translate_upload_error(:too_large) do
+    mb = div(ingestion_max_upload_bytes(), 1_000_000)
+    "ファイルサイズが上限（#{mb}MB）を超えています。"
+  end
+
   defp translate_upload_error(:too_many_files), do: "アップロードできるファイルは1つだけです。"
-  defp translate_upload_error(:not_accepted), do: "PDFファイルのみアップロード可能です。"
+  defp translate_upload_error(:not_accepted), do: "PDF または ZIP ファイルのみアップロード可能です。"
   defp translate_upload_error(err), do: "アップロードエラー: #{inspect(err)}"
 end

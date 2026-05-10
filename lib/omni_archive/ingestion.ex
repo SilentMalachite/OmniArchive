@@ -180,22 +180,33 @@ defmodule OmniArchive.Ingestion do
     - {:error, :file_not_found} — PDF ファイルが存在しない
   """
   def reprocess_pdf_source(%PdfSource{} = pdf_source, opts \\ %{}) do
-    pdf_path = Path.join(["priv", "static", "uploads", "pdfs", pdf_source.filename])
+    source_path = source_file_path(pdf_source)
 
-    if File.exists?(pdf_path) do
+    if File.exists?(source_path) do
       # ステータスを converting に戻す
       {:ok, _} = update_pdf_source(pdf_source, %{status: "converting"})
 
       pipeline_id = OmniArchive.Pipeline.generate_pipeline_id()
 
       Task.start(fn ->
-        OmniArchive.Pipeline.run_pdf_extraction(pdf_source, pdf_path, pipeline_id, opts)
+        OmniArchive.Pipeline.run_source_extraction(pdf_source, source_path, pipeline_id, opts)
       end)
 
       {:ok, pipeline_id}
     else
       {:error, :file_not_found}
     end
+  end
+
+  # ソース種別に応じた物理ファイルパスを返す。
+  # PDF: priv/static/uploads/pdfs/<filename>
+  # ZIP: priv/static/uploads/sources/<filename>
+  defp source_file_path(%PdfSource{source_type: "zip", filename: filename}) do
+    Path.join(["priv", "static", "uploads", "sources", filename])
+  end
+
+  defp source_file_path(%PdfSource{filename: filename}) do
+    Path.join(["priv", "static", "uploads", "pdfs", filename])
   end
 
   @doc "PdfSource に公開済み画像があるか判定"
@@ -276,13 +287,11 @@ defmodule OmniArchive.Ingestion do
         delete_file(image.ptif_path)
       end)
 
-      # 2. ページ画像ディレクトリを削除
-      pages_dir = Path.join(["priv", "static", "uploads", "pages", "#{pdf_source.id}"])
-      File.rm_rf(pages_dir)
+      # 2. ページ画像ディレクトリを削除（storage_key ベース、フォールバック: id）
+      File.rm_rf(PdfSource.pages_dir(pdf_source))
 
-      # 3. PDF 物理ファイルを削除
-      pdf_path = Path.join(["priv", "static", "uploads", "pdfs", pdf_source.filename])
-      delete_file(pdf_path)
+      # 3. ソース物理ファイルを削除（PDF: pdfs/, ZIP: sources/）
+      delete_file(source_file_path(pdf_source))
 
       # 4. 関連 ExtractedImage DB レコードを一括削除
       Repo.delete_all(from(e in ExtractedImage, where: e.pdf_source_id == ^pdf_source.id))

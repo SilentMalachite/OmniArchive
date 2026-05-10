@@ -66,7 +66,8 @@ defmodule OmniArchive.Iiif.PtiffGenerator do
     Logger.info("PTIFF 生成開始: #{input_png_path} → #{output_tiff_path}")
 
     with {:ok, image} <- Image.new_from_file(input_png_path) do
-      # 白背景マスキングは crop_image 時に完了済みのため、そのまま PTIFF を生成
+      # ポリゴン境界マスキング（境界色 + Gaussian feathering）は crop_image 時に
+      # 完了済みのため、そのまま PTIFF を生成
 
       case Image.write_to_file(image, output_tiff_path, @tiff_options) do
         :ok ->
