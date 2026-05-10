@@ -20,7 +20,7 @@ defmodule OmniArchive.Pipeline do
 
   alias OmniArchive.Iiif.Manifest
   alias OmniArchive.Ingestion
-  alias OmniArchive.Ingestion.{ImageProcessor, PdfProcessor}
+  alias OmniArchive.Ingestion.{ImageProcessor, PdfProcessor, PdfSource, ZipProcessor}
   alias OmniArchive.Pipeline.ResourceMonitor
   alias OmniArchive.Repo
   alias Phoenix.PubSub
@@ -54,119 +54,147 @@ defmodule OmniArchive.Pipeline do
     - {:error, reason}
   """
   def run_pdf_extraction(pdf_source, pdf_path, pipeline_id, opts \\ %{}) do
+    run_source_extraction(pdf_source, pdf_path, pipeline_id, opts)
+  end
+
+  @doc """
+  PDF または ZIP ソースをページ画像に展開し、ExtractedImage を一括登録します。
+  source_type に応じて PdfProcessor / ZipProcessor を切り替えるディスパッチャ。
+
+  ## 引数
+    - pdf_source: PdfSource レコード（source_type を参照）
+    - source_path: PDF または ZIP のファイルパス
+    - pipeline_id: パイプライン識別子
+    - opts: オプション（owner_id, color_mode, max_pages など）
+  """
+  def run_source_extraction(pdf_source, source_path, pipeline_id, opts \\ %{}) do
+    source_type = pdf_source.source_type || "pdf"
+
     broadcast_progress(pipeline_id, %{
       event: :pipeline_started,
       phase: :pdf_extraction,
-      message: "PDF変換を開始します..."
+      message: phase_start_message(source_type)
     })
 
     # 並行安全: ジョブごとにユニークな一時ディレクトリを使用
     job_id = Ecto.UUID.generate()
     tmp_dir = Path.join(System.tmp_dir!(), "omniarchive_job_#{job_id}")
-    # 最終出力先
-    output_dir = Path.join(["priv", "static", "uploads", "pages", "#{pdf_source.id}"])
+    # 最終出力先（storage_key ベース、フォールバック: id）
+    output_dir = PdfSource.pages_dir(pdf_source)
     File.mkdir_p!(output_dir)
 
     Logger.info(
-      "[Pipeline] PDF extraction started: #{pdf_path} -> tmp:#{tmp_dir} -> #{output_dir}"
+      "[Pipeline] #{String.upcase(source_type)} extraction started: #{source_path} -> tmp:#{tmp_dir} -> #{output_dir}"
     )
 
     try do
-      # カラーモードとページ数上限を PdfProcessor に伝搬（デフォルト: "mono"）
       processor_opts =
         %{user_id: opts[:owner_id], color_mode: opts[:color_mode] || "mono"}
         |> put_if_present(:max_pages, opts[:max_pages])
+        |> put_if_present(:max_extracted_bytes, opts[:max_extracted_bytes])
 
-      case PdfProcessor.convert_to_images(pdf_path, tmp_dir, processor_opts) do
-        {:ok, %{page_count: page_count, image_paths: tmp_image_paths}} ->
-          # 一時ディレクトリから最終出力先へファイルを移動
-          image_paths =
-            Enum.map(tmp_image_paths, fn tmp_path ->
-              filename = Path.basename(tmp_path)
-              final_path = Path.join(output_dir, filename)
-              File.cp!(tmp_path, final_path)
-              final_path
-            end)
-
-          # PdfSource を更新
-          {:ok, _} =
-            Ingestion.update_pdf_source(pdf_source, %{
-              page_count: page_count,
-              status: "ready"
-            })
-
-          broadcast_progress(pipeline_id, %{
-            event: :phase_complete,
-            phase: :pdf_extraction,
-            message: "PDF変換完了: #{page_count}ページ",
-            total: page_count
-          })
-
-          # Bulk Insert で ExtractedImage レコードを一括登録
-          attrs_list =
-            image_paths
-            |> Enum.with_index(1)
-            |> Enum.map(fn {image_path, page_number} ->
-              %{
-                pdf_source_id: pdf_source.id,
-                page_number: page_number,
-                image_path: image_path
-              }
-              |> maybe_put_owner_id(opts)
-            end)
-
-          {_count, images} = Ingestion.bulk_create_extracted_images(attrs_list)
-
-          # 進捗ブロードキャスト（挿入後に一括送信）
-          Enum.each(Enum.with_index(images, 1), fn {_image, page_number} ->
-            broadcast_progress(pipeline_id, %{
-              event: :task_progress,
-              task_id: "page-#{page_number}",
-              status: :completed,
-              progress: round(page_number / page_count * 100),
-              message: "ページ #{page_number} を登録しました"
-            })
+      with {:ok, %{page_count: page_count, image_paths: tmp_image_paths}} <-
+             dispatch_extraction(source_type, source_path, tmp_dir, processor_opts) do
+        # 一時ディレクトリから最終出力先へファイルを移動
+        image_paths =
+          Enum.map(tmp_image_paths, fn tmp_path ->
+            filename = Path.basename(tmp_path)
+            final_path = Path.join(output_dir, filename)
+            File.cp!(tmp_path, final_path)
+            final_path
           end)
 
-          broadcast_progress(pipeline_id, %{
-            event: :pipeline_complete,
-            phase: :pdf_extraction,
-            total: page_count,
-            succeeded: length(images),
-            failed: 0,
-            pdf_source_id: pdf_source.id
+        {:ok, _} =
+          Ingestion.update_pdf_source(pdf_source, %{
+            page_count: page_count,
+            status: "ready"
           })
 
-          # ユーザーへの完了通知（LiveView 画面遷移用）
-          owner_id = opts[:owner_id]
+        broadcast_progress(pipeline_id, %{
+          event: :phase_complete,
+          phase: :pdf_extraction,
+          message: phase_complete_message(source_type, page_count),
+          total: page_count
+        })
 
-          if owner_id do
-            PubSub.broadcast(
-              @pubsub,
-              pdf_pipeline_topic(owner_id),
-              {:extraction_complete, pdf_source.id}
-            )
-          end
+        attrs_list =
+          image_paths
+          |> Enum.with_index(1)
+          |> Enum.map(fn {image_path, page_number} ->
+            %{
+              pdf_source_id: pdf_source.id,
+              page_number: page_number,
+              image_path: image_path
+            }
+            |> maybe_put_owner_id(opts)
+          end)
 
-          {:ok, %{page_count: page_count, images: images}}
+        {_count, images} = Ingestion.bulk_create_extracted_images(attrs_list)
 
+        Enum.each(Enum.with_index(images, 1), fn {_image, page_number} ->
+          broadcast_progress(pipeline_id, %{
+            event: :task_progress,
+            task_id: "page-#{page_number}",
+            status: :completed,
+            progress: round(page_number / page_count * 100),
+            message: "ページ #{page_number} を登録しました"
+          })
+        end)
+
+        broadcast_progress(pipeline_id, %{
+          event: :pipeline_complete,
+          phase: :pdf_extraction,
+          total: page_count,
+          succeeded: length(images),
+          failed: 0,
+          pdf_source_id: pdf_source.id
+        })
+
+        owner_id = opts[:owner_id]
+
+        if owner_id do
+          PubSub.broadcast(
+            @pubsub,
+            pdf_pipeline_topic(owner_id),
+            {:extraction_complete, pdf_source.id}
+          )
+        end
+
+        {:ok, %{page_count: page_count, images: images}}
+      else
         {:error, reason} ->
           Ingestion.update_pdf_source(pdf_source, %{status: "error"})
 
           broadcast_progress(pipeline_id, %{
             event: :pipeline_error,
             phase: :pdf_extraction,
-            message: "PDF変換に失敗しました: #{reason}"
+            message: phase_error_message(source_type, reason)
           })
 
           {:error, reason}
       end
     after
-      # 一時ディレクトリを確実に削除（並行安全のクリーンアップ）
       File.rm_rf(tmp_dir)
       Logger.info("[Pipeline] Cleaned up temp directory: #{tmp_dir}")
     end
   end
+
+  defp dispatch_extraction("zip", zip_path, tmp_dir, processor_opts) do
+    ZipProcessor.extract_pngs(zip_path, tmp_dir, processor_opts)
+  end
+
+  defp dispatch_extraction(_pdf, pdf_path, tmp_dir, processor_opts) do
+    PdfProcessor.convert_to_images(pdf_path, tmp_dir, processor_opts)
+  end
+
+  defp phase_start_message("zip"), do: "ZIP 展開を開始します..."
+  defp phase_start_message(_), do: "PDF変換を開始します..."
+
+  defp phase_complete_message("zip", page_count), do: "ZIP 展開完了: #{page_count}ページ"
+  defp phase_complete_message(_, page_count), do: "PDF変換完了: #{page_count}ページ"
+
+  defp phase_error_message("zip", reason), do: "ZIP 展開に失敗しました: #{reason}"
+  defp phase_error_message(_, reason), do: "PDF変換に失敗しました: #{reason}"
 
   @doc """
   複数画像の PTIF 生成を並列で実行します（メモリガード付き）。
