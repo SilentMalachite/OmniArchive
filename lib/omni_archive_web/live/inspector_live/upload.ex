@@ -491,7 +491,6 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
     "ファイルサイズが上限（#{mb}MB）を超えています。"
   end
 
-
   defp translate_upload_error(:too_many_files), do: "アップロードできるファイルは1つだけです。"
   defp translate_upload_error(:not_accepted), do: "PDF または ZIP ファイルのみアップロード可能です。"
   defp translate_upload_error(err), do: "アップロードエラー: #{inspect(err)}"
