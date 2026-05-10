@@ -145,14 +145,14 @@ becomes profile-aware and Archaeology-flavored tests opt in via
   - `extracted_image_attrs/1` のデフォルト `label` がアクティブプロファイルの
     検証ルールに合わせて自動選択（Archaeology は `fig-N-N`、それ以外は
     `item-N-N` slug）。`default_factory_label/0` プライベートヘルパーを追加。
-- **Archaeology 前提テストの opt-in 化（13 ファイル）**
+- **Archaeology 前提テストの opt-in 化（12 ファイル）**
   - `OmniArchive.DomainProfileTestHelper.put_domain_profile/1` を module-level
     `setup` ブロックで呼び出すパターンを採用。
   - 対象: `extracted_image_test`, `extracted_image_metadata_test`,
     `duplicate_lookup_test`, `duplicate_identity_test`,
     `extracted_image_dedupe_test`, `inspector_live/label_test`,
     `inspector_live/finalize_test`, `admin/admin_review_live_test`,
-    `gallery_live_test`, `approval_live_test`, `search_live_test`,
+    `gallery_live_test`, `search_live_test`,
     `iiif/presentation_controller_test`, `search_test`。
   - `put_domain_profile` が global Application env を変更するため、対象の
     LiveView / Controller テスト 5 ファイルを `async: true → false` に変更。
