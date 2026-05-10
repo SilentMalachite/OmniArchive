@@ -2,7 +2,7 @@ defmodule OmniArchiveWeb.DownloadController do
   @moduledoc """
   高解像度クロップ画像のダウンロードを提供するコントローラー。
   公開済み (published) の ExtractedImage に対して、サーバーサイドで
-  Vix を使ってクロップし、日本語セマンティックファイル名で配信します。
+  Vix を使ってクロップし、PNG ロスレスで日本語セマンティックファイル名で配信します。
   """
   use OmniArchiveWeb, :controller
 
@@ -41,7 +41,7 @@ defmodule OmniArchiveWeb.DownloadController do
 
         send_download(conn, {:binary, binary},
           filename: filename,
-          content_type: "image/jpeg"
+          content_type: "image/png"
         )
 
       {:error, reason} ->
@@ -57,15 +57,15 @@ defmodule OmniArchiveWeb.DownloadController do
     ImageProcessor.crop_to_binary(image_path, geometry)
   end
 
-  # geometry がない場合は元画像をそのまま JPEG バッファとして返す
+  # geometry がない場合は元画像をそのまま PNG バッファとして返す
   defp crop_image_to_binary(%ExtractedImage{image_path: image_path}) do
     with {:ok, image} <- Vix.Vips.Image.new_from_file(image_path) do
-      Vix.Vips.Image.write_to_buffer(image, ".jpg")
+      Vix.Vips.Image.write_to_buffer(image, ".png")
     end
   end
 
   # セマンティックファイル名の生成
-  # パターン: {遺跡名}_{ラベル}_{遺物種別}.jpg
+  # パターン: {遺跡名}_{ラベル}_{遺物種別}.png
   defp build_filename(image) do
     [
       ExtractedImageMetadata.read(image, :site),
@@ -76,8 +76,8 @@ defmodule OmniArchiveWeb.DownloadController do
     |> Enum.reject(&(String.trim(&1) == ""))
     |> Enum.map(&sanitize_segment/1)
     |> case do
-      [] -> "download.jpg"
-      parts -> Enum.join(parts, "_") <> ".jpg"
+      [] -> "download.png"
+      parts -> Enum.join(parts, "_") <> ".png"
     end
   end
 
