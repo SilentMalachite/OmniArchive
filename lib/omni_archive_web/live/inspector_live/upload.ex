@@ -12,12 +12,13 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
   alias OmniArchive.Pipeline
   alias OmniArchive.Workers.UserWorker
 
-  @max_pdf_file_size 100_000_000
   @daily_upload_limit 20
   @upload_quota_window_seconds 24 * 60 * 60
   @default_estimated_page_count 200
   @min_estimated_page_count 1
-  @max_estimated_page_count 200
+  # 取り込み容量・ページ上限のフォールバック（runtime.exs で上書き）
+  @fallback_max_source_upload_bytes 500_000_000
+  @fallback_max_pages 1500
 
   @impl true
   def mount(_params, _session, socket) do
@@ -33,6 +34,9 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
 
     rejected_images = Ingestion.list_rejected_images(current_user)
 
+    max_estimated_page_count = ingestion_max_pages()
+    max_source_upload_bytes = ingestion_max_upload_bytes()
+
     {:ok,
      socket
      |> assign(:page_title, "PDF をアップロード")
@@ -45,10 +49,14 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
      |> assign(:current_page, 0)
      |> assign(:total_pages, 0)
      |> assign(:color_mode, "mono")
-     |> assign(:estimated_page_count, @default_estimated_page_count)
+     |> assign(:estimated_page_count, default_estimated_page_count(max_estimated_page_count))
      |> assign(:min_estimated_page_count, @min_estimated_page_count)
-     |> assign(:max_estimated_page_count, @max_estimated_page_count)
-     |> allow_upload(:pdf, accept: ~w(.pdf), max_entries: 1, max_file_size: @max_pdf_file_size)}
+     |> assign(:max_estimated_page_count, max_estimated_page_count)
+     |> allow_upload(:pdf,
+       accept: ~w(.pdf),
+       max_entries: 1,
+       max_file_size: max_source_upload_bytes
+     )}
   end
 
   @impl true
@@ -425,18 +433,46 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
   end
 
   defp parse_estimated_page_count(value) do
-    case Integer.parse(to_string(value || @default_estimated_page_count)) do
+    max_pages = ingestion_max_pages()
+    fallback = default_estimated_page_count(max_pages)
+
+    case Integer.parse(to_string(value || fallback)) do
       {page_count, ""} ->
         page_count
         |> max(@min_estimated_page_count)
-        |> min(@max_estimated_page_count)
+        |> min(max_pages)
 
       _ ->
-        @default_estimated_page_count
+        fallback
     end
   end
 
-  defp translate_upload_error(:too_large), do: "ファイルサイズが上限（100MB）を超えています。"
+  # 集約された取り込み設定（config :omni_archive, :ingestion）から最大ページ数を取得
+  defp ingestion_max_pages do
+    case Application.get_env(:omni_archive, :ingestion) do
+      nil -> @fallback_max_pages
+      ingestion -> Keyword.get(ingestion, :pdf_max_pages, @fallback_max_pages)
+    end
+  end
+
+  defp ingestion_max_upload_bytes do
+    case Application.get_env(:omni_archive, :ingestion) do
+      nil -> @fallback_max_source_upload_bytes
+      ingestion -> Keyword.get(ingestion, :max_source_upload_bytes, @fallback_max_source_upload_bytes)
+    end
+  end
+
+  # UI 上の「目安」初期値は、最大値が小さいときは最大値を、十分大きければ既定 200 を返す。
+  defp default_estimated_page_count(max_pages) do
+    min(@default_estimated_page_count, max_pages)
+  end
+
+  defp translate_upload_error(:too_large) do
+    mb = div(ingestion_max_upload_bytes(), 1_000_000)
+    "ファイルサイズが上限（#{mb}MB）を超えています。"
+  end
+
+
   defp translate_upload_error(:too_many_files), do: "アップロードできるファイルは1つだけです。"
   defp translate_upload_error(:not_accepted), do: "PDFファイルのみアップロード可能です。"
   defp translate_upload_error(err), do: "アップロードエラー: #{inspect(err)}"

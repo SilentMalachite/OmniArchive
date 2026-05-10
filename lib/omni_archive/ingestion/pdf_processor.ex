@@ -19,9 +19,11 @@ defmodule OmniArchive.Ingestion.PdfProcessor do
 
   # OOM 防止のためのチャンクサイズ（2GB RAM VPS 向け）
   @chunk_size 10
-  @default_max_pages 200
   @default_command_timeout_ms 120_000
   @default_max_output_bytes 1_000_000_000
+
+  # ページ上限の最終フォールバック。通常は :ingestion config / opts で上書きされる。
+  @hardcoded_fallback_max_pages 1500
 
   @doc """
   PDFファイルの全ページを PNG に変換します。
@@ -92,12 +94,26 @@ defmodule OmniArchive.Ingestion.PdfProcessor do
   end
 
   defp validate_page_count(total_pages, opts) do
-    max_pages = Map.get(opts, :max_pages, @default_max_pages)
+    max_pages = effective_max_pages(opts)
 
     if total_pages <= max_pages do
       :ok
     else
       {:error, "ページ数上限（#{max_pages}ページ）を超えています: #{total_pages}ページ"}
+    end
+  end
+
+  # opts > :ingestion config > ハードコードフォールバック の優先順
+  defp effective_max_pages(opts) do
+    case Map.get(opts, :max_pages) do
+      n when is_integer(n) and n > 0 ->
+        n
+
+      _ ->
+        case Application.get_env(:omni_archive, :ingestion) do
+          nil -> @hardcoded_fallback_max_pages
+          ingestion -> Keyword.get(ingestion, :pdf_max_pages, @hardcoded_fallback_max_pages)
+        end
     end
   end
 
