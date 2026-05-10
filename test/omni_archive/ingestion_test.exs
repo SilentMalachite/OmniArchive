@@ -1,5 +1,10 @@
 defmodule OmniArchive.IngestionTest do
-  use OmniArchive.DataCase, async: true
+  # NOTE: Run synchronously. Several other tests mutate the active
+  # `:omni_archive, :domain_profile` Application env via `put_domain_profile/1`.
+  # Because that env is process-global, concurrent runs would occasionally
+  # see Archaeology validation rules during these tests, which assume the
+  # default (GeneralArchive) `item-N-N` label format produced by the factory.
+  use OmniArchive.DataCase, async: false
 
   alias OmniArchive.Ingestion
   alias OmniArchive.Ingestion.{ExtractedImage, PdfSource}
