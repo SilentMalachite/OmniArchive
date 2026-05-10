@@ -269,9 +269,12 @@ defmodule OmniArchive.Ingestion.ImageProcessor do
 
       list ->
         n = length(list)
-        {sr, sg, sb} = Enum.reduce(list, {0.0, 0.0, 0.0}, fn {r, g, b}, {ar, ag, ab} ->
-          {ar + r, ag + g, ab + b}
-        end)
+
+        {sr, sg, sb} =
+          Enum.reduce(list, {0.0, 0.0, 0.0}, fn {r, g, b}, {ar, ag, ab} ->
+            {ar + r, ag + g, ab + b}
+          end)
+
         {round(sr / n), round(sg / n), round(sb / n)}
     end
   end

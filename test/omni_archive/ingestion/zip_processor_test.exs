@@ -10,10 +10,9 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
   alias OmniArchive.Ingestion.ZipProcessor
 
   # 1x1 PNG のバイナリ（マジックバイト + 最小限ヘッダ）
-  @png_min <<137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1,
-             0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 11, 73, 68, 65, 84,
-             120, 156, 99, 0, 1, 0, 0, 5, 0, 1, 13, 10, 45, 180, 0, 0, 0, 0, 73, 69,
-             78, 68, 174, 66, 96, 130>>
+  @png_min <<137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1,
+             8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 11, 73, 68, 65, 84, 120, 156, 99, 0, 1, 0,
+             0, 5, 0, 1, 13, 10, 45, 180, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130>>
 
   setup %{tmp_dir: tmp_dir} = ctx do
     output_dir = Path.join(tmp_dir, "out")
@@ -24,10 +23,11 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
   describe "extract_pngs/3 正常系" do
     @tag :tmp_dir
     test "PNG エントリを page-NNN-{ts}.png 形式で展開する", %{tmp_dir: tmp_dir, output_dir: output_dir} do
-      zip_path = build_zip(tmp_dir, "ok.zip", [
-        {"page-001.png", @png_min},
-        {"page-002.png", @png_min}
-      ])
+      zip_path =
+        build_zip(tmp_dir, "ok.zip", [
+          {"page-001.png", @png_min},
+          {"page-002.png", @png_min}
+        ])
 
       assert {:ok, %{page_count: 2, image_paths: paths}} =
                ZipProcessor.extract_pngs(zip_path, output_dir)
@@ -43,10 +43,11 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
     @tag :tmp_dir
     test "ネストディレクトリ内の PNG も平坦化して取り込む",
          %{tmp_dir: tmp_dir, output_dir: output_dir} do
-      zip_path = build_zip(tmp_dir, "nested.zip", [
-        {"book/chapter1/p1.png", @png_min},
-        {"book/chapter2/p2.png", @png_min}
-      ])
+      zip_path =
+        build_zip(tmp_dir, "nested.zip", [
+          {"book/chapter1/p1.png", @png_min},
+          {"book/chapter2/p2.png", @png_min}
+        ])
 
       assert {:ok, %{page_count: 2, image_paths: paths}} =
                ZipProcessor.extract_pngs(zip_path, output_dir)
@@ -62,11 +63,12 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
     @tag :tmp_dir
     test "数値を含むファイル名は自然順でソートされる",
          %{tmp_dir: tmp_dir, output_dir: output_dir} do
-      zip_path = build_zip(tmp_dir, "natural.zip", [
-        {"p10.png", @png_min},
-        {"p2.png", @png_min},
-        {"p1.png", @png_min}
-      ])
+      zip_path =
+        build_zip(tmp_dir, "natural.zip", [
+          {"p10.png", @png_min},
+          {"p2.png", @png_min},
+          {"p1.png", @png_min}
+        ])
 
       assert {:ok, %{image_paths: paths}} = ZipProcessor.extract_pngs(zip_path, output_dir)
 
@@ -80,11 +82,12 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
     @tag :tmp_dir
     test "AppleDouble メタデータ (__MACOSX/, ._*) は除外される",
          %{tmp_dir: tmp_dir, output_dir: output_dir} do
-      zip_path = build_zip(tmp_dir, "applefiles.zip", [
-        {"__MACOSX/junk.png", @png_min},
-        {"._sidecar.png", @png_min},
-        {"page.png", @png_min}
-      ])
+      zip_path =
+        build_zip(tmp_dir, "applefiles.zip", [
+          {"__MACOSX/junk.png", @png_min},
+          {"._sidecar.png", @png_min},
+          {"page.png", @png_min}
+        ])
 
       assert {:ok, %{page_count: 1, image_paths: paths}} =
                ZipProcessor.extract_pngs(zip_path, output_dir)
@@ -100,10 +103,11 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
          %{tmp_dir: tmp_dir, output_dir: output_dir} do
       fake_png = "GIF89a fake content"
 
-      zip_path = build_zip(tmp_dir, "fake.zip", [
-        {"page1.png", fake_png},
-        {"page2.png", @png_min}
-      ])
+      zip_path =
+        build_zip(tmp_dir, "fake.zip", [
+          {"page1.png", fake_png},
+          {"page2.png", @png_min}
+        ])
 
       assert {:ok, %{page_count: 1, image_paths: paths}} =
                ZipProcessor.extract_pngs(zip_path, output_dir)
@@ -114,9 +118,10 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
     @tag :tmp_dir
     test "PNG が 1 件も含まれていない ZIP はエラーを返す",
          %{tmp_dir: tmp_dir, output_dir: output_dir} do
-      zip_path = build_zip(tmp_dir, "empty.zip", [
-        {"readme.txt", "no images here"}
-      ])
+      zip_path =
+        build_zip(tmp_dir, "empty.zip", [
+          {"readme.txt", "no images here"}
+        ])
 
       assert {:error, message} = ZipProcessor.extract_pngs(zip_path, output_dir)
       assert message =~ "PNG"

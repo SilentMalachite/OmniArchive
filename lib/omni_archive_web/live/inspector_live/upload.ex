@@ -436,8 +436,7 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
 
       Ingestion.count_recent_pdf_sources(current_user, upload_quota_window_start()) >=
           @daily_upload_limit ->
-        {:error,
-         "1日のアップロード上限（#{@daily_upload_limit}件）に達しました。時間をおいて再試行してください。"}
+        {:error, "1日のアップロード上限（#{@daily_upload_limit}件）に達しました。時間をおいて再試行してください。"}
 
       true ->
         :ok
@@ -474,8 +473,11 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
 
   defp ingestion_max_upload_bytes do
     case Application.get_env(:omni_archive, :ingestion) do
-      nil -> @fallback_max_source_upload_bytes
-      ingestion -> Keyword.get(ingestion, :max_source_upload_bytes, @fallback_max_source_upload_bytes)
+      nil ->
+        @fallback_max_source_upload_bytes
+
+      ingestion ->
+        Keyword.get(ingestion, :max_source_upload_bytes, @fallback_max_source_upload_bytes)
     end
   end
 
