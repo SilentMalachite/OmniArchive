@@ -166,6 +166,91 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
       <<header::binary-size(8), _rest::binary>> = File.read!(path)
       assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
     end
+
+    @tag :tmp_dir
+    test "ZIP 内 PNG は再エンコードされず素通しする（バイト一致）",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      png_bytes = File.read!("priv/static/images/lab_wizard.png")
+      zip_path = build_zip(tmp_dir, "pass.zip", [{"page-001.png", png_bytes}])
+
+      assert {:ok, %{page_count: 1, image_paths: [path]}} =
+               ZipProcessor.extract_pngs(zip_path, output_dir)
+
+      # 素通し＝rename によるファイル移動のみ。バイト列は入力 PNG と一致する。
+      assert File.read!(path) == png_bytes
+    end
+
+    @tag :tmp_dir
+    test "ZIP 内 TIFF は PNG ページに変換される",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      zip_path = build_zip(tmp_dir, "tif.zip", [{"p1.tif", image_bytes(".tif")}])
+
+      assert {:ok, %{page_count: 1, image_paths: [path]}} =
+               ZipProcessor.extract_pngs(zip_path, output_dir)
+
+      <<header::binary-size(8), _rest::binary>> = File.read!(path)
+      assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
+    end
+
+    @tag :tmp_dir
+    test "PNG・JPEG・TIFF 混在 ZIP は全て PNG ページになる（件数3）",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      png_bytes = File.read!("priv/static/images/lab_wizard.png")
+
+      zip_path =
+        build_zip(tmp_dir, "mixed.zip", [
+          {"page-001.png", png_bytes},
+          {"page-002.jpg", image_bytes(".jpg")},
+          {"page-003.tif", image_bytes(".tif")}
+        ])
+
+      assert {:ok, %{page_count: 3, image_paths: paths}} =
+               ZipProcessor.extract_pngs(zip_path, output_dir)
+
+      assert length(paths) == 3
+
+      Enum.each(paths, fn path ->
+        <<header::binary-size(8), _rest::binary>> = File.read!(path)
+        assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
+        assert Regex.match?(~r/page-\d{3}-\d+\.png$/, Path.basename(path))
+      end)
+    end
+
+    @tag :tmp_dir
+    test "不良画像が混在しても有効な画像は取り込まれる",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      png_bytes = File.read!("priv/static/images/lab_wizard.png")
+
+      zip_path =
+        build_zip(tmp_dir, "mix_bad.zip", [
+          {"bad.jpg", "not really a jpeg"},
+          {"good.png", png_bytes},
+          {"good2.jpg", image_bytes(".jpg")}
+        ])
+
+      assert {:ok, %{page_count: 2, image_paths: paths}} =
+               ZipProcessor.extract_pngs(zip_path, output_dir)
+
+      assert length(paths) == 2
+
+      Enum.each(paths, fn path ->
+        <<header::binary-size(8), _rest::binary>> = File.read!(path)
+        assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
+      end)
+    end
+
+    @tag :tmp_dir
+    test "有効な画像が無い ZIP はエラーを返す",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      zip_path =
+        build_zip(tmp_dir, "all_bad.zip", [
+          {"bad1.jpg", "xxxx"},
+          {"bad2.tif", "yyyy"}
+        ])
+
+      assert {:error, message} = ZipProcessor.extract_pngs(zip_path, output_dir)
+      assert message =~ "有効な画像"
+    end
   end
 
   # === ヘルパ ===
