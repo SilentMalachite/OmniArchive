@@ -2,7 +2,7 @@ defmodule OmniArchive.Ingestion.ZipProcessor do
   require Logger
 
   @moduledoc """
-  PNG コレクションを格納した ZIP アーカイブから、ページ画像を
+  画像コレクションを格納した ZIP アーカイブから、ページ画像を
   安全に展開するモジュール。
 
   ## なぜこの設計か
@@ -11,7 +11,7 @@ defmodule OmniArchive.Ingestion.ZipProcessor do
     CLAUDE.md の "No new dependencies" 不変条件に準拠。
   - **3 層防御**:
     1. zip-slip 防止 — 各エントリの解決後パスが output_dir 配下にあることを `Path.expand` で確認。
-    2. PNG マジックバイト検証 — 拡張子だけでなくファイル先頭 8 バイト（`<<137,80,78,71,13,10,26,10>>`）を確認。
+    2. PNG 正規化 — PNG はマジックバイトで判定して素通し、非PNG は libvips で PNG へ変換（壊れた画像は破棄）。
     3. 容量上限 — `:zip_max_extracted_bytes` / `:zip_max_pages` で展開サイズ・件数を抑制（zip bomb 対策）。
   - **AppleDouble 除外**: macOS 由来の `__MACOSX/` および `._*` メタデータを取り除き、誤検出を防ぐ。
   - **自然順ソート**: `page-2.png` が `page-10.png` より先に来るよう、数値部分を抽出してソート。
@@ -24,9 +24,13 @@ defmodule OmniArchive.Ingestion.ZipProcessor do
   """
 
   alias OmniArchive.Ingestion.PdfSource
+  alias OmniArchive.Ingestion.ImageProcessor
 
   # PNG マジックバイト
   @png_magic <<137, 80, 78, 71, 13, 10, 26, 10>>
+
+  # 変換対象としてサポートする画像拡張子（libvips が扱える一般的な形式）
+  @supported_image_exts ~w(.png .jpg .jpeg .tif .tiff .webp .gif .bmp)
 
   # フォールバック値（runtime config が未ロードの場合）
   @fallback_max_extracted_bytes 1_000_000_000
@@ -53,13 +57,13 @@ defmodule OmniArchive.Ingestion.ZipProcessor do
     abs_output_dir = Path.expand(output_dir)
 
     with {:ok, entries} <- list_zip_entries(abs_zip_path),
-         png_entries <- filter_png_entries(entries),
-         :ok <- validate_page_count(png_entries, opts),
-         :ok <- validate_extracted_bytes(png_entries, opts),
+         image_entries <- filter_image_entries(entries),
+         :ok <- validate_page_count(image_entries, opts),
+         :ok <- validate_extracted_bytes(image_entries, opts),
          {:ok, extracted_paths} <-
-           extract_filtered(abs_zip_path, png_entries, abs_output_dir),
-         {:ok, validated_paths} <- validate_png_signatures(extracted_paths),
-         {:ok, renamed_paths} <- rename_to_page_format(validated_paths, abs_output_dir, opts) do
+           extract_filtered(abs_zip_path, image_entries, abs_output_dir),
+         {:ok, normalized_paths} <- normalize_entries_to_png(extracted_paths),
+         {:ok, renamed_paths} <- rename_to_page_format(normalized_paths, abs_output_dir, opts) do
       page_count = length(renamed_paths)
 
       Logger.info("[ZipProcessor] 完了: #{page_count} ページを #{abs_output_dir} に展開")
@@ -83,8 +87,8 @@ defmodule OmniArchive.Ingestion.ZipProcessor do
   end
 
   # :zip エントリは `:zip_comment` ヘッダと `:zip_file` レコードが混在する。
-  # PNG 拡張子のみを残し、AppleDouble メタを除外、自然順でソート。
-  defp filter_png_entries(entries) do
+  # サポート画像拡張子のみを残し、AppleDouble メタを除外、自然順でソート。
+  defp filter_image_entries(entries) do
     entries
     |> Enum.flat_map(fn
       {:zip_file, name, info, _comment, _offset, _size} ->
@@ -95,7 +99,7 @@ defmodule OmniArchive.Ingestion.ZipProcessor do
     end)
     |> Enum.reject(fn {name, _info} -> apple_double?(name) end)
     |> Enum.filter(fn {name, _info} ->
-      String.downcase(Path.extname(name)) == ".png"
+      String.downcase(Path.extname(name)) in @supported_image_exts
     end)
     |> Enum.sort_by(fn {name, _info} -> natural_sort_key(name) end)
   end
@@ -125,7 +129,7 @@ defmodule OmniArchive.Ingestion.ZipProcessor do
 
     cond do
       count == 0 ->
-        {:error, "ZIP に PNG ファイルが含まれていません"}
+        {:error, "ZIP に画像ファイルが含まれていません"}
 
       count > max_pages ->
         {:error, "ページ数上限（#{max_pages}ページ）を超えています: #{count}ページ"}
@@ -229,28 +233,63 @@ defmodule OmniArchive.Ingestion.ZipProcessor do
     end
   end
 
-  # === PNG マジックバイト検証 ===
+  # === PNG 正規化（非PNGは PNG へ変換、PNGは素通し） ===
 
-  defp validate_png_signatures(paths) do
-    expected = @png_magic
+  # 展開済み各パスを PNG へ正規化する。
+  # - PNG（マジックバイト一致）はそのまま採用（再エンコードなし）。
+  # - 非PNG は ImageProcessor.to_png/2 で変換。成功なら元ファイルを削除して
+  #   生成 PNG を採用、失敗なら警告ログを出してそのエントリを破棄。
+  # - リスト順は保持する（ページ番号は rename_to_page_format/3 が index 順で付与）。
+  defp normalize_entries_to_png(paths) do
+    normalized =
+      Enum.flat_map(paths, fn path ->
+        if png_signature?(path) do
+          [path]
+        else
+          dest = png_dest_path(path)
 
-    {valid, invalid} =
-      Enum.split_with(paths, fn path ->
-        case File.open(path, [:read, :binary], fn io -> IO.binread(io, 8) end) do
-          {:ok, header} when header == expected -> true
-          _ -> false
+          case ImageProcessor.to_png(path, dest) do
+            {:ok, png_path} ->
+              File.rm(path)
+              [png_path]
+
+            {:error, reason} ->
+              Logger.warning(
+                "[ZipProcessor] PNG 変換失敗のため破棄: #{path} (#{inspect(reason)})"
+              )
+
+              File.rm(path)
+              # 変換途中で生成された不完全な出力ファイルが残らないよう削除
+              File.rm(dest)
+              []
+          end
         end
       end)
 
-    Enum.each(invalid, fn path ->
-      Logger.warning("[ZipProcessor] PNG マジックバイト不一致のため削除: #{path}")
-      File.rm(path)
-    end)
-
-    if valid == [] do
-      {:error, "ZIP 内に有効な PNG ファイルがありませんでした"}
+    if normalized == [] do
+      {:error, "ZIP 内に有効な画像がありませんでした"}
     else
-      {:ok, valid}
+      {:ok, normalized}
+    end
+  end
+
+  # 先頭 8 バイトが PNG マジックバイトかどうか
+  defp png_signature?(path) do
+    case File.open(path, [:read, :binary], fn io -> IO.binread(io, 8) end) do
+      {:ok, header} when header == @png_magic -> true
+      _ -> false
+    end
+  end
+
+  # 変換先 PNG パス（衝突回避）。同名 PNG が既にあればユニーク化。
+  defp png_dest_path(path) do
+    base = Path.rootname(path)
+    candidate = base <> ".png"
+
+    if File.exists?(candidate) do
+      base <> "-conv-" <> Integer.to_string(System.unique_integer([:positive])) <> ".png"
+    else
+      candidate
     end
   end
 

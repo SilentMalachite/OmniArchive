@@ -116,7 +116,7 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
     end
 
     @tag :tmp_dir
-    test "PNG が 1 件も含まれていない ZIP はエラーを返す",
+    test "画像ファイルが 1 件も含まれていない ZIP はエラーを返す",
          %{tmp_dir: tmp_dir, output_dir: output_dir} do
       zip_path =
         build_zip(tmp_dir, "empty.zip", [
@@ -124,7 +124,7 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
         ])
 
       assert {:error, message} = ZipProcessor.extract_pngs(zip_path, output_dir)
-      assert message =~ "PNG"
+      assert message =~ "画像"
     end
   end
 
@@ -154,6 +154,20 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
     end
   end
 
+  describe "extract_pngs/3 非PNG画像の変換" do
+    @tag :tmp_dir
+    test "ZIP 内 JPEG は PNG ページに変換される",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      zip_path = build_zip(tmp_dir, "jpg.zip", [{"p1.jpg", image_bytes(".jpg")}])
+
+      assert {:ok, %{page_count: 1, image_paths: [path]}} =
+               ZipProcessor.extract_pngs(zip_path, output_dir)
+
+      <<header::binary-size(8), _rest::binary>> = File.read!(path)
+      assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
+    end
+  end
+
   # === ヘルパ ===
 
   defp build_zip(tmp_dir, name, entries) do
@@ -166,5 +180,12 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
 
     {:ok, _} = :zip.create(String.to_charlist(zip_path), file_list)
     zip_path
+  end
+
+  # lab_wizard.png を指定形式のバイト列に変換して返す（バイナリ資産をコミットしないため）
+  defp image_bytes(suffix) do
+    {:ok, img} = Vix.Vips.Image.new_from_file("priv/static/images/lab_wizard.png")
+    {:ok, bytes} = Vix.Vips.Image.write_to_buffer(img, suffix)
+    bytes
   end
 end
