@@ -193,6 +193,45 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
     end
 
     @tag :tmp_dir
+    test "ZIP 内 WebP は PNG ページに変換される",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      zip_path = build_zip(tmp_dir, "webp.zip", [{"p1.webp", image_bytes(".webp")}])
+
+      assert {:ok, %{page_count: 1, image_paths: [path]}} =
+               ZipProcessor.extract_pngs(zip_path, output_dir)
+
+      <<header::binary-size(8), _rest::binary>> = File.read!(path)
+      assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
+    end
+
+    @tag :tmp_dir
+    test "ZIP 内 GIF は PNG ページに変換される",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      zip_path = build_zip(tmp_dir, "gif.zip", [{"p1.gif", image_bytes(".gif")}])
+
+      assert {:ok, %{page_count: 1, image_paths: [path]}} =
+               ZipProcessor.extract_pngs(zip_path, output_dir)
+
+      <<header::binary-size(8), _rest::binary>> = File.read!(path)
+      assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
+    end
+
+    @tag :tmp_dir
+    test "ZIP 内 BMP は PNG ページに変換される（libvips 非対応形式の内製デコーダ経由）",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      zip_path = build_zip(tmp_dir, "bmp.zip", [{"p1.bmp", OmniArchive.BmpFixture.solid(12, 8)}])
+
+      assert {:ok, %{page_count: 1, image_paths: [path]}} =
+               ZipProcessor.extract_pngs(zip_path, output_dir)
+
+      <<header::binary-size(8), _rest::binary>> = File.read!(path)
+      assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
+
+      assert {:ok, %{width: 12, height: 8}} =
+               OmniArchive.Ingestion.ImageProcessor.get_image_dimensions(path)
+    end
+
+    @tag :tmp_dir
     test "PNG・JPEG・TIFF 混在 ZIP は全て PNG ページになる（件数3）",
          %{tmp_dir: tmp_dir, output_dir: output_dir} do
       png_bytes = File.read!("priv/static/images/lab_wizard.png")

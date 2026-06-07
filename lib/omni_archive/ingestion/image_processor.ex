@@ -12,6 +12,7 @@ defmodule OmniArchive.Ingestion.ImageProcessor do
     複数解像度のピラミッド構造を持つため、任意のズームレベルのタイルを
     高速に切り出せます。Deep Zoom や DZI と同等の性能を単一ファイルで実現します。
   """
+  alias OmniArchive.Ingestion.Bmp
   alias Vix.Vips.Image
   alias Vix.Vips.Operation
 
@@ -130,8 +131,13 @@ defmodule OmniArchive.Ingestion.ImageProcessor do
   画像をロスレス PNG コンテナへ変換して保存します。
 
   リサイズ・色空間変更・再圧縮は行わず、コンテナ（ファイル形式）だけを PNG に
-  します。元画像にアルファチャンネルがあれば保持します。壊れた / 非対応の入力は
-  例外を握りつぶさず `{:error, term}` を返します。
+  します。元画像にアルファチャンネルがあれば保持します（ただし内製デコーダ経由の
+  BMP は RGB 固定でアルファを持ちません）。壊れた / 非対応の入力は例外を握りつぶさず
+  `{:error, term}` を返します。
+
+  libvips が読める形式（PNG / JPEG / TIFF / WebP / GIF 等）はそのまま読み込み、
+  libvips に BMP ローダが無い環境では `OmniArchive.Ingestion.Bmp` の内製デコーダで
+  フォールバックします。
 
   ## 引数
     - src_path: 変換元画像のパス（PNG / JPEG / TIFF / WebP / GIF / BMP 等）
@@ -143,9 +149,25 @@ defmodule OmniArchive.Ingestion.ImageProcessor do
   """
   @spec to_png(Path.t(), Path.t()) :: {:ok, Path.t()} | {:error, term()}
   def to_png(src_path, dest_path) do
-    with {:ok, image} <- Image.new_from_file(src_path),
+    with {:ok, image} <- load_source_image(src_path),
          :ok <- Image.write_to_file(image, dest_path) do
       {:ok, dest_path}
+    end
+  end
+
+  # libvips が読める形式はそのまま、読めない形式（この環境では BMP）は内製
+  # BMP デコーダでフォールバックする。BMP でなければ libvips の元エラーを返す。
+  defp load_source_image(src_path) do
+    case Image.new_from_file(src_path) do
+      {:ok, image} ->
+        {:ok, image}
+
+      {:error, _reason} = error ->
+        case Bmp.decode_file(src_path) do
+          {:ok, image} -> {:ok, image}
+          :not_bmp -> error
+          {:error, _reason} = bmp_error -> bmp_error
+        end
     end
   end
 

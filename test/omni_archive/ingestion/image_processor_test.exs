@@ -109,6 +109,19 @@ defmodule OmniArchive.Ingestion.ImageProcessorTest do
       assert {:error, _reason} = ImageProcessor.to_png(src, dest)
       refute File.exists?(dest)
     end
+
+    @tag :tmp_dir
+    test "BMP を PNG に変換する（libvips 非対応形式の内製デコーダ経由）", %{tmp_dir: tmp_dir} do
+      src = Path.join(tmp_dir, "src.bmp")
+      File.write!(src, OmniArchive.BmpFixture.solid(8, 6, {200, 100, 50}))
+      dest = Path.join(tmp_dir, "out.png")
+
+      assert {:ok, ^dest} = ImageProcessor.to_png(src, dest)
+
+      <<header::binary-size(8), _rest::binary>> = File.read!(dest)
+      assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
+      assert {:ok, %{width: 8, height: 6}} = ImageProcessor.get_image_dimensions(dest)
+    end
   end
 
   # lab_wizard.png を指定形式のバイト列に変換して返す（バイナリ資産をコミットしないため）
