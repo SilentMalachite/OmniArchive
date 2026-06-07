@@ -126,6 +126,29 @@ defmodule OmniArchive.Ingestion.ImageProcessor do
     end
   end
 
+  @doc """
+  画像をロスレス PNG コンテナへ変換して保存します。
+
+  リサイズ・色空間変更・再圧縮は行わず、コンテナ（ファイル形式）だけを PNG に
+  します。元画像にアルファチャンネルがあれば保持します。壊れた / 非対応の入力は
+  例外を握りつぶさず `{:error, term}` を返します。
+
+  ## 引数
+    - src_path: 変換元画像のパス（PNG / JPEG / TIFF / WebP / GIF / BMP 等）
+    - dest_path: 出力先 PNG のパス（拡張子 `.png`）
+
+  ## 戻り値
+    - `{:ok, dest_path}` 変換成功
+    - `{:error, term}` 読み込み失敗・書き込み失敗
+  """
+  @spec to_png(Path.t(), Path.t()) :: {:ok, Path.t()} | {:error, term()}
+  def to_png(src_path, dest_path) do
+    with {:ok, image} <- Image.new_from_file(src_path),
+         :ok <- Image.write_to_file(image, dest_path) do
+      {:ok, dest_path}
+    end
+  end
+
   # --- プライベート関数 ---
 
   # ポリゴンクロップ: 境界色サンプリング + Gaussian feathering 戦略

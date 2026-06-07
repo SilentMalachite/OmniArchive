@@ -67,4 +67,54 @@ defmodule OmniArchive.Ingestion.ImageProcessorTest do
       assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
     end
   end
+
+  describe "to_png/2 画像コンテナ変換" do
+    @tag :tmp_dir
+    test "JPEG を PNG に変換し、寸法を保持する", %{tmp_dir: tmp_dir} do
+      src = Path.join(tmp_dir, "src.jpg")
+      File.write!(src, sample_as(".jpg"))
+      dest = Path.join(tmp_dir, "out.png")
+
+      assert {:ok, ^dest} = ImageProcessor.to_png(src, dest)
+
+      <<header::binary-size(8), _rest::binary>> = File.read!(dest)
+      assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
+
+      {:ok, %{width: sw, height: sh}} = ImageProcessor.get_image_dimensions(src)
+      assert {:ok, %{width: ^sw, height: ^sh}} = ImageProcessor.get_image_dimensions(dest)
+    end
+
+    @tag :tmp_dir
+    test "アルファチャンネルを保持する（TIFF 変換元）", %{tmp_dir: tmp_dir} do
+      # lab_wizard.png は 4 バンド（アルファ付き）。TIFF はアルファを保持するため変換元に使う。
+      {:ok, img} = Vix.Vips.Image.new_from_file(@sample_png)
+      assert Vix.Vips.Image.has_alpha?(img)
+
+      src = Path.join(tmp_dir, "alpha_src.tif")
+      :ok = Vix.Vips.Image.write_to_file(img, src)
+      dest = Path.join(tmp_dir, "alpha_out.png")
+
+      assert {:ok, ^dest} = ImageProcessor.to_png(src, dest)
+
+      {:ok, out} = Vix.Vips.Image.new_from_file(dest)
+      assert Vix.Vips.Image.has_alpha?(out)
+    end
+
+    @tag :tmp_dir
+    test "壊れた入力は {:error, _} を返し raise しない", %{tmp_dir: tmp_dir} do
+      src = Path.join(tmp_dir, "broken.png")
+      File.write!(src, "this is not an image")
+      dest = Path.join(tmp_dir, "broken_out.png")
+
+      assert {:error, _reason} = ImageProcessor.to_png(src, dest)
+      refute File.exists?(dest)
+    end
+  end
+
+  # lab_wizard.png を指定形式のバイト列に変換して返す（バイナリ資産をコミットしないため）
+  defp sample_as(suffix) do
+    {:ok, img} = Vix.Vips.Image.new_from_file(@sample_png)
+    {:ok, bytes} = Vix.Vips.Image.write_to_buffer(img, suffix)
+    bytes
+  end
 end
