@@ -254,11 +254,10 @@ defmodule OmniArchive.Ingestion.ZipProcessor do
               [png_path]
 
             {:error, reason} ->
-              Logger.warning(
-                "[ZipProcessor] PNG 変換失敗のため破棄: #{path} (#{inspect(reason)})"
-              )
+              Logger.warning("[ZipProcessor] PNG 変換失敗のため破棄: #{path} (#{inspect(reason)})")
 
               File.rm(path)
+
               # 変換途中で生成された不完全な出力ファイルが残らないよう削除
               File.rm(dest)
               []
