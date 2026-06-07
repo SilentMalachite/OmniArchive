@@ -1,7 +1,7 @@
 defmodule OmniArchiveWeb.InspectorLive.Upload do
   @moduledoc """
   ウィザード Step 1: ソース（PDF / ZIP）アップロード画面 + 要修正タブ。
-  PDF または PNG 入り ZIP をアップロードし、並列パイプラインで自動的に
+  PDF または画像入り ZIP をアップロードし、並列パイプラインで自動的に
   ページ画像へ展開します。差し戻された画像の一覧も表示し、修正・再提出
   ワークフローを提供します。
   """
@@ -174,7 +174,7 @@ defmodule OmniArchiveWeb.InspectorLive.Upload do
         <div class="upload-area">
           <h2 class="section-title">ソースファイルをアップロード</h2>
           <p class="section-description">
-            アーカイブする PDF または PNG 入り ZIP ファイルを選択してください。
+            アーカイブする PDF または画像入り ZIP ファイルを選択してください。
           </p>
 
           <form id="upload-form" phx-submit="upload_source" phx-change="validate">
