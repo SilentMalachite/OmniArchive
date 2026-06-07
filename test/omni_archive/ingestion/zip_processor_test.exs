@@ -253,6 +253,32 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
     end
   end
 
+  describe "extract_pngs/3 ページ採番順" do
+    @tag :tmp_dir
+    test "出力ページはファイル名（自然順）で採番される（ZIP 格納順に依存しない）",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      # 格納順を意図的にシャッフル（p10, p2, p1）し、各画像を識別用に異なる幅で生成。
+      # 形式も混在させ、変換後も採番順がファイル名順になることを確認する。
+      zip_path =
+        build_zip(tmp_dir, "order.zip", [
+          {"p10.tif", sized_image_bytes(100, 5, ".tif")},
+          {"p2.jpg", sized_image_bytes(22, 5, ".jpg")},
+          {"p1.png", sized_image_bytes(11, 5, ".png")}
+        ])
+
+      assert {:ok, %{image_paths: paths}} = ZipProcessor.extract_pngs(zip_path, output_dir)
+
+      widths =
+        Enum.map(paths, fn path ->
+          {:ok, %{width: w}} = OmniArchive.Ingestion.ImageProcessor.get_image_dimensions(path)
+          w
+        end)
+
+      # page-001=p1（幅11） / page-002=p2（幅22） / page-003=p10（幅100）
+      assert widths == [11, 22, 100]
+    end
+  end
+
   # === ヘルパ ===
 
   defp build_zip(tmp_dir, name, entries) do
@@ -271,6 +297,13 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
   defp image_bytes(suffix) do
     {:ok, img} = Vix.Vips.Image.new_from_file("priv/static/images/lab_wizard.png")
     {:ok, bytes} = Vix.Vips.Image.write_to_buffer(img, suffix)
+    bytes
+  end
+
+  # 識別用に指定サイズの単色画像を生成して指定形式のバイト列で返す
+  defp sized_image_bytes(width, height, suffix) do
+    {:ok, image} = Vix.Vips.Operation.black(width, height)
+    {:ok, bytes} = Vix.Vips.Image.write_to_buffer(image, suffix)
     bytes
   end
 end

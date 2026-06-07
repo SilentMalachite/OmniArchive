@@ -87,7 +87,9 @@ defmodule OmniArchive.Ingestion.ZipProcessor do
   end
 
   # :zip エントリは `:zip_comment` ヘッダと `:zip_file` レコードが混在する。
-  # サポート画像拡張子のみを残し、AppleDouble メタを除外、自然順でソート。
+  # サポート画像拡張子のみを残し、AppleDouble メタを除外する。
+  # ページ採番のための自然順ソートは展開後の実パスに対して extract_filtered で行う
+  # （:zip.unzip がアーカイブ格納順で返すため、ここで並べ替えても最終順には効かない）。
   defp filter_image_entries(entries) do
     entries
     |> Enum.flat_map(fn
@@ -101,7 +103,6 @@ defmodule OmniArchive.Ingestion.ZipProcessor do
     |> Enum.filter(fn {name, _info} ->
       String.downcase(Path.extname(name)) in @supported_image_exts
     end)
-    |> Enum.sort_by(fn {name, _info} -> natural_sort_key(name) end)
   end
 
   defp apple_double?(name) do
@@ -118,6 +119,20 @@ defmodule OmniArchive.Ingestion.ZipProcessor do
       [_, num, ""] -> {0, String.to_integer(num)}
       [_, "", text] -> {1, text}
       [_, num] -> {0, String.to_integer(num)}
+    end)
+  end
+
+  # 展開後の実パスを、output_dir 相対のファイル名で自然順ソートする。
+  # :zip.unzip はアーカイブ格納順でパスを返すため、ページ採番をファイル名順に
+  # するにはここで並べ替える必要がある。
+  defp sort_paths_by_name(paths, output_dir) do
+    abs_output = Path.expand(output_dir)
+
+    Enum.sort_by(paths, fn path ->
+      path
+      |> Path.expand()
+      |> Path.relative_to(abs_output)
+      |> natural_sort_key()
     end)
   end
 
@@ -208,7 +223,9 @@ defmodule OmniArchive.Ingestion.ZipProcessor do
 
         case enforce_path_safety(paths, output_dir) do
           {:ok, safe_paths} ->
-            {:ok, safe_paths}
+            # ページ採番（後段 rename_to_page_format がリスト index 順で付与）が
+            # ファイル名順になるよう、展開後パスを自然順へ並べ替える。
+            {:ok, sort_paths_by_name(safe_paths, output_dir)}
 
           {:error, _} = err ->
             Enum.each(paths, fn p -> if File.regular?(p), do: File.rm(p) end)
