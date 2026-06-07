@@ -23,8 +23,8 @@ defmodule OmniArchive.Ingestion.ZipProcessor do
   PDF と同じパス前提で動作できる。
   """
 
-  alias OmniArchive.Ingestion.PdfSource
   alias OmniArchive.Ingestion.ImageProcessor
+  alias OmniArchive.Ingestion.PdfSource
 
   # PNG マジックバイト
   @png_magic <<137, 80, 78, 71, 13, 10, 26, 10>>
