@@ -8,6 +8,76 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.3.1] - 2026-08-06
+
+_Summary: ZIP upload accepts any common image format — non-PNG entries are converted
+to PNG losslessly on extraction, including BMP via a dependency-free decoder. Page
+numbering now follows filename order, and the conversion path is brought back inside
+the existing pixel-count, extracted-size, and memory guards._
+
+### 🖼️ ZIP 画像の PNG 自動変換
+
+- **`ImageProcessor.to_png/3` を追加** — ロスレスな PNG コンテナ変換
+  - リサイズ・色空間変更・再圧縮は行わず、コンテナだけを PNG にする。
+    元画像にアルファチャンネルがあれば保持。
+  - 壊れた / 非対応の入力は例外を握りつぶさず `{:error, term}` を返し、
+    ZIP バッチ全体は継続する（該当エントリのみ破棄）。
+- **`ZipProcessor` が非 PNG エントリを変換して取り込む**
+  - 受付拡張子を `.png .jpg .jpeg .tif .tiff .webp .gif .bmp` に拡張。
+  - PNG（マジックバイト一致）は再エンコードせず素通し。
+- **`OmniArchive.Ingestion.Bmp` を追加** — pure Elixir の無圧縮 BMP デコーダ
+  - libvips に BMP ローダ（および magickload）が無い環境向けのフォールバック。
+    **新規依存を追加しない**（AGENTS.md「No new dependencies」遵守）。
+  - 対応範囲は BITMAPINFOHEADER 以降・無圧縮 (BI_RGB)・24/32bit、
+    ボトムアップ／トップダウン両対応。非対応変種は `{:error, _}` でスキップ。
+
+### 🛡️ 取り込み保護境界の修正
+
+- **画素数上限を全形式へ適用** — 従来この境界は BMP フォールバックにしか無く、
+  高圧縮の JPEG / WebP / TIFF は入力バイト数が上限内でも巨大な画素数を持てるため
+  素通りしていた。libvips の遅延読み込みを利用し、ヘッダ読み込み時点（画素未展開）で
+  1 辺 20,000px・合計 1 億画素を検証する。クロップ経路・IIIF 配信と同じ値。
+- **変換後 PNG を展開容量予算へ計上** — JPEG → PNG は数倍に膨らみ得るため、
+  展開前チェックだけでは上限内の ZIP が `ZIP_MAX_EXTRACTED_BYTES` を超える出力を
+  生成できた。実際の出力サイズを累積し、超過時点で中断して生成済み PNG と
+  未処理ファイルを削除する。
+- **BMP のヘッダ先行検証** — `decode_file/1` がファイル全体を読んでから寸法を
+  検証しており、最終的に寸法超過で拒否する入力でもファイルサイズ分を BEAM ヒープへ
+  載せていた（上限チェック自体が 2GB-VPS の OOM 経路）。54 バイトのヘッダのみを
+  読んで検証し、合格時だけピクセル行を逐次読み込む方式へ変更。
+- **EXIF Orientation を PNG 化前に画素へ適用** — PNG は EXIF 向き情報を保持できず、
+  未適用のままでは後続のクロップ座標と PTIF 生成が横倒しの画素を前提にしていた。
+  書き出し前に `autorot` を通して画素そのものを正立させる。
+
+### 🔢 ページ採番
+
+- **ZIP ページ番号をファイル名の自然順で付与** — `:zip.unzip` はアーカイブ格納順で
+  パスを返すため、エントリ列挙時のソートは最終的な採番に効いていなかった。
+  展開後の実パスに対して自然順ソートを行い、`p1 → p2 → p10` の順を保証する。
+
+### ✅ テスト
+
+- `test/omni_archive/ingestion/bmp_test.exs` — 24/32bit・ボトムアップ／トップダウン・
+  非対応変種・破損入力に加え、**メモリ保護の実測テスト**（192MB のスパースファイルに
+  対しデコードプロセスが保持する refc バイナリ量を計測し、全量読み込みを検出）。
+- `test/omni_archive/ingestion/image_processor_test.exs` — JPEG/TIFF/BMP からの変換、
+  アルファ保持、寸法・画素数上限、EXIF Orientation の画素適用。
+- `test/omni_archive/ingestion/zip_processor_test.exs` — 混在形式の取り込み、
+  不良画像の破棄、ファイル名順の採番、変換後サイズによる上限超過と残骸クリーンアップ。
+- `test/support/bmp_fixture.ex` — バイナリ資産をコミットせずに BMP を生成するヘルパ。
+
+### 📚 ドキュメント
+
+- `USER_GUIDE.md` — ZIP 受付形式を「PNG のみ」から「一般的な画像形式（PNG 以外は
+  自動変換）」へ更新。自動正立・変換後サイズでの上限計上・寸法上限を明記。
+
+### 🔧 開発環境
+
+- `credo` を 1.7.19 に更新（Elixir 1.20 互換）。
+- `.serena/project.yml` を新しい設定スキーマへ再生成（実効設定は同等）。
+
+---
+
 ## [0.3.0] - 2026-05-10
 
 _Summary: AlchemIIIF v0.3.0 と機能等価の取り込みパイプライン更新。
