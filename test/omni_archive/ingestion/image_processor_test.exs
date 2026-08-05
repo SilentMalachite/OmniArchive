@@ -67,4 +67,113 @@ defmodule OmniArchive.Ingestion.ImageProcessorTest do
       assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
     end
   end
+
+  describe "to_png/2 画像コンテナ変換" do
+    @tag :tmp_dir
+    test "JPEG を PNG に変換し、寸法を保持する", %{tmp_dir: tmp_dir} do
+      src = Path.join(tmp_dir, "src.jpg")
+      File.write!(src, sample_as(".jpg"))
+      dest = Path.join(tmp_dir, "out.png")
+
+      assert {:ok, ^dest} = ImageProcessor.to_png(src, dest)
+
+      <<header::binary-size(8), _rest::binary>> = File.read!(dest)
+      assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
+
+      {:ok, %{width: sw, height: sh}} = ImageProcessor.get_image_dimensions(src)
+      assert {:ok, %{width: ^sw, height: ^sh}} = ImageProcessor.get_image_dimensions(dest)
+    end
+
+    @tag :tmp_dir
+    test "アルファチャンネルを保持する（TIFF 変換元）", %{tmp_dir: tmp_dir} do
+      # lab_wizard.png は 4 バンド（アルファ付き）。TIFF はアルファを保持するため変換元に使う。
+      {:ok, img} = Vix.Vips.Image.new_from_file(@sample_png)
+      assert Vix.Vips.Image.has_alpha?(img)
+
+      src = Path.join(tmp_dir, "alpha_src.tif")
+      :ok = Vix.Vips.Image.write_to_file(img, src)
+      dest = Path.join(tmp_dir, "alpha_out.png")
+
+      assert {:ok, ^dest} = ImageProcessor.to_png(src, dest)
+
+      {:ok, out} = Vix.Vips.Image.new_from_file(dest)
+      assert Vix.Vips.Image.has_alpha?(out)
+    end
+
+    @tag :tmp_dir
+    test "壊れた入力は {:error, _} を返し raise しない", %{tmp_dir: tmp_dir} do
+      src = Path.join(tmp_dir, "broken.png")
+      File.write!(src, "this is not an image")
+      dest = Path.join(tmp_dir, "broken_out.png")
+
+      assert {:error, _reason} = ImageProcessor.to_png(src, dest)
+      refute File.exists?(dest)
+    end
+
+    @tag :tmp_dir
+    test "寸法上限を超える画像は変換せず {:error, _} を返す", %{tmp_dir: tmp_dir} do
+      # 入力バイト数は小さくても寸法が巨大な画像（高圧縮画像で成立する）を拒否する。
+      src = Path.join(tmp_dir, "too_wide.png")
+      {:ok, wide} = Vix.Vips.Operation.black(25_000, 4)
+      :ok = Vix.Vips.Image.write_to_file(wide, src)
+      dest = Path.join(tmp_dir, "too_wide_out.png")
+
+      assert {:error, message} = ImageProcessor.to_png(src, dest)
+      assert message =~ "寸法"
+      refute File.exists?(dest)
+    end
+
+    @tag :tmp_dir
+    test "画素数上限を超える画像は変換せず {:error, _} を返す", %{tmp_dir: tmp_dir} do
+      src = Path.join(tmp_dir, "too_many_pixels.png")
+      {:ok, image} = Vix.Vips.Operation.black(100, 100)
+      :ok = Vix.Vips.Image.write_to_file(image, src)
+      dest = Path.join(tmp_dir, "too_many_pixels_out.png")
+
+      assert {:error, message} = ImageProcessor.to_png(src, dest, max_area: 9_999)
+      assert message =~ "画素数"
+      refute File.exists?(dest)
+    end
+
+    @tag :tmp_dir
+    test "EXIF Orientation を画素へ適用してから PNG 化する", %{tmp_dir: tmp_dir} do
+      # PNG は EXIF 向き情報を持てないため、変換前に画素へ適用しないと
+      # 後続のクロップ座標・PTIF 生成が横倒しの画素を前提にしてしまう。
+      {:ok, img} = Vix.Vips.Image.new_from_file(@sample_png)
+      {:ok, small} = Vix.Vips.Operation.extract_area(img, 0, 0, 40, 20)
+
+      {:ok, oriented} =
+        Vix.Vips.Image.mutate(small, fn mut ->
+          Vix.Vips.MutableImage.set(mut, "orientation", :gint, 6)
+        end)
+
+      src = Path.join(tmp_dir, "exif.jpg")
+      :ok = Vix.Vips.Image.write_to_file(oriented, src)
+      dest = Path.join(tmp_dir, "exif_out.png")
+
+      # Orientation 6 は「90 度回転が必要」を意味する。40x20 → 20x40 になる。
+      assert {:ok, ^dest} = ImageProcessor.to_png(src, dest)
+      assert {:ok, %{width: 20, height: 40}} = ImageProcessor.get_image_dimensions(dest)
+    end
+
+    @tag :tmp_dir
+    test "BMP を PNG に変換する（libvips 非対応形式の内製デコーダ経由）", %{tmp_dir: tmp_dir} do
+      src = Path.join(tmp_dir, "src.bmp")
+      File.write!(src, OmniArchive.BmpFixture.solid(8, 6, {200, 100, 50}))
+      dest = Path.join(tmp_dir, "out.png")
+
+      assert {:ok, ^dest} = ImageProcessor.to_png(src, dest)
+
+      <<header::binary-size(8), _rest::binary>> = File.read!(dest)
+      assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
+      assert {:ok, %{width: 8, height: 6}} = ImageProcessor.get_image_dimensions(dest)
+    end
+  end
+
+  # lab_wizard.png を指定形式のバイト列に変換して返す（バイナリ資産をコミットしないため）
+  defp sample_as(suffix) do
+    {:ok, img} = Vix.Vips.Image.new_from_file(@sample_png)
+    {:ok, bytes} = Vix.Vips.Image.write_to_buffer(img, suffix)
+    bytes
+  end
 end

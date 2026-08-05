@@ -116,7 +116,7 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
     end
 
     @tag :tmp_dir
-    test "PNG が 1 件も含まれていない ZIP はエラーを返す",
+    test "画像ファイルが 1 件も含まれていない ZIP はエラーを返す",
          %{tmp_dir: tmp_dir, output_dir: output_dir} do
       zip_path =
         build_zip(tmp_dir, "empty.zip", [
@@ -124,7 +124,7 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
         ])
 
       assert {:error, message} = ZipProcessor.extract_pngs(zip_path, output_dir)
-      assert message =~ "PNG"
+      assert message =~ "画像"
     end
   end
 
@@ -154,6 +154,203 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
     end
   end
 
+  describe "extract_pngs/3 非PNG画像の変換" do
+    @tag :tmp_dir
+    test "ZIP 内 JPEG は PNG ページに変換される",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      zip_path = build_zip(tmp_dir, "jpg.zip", [{"p1.jpg", image_bytes(".jpg")}])
+
+      assert {:ok, %{page_count: 1, image_paths: [path]}} =
+               ZipProcessor.extract_pngs(zip_path, output_dir)
+
+      <<header::binary-size(8), _rest::binary>> = File.read!(path)
+      assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
+    end
+
+    @tag :tmp_dir
+    test "ZIP 内 PNG は再エンコードされず素通しする（バイト一致）",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      png_bytes = File.read!("priv/static/images/lab_wizard.png")
+      zip_path = build_zip(tmp_dir, "pass.zip", [{"page-001.png", png_bytes}])
+
+      assert {:ok, %{page_count: 1, image_paths: [path]}} =
+               ZipProcessor.extract_pngs(zip_path, output_dir)
+
+      # 素通し＝rename によるファイル移動のみ。バイト列は入力 PNG と一致する。
+      assert File.read!(path) == png_bytes
+    end
+
+    @tag :tmp_dir
+    test "ZIP 内 TIFF は PNG ページに変換される",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      zip_path = build_zip(tmp_dir, "tif.zip", [{"p1.tif", image_bytes(".tif")}])
+
+      assert {:ok, %{page_count: 1, image_paths: [path]}} =
+               ZipProcessor.extract_pngs(zip_path, output_dir)
+
+      <<header::binary-size(8), _rest::binary>> = File.read!(path)
+      assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
+    end
+
+    @tag :tmp_dir
+    test "ZIP 内 WebP は PNG ページに変換される",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      zip_path = build_zip(tmp_dir, "webp.zip", [{"p1.webp", image_bytes(".webp")}])
+
+      assert {:ok, %{page_count: 1, image_paths: [path]}} =
+               ZipProcessor.extract_pngs(zip_path, output_dir)
+
+      <<header::binary-size(8), _rest::binary>> = File.read!(path)
+      assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
+    end
+
+    @tag :tmp_dir
+    test "ZIP 内 GIF は PNG ページに変換される",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      zip_path = build_zip(tmp_dir, "gif.zip", [{"p1.gif", image_bytes(".gif")}])
+
+      assert {:ok, %{page_count: 1, image_paths: [path]}} =
+               ZipProcessor.extract_pngs(zip_path, output_dir)
+
+      <<header::binary-size(8), _rest::binary>> = File.read!(path)
+      assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
+    end
+
+    @tag :tmp_dir
+    test "ZIP 内 BMP は PNG ページに変換される（libvips 非対応形式の内製デコーダ経由）",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      zip_path = build_zip(tmp_dir, "bmp.zip", [{"p1.bmp", OmniArchive.BmpFixture.solid(12, 8)}])
+
+      assert {:ok, %{page_count: 1, image_paths: [path]}} =
+               ZipProcessor.extract_pngs(zip_path, output_dir)
+
+      <<header::binary-size(8), _rest::binary>> = File.read!(path)
+      assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
+
+      assert {:ok, %{width: 12, height: 8}} =
+               OmniArchive.Ingestion.ImageProcessor.get_image_dimensions(path)
+    end
+
+    @tag :tmp_dir
+    test "PNG・JPEG・TIFF 混在 ZIP は全て PNG ページになる（件数3）",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      png_bytes = File.read!("priv/static/images/lab_wizard.png")
+
+      zip_path =
+        build_zip(tmp_dir, "mixed.zip", [
+          {"page-001.png", png_bytes},
+          {"page-002.jpg", image_bytes(".jpg")},
+          {"page-003.tif", image_bytes(".tif")}
+        ])
+
+      assert {:ok, %{page_count: 3, image_paths: paths}} =
+               ZipProcessor.extract_pngs(zip_path, output_dir)
+
+      assert length(paths) == 3
+
+      Enum.each(paths, fn path ->
+        <<header::binary-size(8), _rest::binary>> = File.read!(path)
+        assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
+        assert Regex.match?(~r/page-\d{3}-\d+\.png$/, Path.basename(path))
+      end)
+    end
+
+    @tag :tmp_dir
+    test "不良画像が混在しても有効な画像は取り込まれる",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      png_bytes = File.read!("priv/static/images/lab_wizard.png")
+
+      zip_path =
+        build_zip(tmp_dir, "mix_bad.zip", [
+          {"bad.jpg", "not really a jpeg"},
+          {"good.png", png_bytes},
+          {"good2.jpg", image_bytes(".jpg")}
+        ])
+
+      assert {:ok, %{page_count: 2, image_paths: paths}} =
+               ZipProcessor.extract_pngs(zip_path, output_dir)
+
+      assert length(paths) == 2
+
+      Enum.each(paths, fn path ->
+        <<header::binary-size(8), _rest::binary>> = File.read!(path)
+        assert header == <<137, 80, 78, 71, 13, 10, 26, 10>>
+      end)
+    end
+
+    @tag :tmp_dir
+    test "有効な画像が無い ZIP はエラーを返す",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      zip_path =
+        build_zip(tmp_dir, "all_bad.zip", [
+          {"bad1.jpg", "xxxx"},
+          {"bad2.tif", "yyyy"}
+        ])
+
+      assert {:error, message} = ZipProcessor.extract_pngs(zip_path, output_dir)
+      assert message =~ "有効な画像"
+    end
+  end
+
+  describe "extract_pngs/3 ページ採番順" do
+    @tag :tmp_dir
+    test "出力ページはファイル名（自然順）で採番される（ZIP 格納順に依存しない）",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      # 格納順を意図的にシャッフル（p10, p2, p1）し、各画像を識別用に異なる幅で生成。
+      # 形式も混在させ、変換後も採番順がファイル名順になることを確認する。
+      zip_path =
+        build_zip(tmp_dir, "order.zip", [
+          {"p10.tif", sized_image_bytes(100, 5, ".tif")},
+          {"p2.jpg", sized_image_bytes(22, 5, ".jpg")},
+          {"p1.png", sized_image_bytes(11, 5, ".png")}
+        ])
+
+      assert {:ok, %{image_paths: paths}} = ZipProcessor.extract_pngs(zip_path, output_dir)
+
+      widths =
+        Enum.map(paths, fn path ->
+          {:ok, %{width: w}} = OmniArchive.Ingestion.ImageProcessor.get_image_dimensions(path)
+          w
+        end)
+
+      # page-001=p1（幅11） / page-002=p2（幅22） / page-003=p10（幅100）
+      assert widths == [11, 22, 100]
+    end
+  end
+
+  describe "extract_pngs/3 変換後の容量上限" do
+    @tag :tmp_dir
+    test "PNG 変換で膨らんだ結果が上限を超えたらエラーにし、残骸を残さない",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      jpeg = image_bytes(".jpg")
+      converted_size = converted_png_size(tmp_dir, jpeg)
+
+      assert converted_size > byte_size(jpeg),
+             "前提が崩れています: 変換後 PNG(#{converted_size}) は JPEG(#{byte_size(jpeg)}) より大きいはず"
+
+      # 変換元 JPEG は展開前チェックを通るが、変換後 PNG では超過する上限。
+      cap = byte_size(jpeg) + div(converted_size - byte_size(jpeg), 2)
+
+      zip_path = build_zip(tmp_dir, "expand.zip", [{"a.jpg", jpeg}])
+
+      assert {:error, message} =
+               ZipProcessor.extract_pngs(zip_path, output_dir, %{max_extracted_bytes: cap})
+
+      assert message =~ "上限"
+      assert File.ls!(output_dir) == []
+    end
+
+    @tag :tmp_dir
+    test "変換後も上限内なら正常に取り込む", %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      jpeg = image_bytes(".jpg")
+      cap = converted_png_size(tmp_dir, jpeg) + 1024
+      zip_path = build_zip(tmp_dir, "fits.zip", [{"a.jpg", jpeg}])
+
+      assert {:ok, %{page_count: 1}} =
+               ZipProcessor.extract_pngs(zip_path, output_dir, %{max_extracted_bytes: cap})
+    end
+  end
+
   # === ヘルパ ===
 
   defp build_zip(tmp_dir, name, entries) do
@@ -166,5 +363,32 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
 
     {:ok, _} = :zip.create(String.to_charlist(zip_path), file_list)
     zip_path
+  end
+
+  # lab_wizard.png を指定形式のバイト列に変換して返す（バイナリ資産をコミットしないため）
+  defp image_bytes(suffix) do
+    {:ok, img} = Vix.Vips.Image.new_from_file("priv/static/images/lab_wizard.png")
+    {:ok, bytes} = Vix.Vips.Image.write_to_buffer(img, suffix)
+    bytes
+  end
+
+  # JPEG バイト列を実際に PNG へ変換したときの出力サイズを実測する。
+  # 「元より膨らむ」量は画像内容依存のため、上限値の見積もりは実測に基づける。
+  defp converted_png_size(tmp_dir, jpeg) do
+    src = Path.join(tmp_dir, "probe.jpg")
+    dest = Path.join(tmp_dir, "probe.png")
+    File.write!(src, jpeg)
+    {:ok, ^dest} = OmniArchive.Ingestion.ImageProcessor.to_png(src, dest)
+    size = File.stat!(dest).size
+    File.rm!(src)
+    File.rm!(dest)
+    size
+  end
+
+  # 識別用に指定サイズの単色画像を生成して指定形式のバイト列で返す
+  defp sized_image_bytes(width, height, suffix) do
+    {:ok, image} = Vix.Vips.Operation.black(width, height)
+    {:ok, bytes} = Vix.Vips.Image.write_to_buffer(image, suffix)
+    bytes
   end
 end

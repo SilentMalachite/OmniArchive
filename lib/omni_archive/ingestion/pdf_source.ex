@@ -2,7 +2,7 @@ defmodule OmniArchive.Ingestion.PdfSource do
   @moduledoc """
   取り込みソース（PDF / ZIP）を管理する Ecto スキーマ。
   歴史的経緯から名前は PdfSource のままだが、`source_type` で
-  PDF と ZIP（PNG コレクション）の双方を表現する。
+  PDF と ZIP（画像コレクション）の双方を表現する。
 
   ## なぜこの設計か
 

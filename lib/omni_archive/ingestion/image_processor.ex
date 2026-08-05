@@ -12,6 +12,7 @@ defmodule OmniArchive.Ingestion.ImageProcessor do
     複数解像度のピラミッド構造を持つため、任意のズームレベルのタイルを
     高速に切り出せます。Deep Zoom や DZI と同等の性能を単一ファイルで実現します。
   """
+  alias OmniArchive.Ingestion.Bmp
   alias Vix.Vips.Image
   alias Vix.Vips.Operation
 
@@ -22,6 +23,13 @@ defmodule OmniArchive.Ingestion.ImageProcessor do
   # - feather_radius: SVG マスクへ適用する Gaussian blur の半径（ピクセル）
   @polygon_boundary_samples 32
   @polygon_feather_radius 1.5
+
+  # 取り込み画像の画素数上限。クロップ経路（InspectorLive.Crop）・IIIF 配信
+  # （IIIF.ImageController）と同じ値を使い、取り込み時点で同じ境界を強制する。
+  # 高圧縮の JPEG / WebP / TIFF は入力バイト数が小さくても巨大な画素数を持てるため、
+  # バイト数上限（ZIP_MAX_EXTRACTED_BYTES 等）だけでは CPU / メモリを守れない。
+  @to_png_max_dimension 20_000
+  @to_png_max_area 100_000_000
 
   @doc """
   画像をクロップして保存します。
@@ -123,6 +131,91 @@ defmodule OmniArchive.Ingestion.ImageProcessor do
   def get_image_dimensions(image_path) do
     with {:ok, image} <- Image.new_from_file(image_path) do
       {:ok, %{width: Image.width(image), height: Image.height(image)}}
+    end
+  end
+
+  @doc """
+  画像をロスレス PNG コンテナへ変換して保存します。
+
+  リサイズ・色空間変更・再圧縮は行わず、コンテナ（ファイル形式）だけを PNG に
+  します。元画像にアルファチャンネルがあれば保持します（ただし内製デコーダ経由の
+  BMP は RGB 固定でアルファを持ちません）。壊れた / 非対応の入力は例外を握りつぶさず
+  `{:error, term}` を返します。
+
+  libvips が読める形式（PNG / JPEG / TIFF / WebP / GIF 等）はそのまま読み込み、
+  libvips に BMP ローダが無い環境では `OmniArchive.Ingestion.Bmp` の内製デコーダで
+  フォールバックします。
+
+  書き出し前に 2 つの前処理を行います。
+
+  1. **画素数の検証** — ヘッダ読み込み時点（libvips は遅延読み込みのため画素は
+     まだ展開されていない）で寸法・画素数の上限を検証し、超過分は変換せず
+     `{:error, _}` を返します。
+  2. **EXIF Orientation の適用** — PNG は EXIF 向き情報を持てないため、
+     `autorot` で画素そのものを正立させます。これを行わないと、後続のクロップ
+     座標と PTIF 生成が横倒しの画素を前提にしてしまいます。
+
+  ## 引数
+    - src_path: 変換元画像のパス（PNG / JPEG / TIFF / WebP / GIF / BMP 等）
+    - dest_path: 出力先 PNG のパス（拡張子 `.png`）
+    - opts: `:max_dimension` / `:max_area`（既定値は取り込み全体の上限）
+
+  ## 戻り値
+    - `{:ok, dest_path}` 変換成功
+    - `{:error, term}` 読み込み失敗・上限超過・書き込み失敗
+  """
+  @spec to_png(Path.t(), Path.t(), keyword()) :: {:ok, Path.t()} | {:error, term()}
+  def to_png(src_path, dest_path, opts \\ []) do
+    with {:ok, image} <- load_source_image(src_path),
+         :ok <- validate_pixel_budget(image, opts),
+         {:ok, upright} <- apply_exif_orientation(image),
+         :ok <- Image.write_to_file(upright, dest_path) do
+      {:ok, dest_path}
+    end
+  end
+
+  # libvips が読める形式はそのまま、読めない形式（この環境では BMP）は内製
+  # BMP デコーダでフォールバックする。BMP でなければ libvips の元エラーを返す。
+  defp load_source_image(src_path) do
+    case Image.new_from_file(src_path) do
+      {:ok, image} ->
+        {:ok, image}
+
+      {:error, _reason} = error ->
+        case Bmp.decode_file(src_path) do
+          {:ok, image} -> {:ok, image}
+          :not_bmp -> error
+          {:error, _reason} = bmp_error -> bmp_error
+        end
+    end
+  end
+
+  # 画素の展開（write_to_file）前に寸法・画素数を検証する。
+  # libvips の遅延読み込みにより、この時点ではヘッダしか読まれていない。
+  defp validate_pixel_budget(image, opts) do
+    max_dimension = Keyword.get(opts, :max_dimension, @to_png_max_dimension)
+    max_area = Keyword.get(opts, :max_area, @to_png_max_area)
+    width = Image.width(image)
+    height = Image.height(image)
+
+    cond do
+      width > max_dimension or height > max_dimension ->
+        {:error, "画像の寸法が上限（#{max_dimension}px）を超えています: #{width}x#{height}"}
+
+      width * height > max_area ->
+        {:error, "画像の画素数が上限（#{max_area}px）を超えています: #{width}x#{height}"}
+
+      true ->
+        :ok
+    end
+  end
+
+  # EXIF Orientation を画素へ適用する。向き情報が無い画像では no-op。
+  # vix の autorot は `{画像, %{angle:, flip:}}` を返す。
+  defp apply_exif_orientation(image) do
+    case Operation.autorot(image) do
+      {:ok, {upright, _info}} -> {:ok, upright}
+      {:error, _reason} = error -> error
     end
   end
 
