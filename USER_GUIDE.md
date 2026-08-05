@@ -79,9 +79,9 @@ Lab は IIIF アセットを作成する内部ワークスペースです。**�
 3. Drop a file (or click to choose). Accepted: `.pdf`, `.zip` (images auto-converted to PNG) / ファイルをドロップまたは選択。受付形式: `.pdf` / `.zip`（画像は自動で PNG 変換）
 4. Watch the progress bar. PDFs are converted in 10-page chunks; you can leave the screen and come back / プログレスバーで進捗を確認。10 ページ単位で変換されるため、画面を離れても作業は継続されます
 
-> **Why two upload formats?** PDFs are converted to PNG at 300 DPI by `pdftoppm`. If you already have image scans (PNG, JPEG, TIFF, etc.), packaging them in a ZIP imports them directly — non-PNG images are automatically converted to PNG on extraction. The system enforces zip-slip protection, magic-byte verification, and size limits when extracting ZIPs.
+> **Why two upload formats?** PDFs are converted to PNG at 300 DPI by `pdftoppm`. If you already have image scans (PNG, JPEG, TIFF, etc.), packaging them in a ZIP imports them directly — non-PNG images are automatically converted to PNG on extraction. Because PNG cannot carry EXIF orientation, camera-rotated photos are rotated upright during conversion, so crop coordinates always match what you see. The system enforces zip-slip protection, magic-byte verification, and size limits when extracting ZIPs; the limits are applied to the converted PNGs as well, so a highly compressed source cannot bypass them.
 >
-> **なぜ 2 つの形式に対応しているか**: PDF は `pdftoppm` で 300 DPI の PNG に変換します。すでに画像スキャン（PNG・JPEG・TIFF など）がある場合は ZIP でまとめてアップロードすると直接取り込めます（PNG 以外は展開時に自動で PNG へ変換）。ZIP 展開時は zip-slip 対策・magic byte 検証・サイズ上限を強制しています。
+> **なぜ 2 つの形式に対応しているか**: PDF は `pdftoppm` で 300 DPI の PNG に変換します。すでに画像スキャン（PNG・JPEG・TIFF など）がある場合は ZIP でまとめてアップロードすると直接取り込めます（PNG 以外は展開時に自動で PNG へ変換）。PNG は EXIF の向き情報を保持できないため、カメラで回転した写真は変換時に画素そのものを正立させます（クロップ座標が見た目とずれません）。ZIP 展開時は zip-slip 対策・magic byte 検証・サイズ上限を強制し、上限は変換後の PNG にも適用するため、高圧縮のソースで上限を回避することはできません。
 
 ### Step 2 — Browse and select pages / ページ選択
 
@@ -253,7 +253,8 @@ Check the file size and type:
 | File extension / 拡張子 | `.pdf` or `.zip` only |
 | ZIP contents / ZIP 内容 | Common image formats, non-PNG auto-converted to PNG / 一般的な画像形式（PNG 以外は自動で PNG 変換） |
 | Source size / ソースサイズ | `MAX_SOURCE_UPLOAD_BYTES` (env var) |
-| ZIP extracted size / ZIP 展開後サイズ | `ZIP_MAX_EXTRACTED_BYTES` |
+| ZIP extracted size / ZIP 展開後サイズ | `ZIP_MAX_EXTRACTED_BYTES` (counted after PNG conversion / PNG 変換後のサイズで計上) |
+| Image dimensions / 画像寸法 | 20,000 px per side, 100M px total — oversized images are skipped / 1 辺 20,000px・合計 1 億画素。超過画像はスキップ |
 | PDF pages / PDF ページ数 | `PDF_MAX_PAGES` |
 | ZIP pages / ZIP ページ数 | `ZIP_MAX_PAGES` |
 

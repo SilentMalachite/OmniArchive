@@ -62,7 +62,7 @@ defmodule OmniArchive.Ingestion.ZipProcessor do
          :ok <- validate_extracted_bytes(image_entries, opts),
          {:ok, extracted_paths} <-
            extract_filtered(abs_zip_path, image_entries, abs_output_dir),
-         {:ok, normalized_paths} <- normalize_entries_to_png(extracted_paths),
+         {:ok, normalized_paths} <- normalize_entries_to_png(extracted_paths, opts),
          {:ok, renamed_paths} <- rename_to_page_format(normalized_paths, abs_output_dir, opts) do
       page_count = length(renamed_paths)
 
@@ -257,35 +257,70 @@ defmodule OmniArchive.Ingestion.ZipProcessor do
   # - 非PNG は ImageProcessor.to_png/2 で変換。成功なら元ファイルを削除して
   #   生成 PNG を採用、失敗なら警告ログを出してそのエントリを破棄。
   # - リスト順は保持する（ページ番号は rename_to_page_format/3 が index 順で付与）。
-  defp normalize_entries_to_png(paths) do
-    normalized =
-      Enum.flat_map(paths, fn path ->
-        if png_signature?(path) do
-          [path]
-        else
-          dest = png_dest_path(path)
+  #
+  # 容量上限は展開前（validate_extracted_bytes/2）だけでは不十分。JPEG → PNG の
+  # ような変換はロスレス PNG が元より数倍に膨らみ得るため、上限内の ZIP でも
+  # 生成物がディスクを枯渇させ得る。ここで実際の出力サイズを同じ予算へ計上し、
+  # 超過した時点で中断して生成済みファイルも含めて削除する。
+  defp normalize_entries_to_png(paths, opts) do
+    max_bytes = effective_max_extracted_bytes(opts)
 
-          case ImageProcessor.to_png(path, dest) do
-            {:ok, png_path} ->
-              File.rm(path)
-              [png_path]
+    paths
+    |> Enum.with_index()
+    |> Enum.reduce_while({[], 0}, fn {path, index}, {kept, total} ->
+      case normalize_entry(path) do
+        :discarded ->
+          {:cont, {kept, total}}
 
-            {:error, reason} ->
-              Logger.warning("[ZipProcessor] PNG 変換失敗のため破棄: #{path} (#{inspect(reason)})")
+        {:ok, png_path} ->
+          total = total + file_size(png_path)
 
-              File.rm(path)
+          if total > max_bytes do
+            discard_all([png_path | kept] ++ Enum.drop(paths, index + 1))
 
-              # 変換途中で生成された不完全な出力ファイルが残らないよう削除
-              File.rm(dest)
-              []
+            {:halt, {:error, "PNG 変換後の展開サイズが上限（#{max_bytes} bytes）を超えました: #{total} bytes"}}
+          else
+            {:cont, {[png_path | kept], total}}
           end
-        end
-      end)
+      end
+    end)
+    |> case do
+      {:error, _reason} = error -> error
+      {[], _total} -> {:error, "ZIP 内に有効な画像がありませんでした"}
+      {kept, _total} -> {:ok, Enum.reverse(kept)}
+    end
+  end
 
-    if normalized == [] do
-      {:error, "ZIP 内に有効な画像がありませんでした"}
+  # 1 エントリを PNG へ正規化する。破棄したエントリは `:discarded` を返す。
+  defp normalize_entry(path) do
+    if png_signature?(path) do
+      {:ok, path}
     else
-      {:ok, normalized}
+      dest = png_dest_path(path)
+
+      case ImageProcessor.to_png(path, dest) do
+        {:ok, png_path} ->
+          File.rm(path)
+          {:ok, png_path}
+
+        {:error, reason} ->
+          Logger.warning("[ZipProcessor] PNG 変換失敗のため破棄: #{path} (#{inspect(reason)})")
+
+          File.rm(path)
+
+          # 変換途中で生成された不完全な出力ファイルが残らないよう削除
+          File.rm(dest)
+          :discarded
+      end
+    end
+  end
+
+  defp discard_all(paths), do: Enum.each(paths, &File.rm/1)
+
+  defp file_size(path) do
+    case File.stat(path) do
+      {:ok, %File.Stat{size: size}} -> size
+      _ -> 0
     end
   end
 

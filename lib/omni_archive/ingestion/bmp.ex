@@ -20,6 +20,11 @@ defmodule OmniArchive.Ingestion.Bmp do
   - **メモリ保護**: libvips のストリーミングと異なり BMP は BEAM ヒープ上に
     全画素を展開するため、クロップ経路と同じ寸法・面積上限を適用して
     巨大/細長い BMP による過大なメモリ確保を防ぐ（2GB-VPS のメモリ予算保護）。
+  - **ヘッダ先行検証**: `decode_file/1` は固定長ヘッダ（54 バイト）だけを読んで
+    寸法・ビット深度・圧縮形式を検証し、棄却対象のファイルは本体を一切読まない。
+    ファイル全体を先に読むと、最終的に寸法超過で拒否する入力でもファイルサイズ
+    分のメモリを確保してしまい、上限チェック自体が OOM 経路になる。
+    合格後はピクセル行を逐次読み込み、生ファイルと RGB を同時に保持しない。
   """
 
   alias Vix.Vips.Image
@@ -28,8 +33,13 @@ defmodule OmniArchive.Ingestion.Bmp do
   @max_dimension 20_000
   @max_area 100_000_000
 
+  # BITMAPFILEHEADER(14) + BITMAPINFOHEADER(40)。妥当な BMP は必ずこれ以上ある。
+  @header_bytes 54
+
   @doc """
   BMP ファイルを vix 画像へデコードする。
+
+  ヘッダのみを読んで検証し、合格した場合だけピクセルデータを行単位で読み込む。
 
   ## 戻り値
     - `{:ok, %Vix.Vips.Image{}}` 成功
@@ -38,10 +48,18 @@ defmodule OmniArchive.Ingestion.Bmp do
   """
   @spec decode_file(Path.t()) :: {:ok, Image.t()} | :not_bmp | {:error, term()}
   def decode_file(path) do
-    case File.read(path) do
-      {:ok, <<"BM", _::binary>> = bin} -> decode(bin)
-      {:ok, _} -> :not_bmp
-      {:error, reason} -> {:error, reason}
+    case File.open(path, [:read, :binary, :raw, {:read_ahead, 65_536}]) do
+      {:ok, io} ->
+        try do
+          decode_io(io)
+        rescue
+          e -> {:error, "BMP の解析に失敗: #{Exception.message(e)}"}
+        after
+          File.close(io)
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -50,21 +68,43 @@ defmodule OmniArchive.Ingestion.Bmp do
   """
   @spec decode(binary()) :: {:ok, Image.t()} | :not_bmp | {:error, term()}
   def decode(<<"BM", _::binary>> = bin) do
-    parse(bin)
+    with {:ok, info} <- parse_header(bin) do
+      build_from_binary(bin, info)
+    end
   rescue
     e -> {:error, "BMP の解析に失敗: #{Exception.message(e)}"}
   end
 
   def decode(_), do: :not_bmp
 
+  # 固定長ヘッダだけを読んで検証し、合格時のみピクセルデータへ進む。
+  defp decode_io(io) do
+    case :file.read(io, @header_bytes) do
+      {:ok, <<"BM", _::binary>> = header} when byte_size(header) == @header_bytes ->
+        with {:ok, info} <- parse_header(header), do: read_pixels(io, info)
+
+      {:ok, <<"BM", _::binary>>} ->
+        {:error, "BMP ヘッダが不正です"}
+
+      {:ok, _other} ->
+        :not_bmp
+
+      :eof ->
+        :not_bmp
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   # BITMAPFILEHEADER(14) + BITMAPINFOHEADER 先頭フィールド。
   # width/height/planes/bpp/compression のオフセットは BITMAPINFOHEADER 以降の
   # 全バージョンで共通。ピクセル位置は dib_size ではなく pixel_offset で解決する
   # ため、V4/V5 のような大きい DIB ヘッダでも正しく扱える。
-  defp parse(
+  defp parse_header(
          <<"BM", _fsize::little-32, _r1::little-16, _r2::little-16, pixel_offset::little-32,
            dib_size::little-32, width::little-signed-32, height_raw::little-signed-32,
-           _planes::little-16, bpp::little-16, compression::little-32, _::binary>> = bin
+           _planes::little-16, bpp::little-16, compression::little-32, _::binary>>
        ) do
     cond do
       dib_size < 40 ->
@@ -86,18 +126,60 @@ defmodule OmniArchive.Ingestion.Bmp do
         {:error, "BMP の面積が上限（#{@max_area}px）を超えています: #{width}x#{abs(height_raw)}"}
 
       true ->
-        build_image(bin, pixel_offset, width, height_raw, bpp)
+        {:ok, %{pixel_offset: pixel_offset, width: width, height_raw: height_raw, bpp: bpp}}
     end
   end
 
-  defp parse(_), do: {:error, "BMP ヘッダが不正です"}
+  defp parse_header(_), do: {:error, "BMP ヘッダが不正です"}
 
-  defp build_image(bin, pixel_offset, width, height_raw, bpp) do
+  # 検証済みヘッダに従い、ピクセル行を逐次読み込んで RGB へ詰め替える。
+  defp read_pixels(io, %{pixel_offset: pixel_offset} = info) do
+    %{width: width, height_raw: height_raw, bpp: bpp} = info
     abs_height = abs(height_raw)
-    top_down? = height_raw < 0
-    bytes_per_pixel = div(bpp, 8)
-    pixel_bytes = width * bytes_per_pixel
+    pixel_bytes = width * div(bpp, 8)
     # 行は 4 バイト境界へパディング: ((bpp*width + 31) / 32) * 4
+    row_stride = div(bpp * width + 31, 32) * 4
+
+    with {:ok, _pos} <- :file.position(io, {:bof, pixel_offset}),
+         {:ok, rows} <- read_rows(io, abs_height, row_stride, pixel_bytes, bpp, []) do
+      # rows はファイル格納順の逆順で積まれている。ボトムアップ格納
+      # （height > 0）は最終行が画像最上段なので、この逆順がそのまま
+      # 上から下の並びになる。トップダウンのときだけ戻す。
+      ordered = if height_raw < 0, do: Enum.reverse(rows), else: rows
+
+      Image.new_from_binary(
+        IO.iodata_to_binary(ordered),
+        width,
+        abs_height,
+        3,
+        :VIPS_FORMAT_UCHAR
+      )
+    end
+  end
+
+  defp read_rows(_io, 0, _row_stride, _pixel_bytes, _bpp, acc), do: {:ok, acc}
+
+  defp read_rows(io, remaining, row_stride, pixel_bytes, bpp, acc) do
+    case :file.read(io, row_stride) do
+      {:ok, <<pixels::binary-size(^pixel_bytes), _padding::binary>> = row}
+      when byte_size(row) == row_stride ->
+        read_rows(io, remaining - 1, row_stride, pixel_bytes, bpp, [
+          bgr_to_rgb(pixels, bpp) | acc
+        ])
+
+      {:error, reason} ->
+        {:error, reason}
+
+      _short_read ->
+        {:error, "BMP のピクセルデータが不足しています"}
+    end
+  end
+
+  # バイナリ入力版（decode/1）。全量がすでにメモリ上にあるためスライスで取り出す。
+  defp build_from_binary(bin, %{pixel_offset: pixel_offset} = info) do
+    %{width: width, height_raw: height_raw, bpp: bpp} = info
+    abs_height = abs(height_raw)
+    pixel_bytes = width * div(bpp, 8)
     row_stride = div(bpp * width + 31, 32) * 4
 
     <<_::binary-size(^pixel_offset), pixel_data::binary>> = bin
@@ -111,10 +193,9 @@ defmodule OmniArchive.Ingestion.Bmp do
       end
 
     # ボトムアップ格納は最終行が画像最上段。トップダウンはそのまま。
-    ordered = if top_down?, do: rows, else: Enum.reverse(rows)
-    rgb = IO.iodata_to_binary(ordered)
+    ordered = if height_raw < 0, do: rows, else: Enum.reverse(rows)
 
-    Image.new_from_binary(rgb, width, abs_height, 3, :VIPS_FORMAT_UCHAR)
+    Image.new_from_binary(IO.iodata_to_binary(ordered), width, abs_height, 3, :VIPS_FORMAT_UCHAR)
   end
 
   # BMP は BGR(A) 順。RGB 順へ詰め替える（32bit は第 4 バイトを破棄）。

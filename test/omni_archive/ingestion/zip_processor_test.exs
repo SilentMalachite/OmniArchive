@@ -318,6 +318,39 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
     end
   end
 
+  describe "extract_pngs/3 変換後の容量上限" do
+    @tag :tmp_dir
+    test "PNG 変換で膨らんだ結果が上限を超えたらエラーにし、残骸を残さない",
+         %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      jpeg = image_bytes(".jpg")
+      converted_size = converted_png_size(tmp_dir, jpeg)
+
+      assert converted_size > byte_size(jpeg),
+             "前提が崩れています: 変換後 PNG(#{converted_size}) は JPEG(#{byte_size(jpeg)}) より大きいはず"
+
+      # 変換元 JPEG は展開前チェックを通るが、変換後 PNG では超過する上限。
+      cap = byte_size(jpeg) + div(converted_size - byte_size(jpeg), 2)
+
+      zip_path = build_zip(tmp_dir, "expand.zip", [{"a.jpg", jpeg}])
+
+      assert {:error, message} =
+               ZipProcessor.extract_pngs(zip_path, output_dir, %{max_extracted_bytes: cap})
+
+      assert message =~ "上限"
+      assert File.ls!(output_dir) == []
+    end
+
+    @tag :tmp_dir
+    test "変換後も上限内なら正常に取り込む", %{tmp_dir: tmp_dir, output_dir: output_dir} do
+      jpeg = image_bytes(".jpg")
+      cap = converted_png_size(tmp_dir, jpeg) + 1024
+      zip_path = build_zip(tmp_dir, "fits.zip", [{"a.jpg", jpeg}])
+
+      assert {:ok, %{page_count: 1}} =
+               ZipProcessor.extract_pngs(zip_path, output_dir, %{max_extracted_bytes: cap})
+    end
+  end
+
   # === ヘルパ ===
 
   defp build_zip(tmp_dir, name, entries) do
@@ -337,6 +370,19 @@ defmodule OmniArchive.Ingestion.ZipProcessorTest do
     {:ok, img} = Vix.Vips.Image.new_from_file("priv/static/images/lab_wizard.png")
     {:ok, bytes} = Vix.Vips.Image.write_to_buffer(img, suffix)
     bytes
+  end
+
+  # JPEG バイト列を実際に PNG へ変換したときの出力サイズを実測する。
+  # 「元より膨らむ」量は画像内容依存のため、上限値の見積もりは実測に基づける。
+  defp converted_png_size(tmp_dir, jpeg) do
+    src = Path.join(tmp_dir, "probe.jpg")
+    dest = Path.join(tmp_dir, "probe.png")
+    File.write!(src, jpeg)
+    {:ok, ^dest} = OmniArchive.Ingestion.ImageProcessor.to_png(src, dest)
+    size = File.stat!(dest).size
+    File.rm!(src)
+    File.rm!(dest)
+    size
   end
 
   # 識別用に指定サイズの単色画像を生成して指定形式のバイト列で返す

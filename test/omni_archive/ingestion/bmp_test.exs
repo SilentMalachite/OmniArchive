@@ -10,6 +10,9 @@ defmodule OmniArchive.Ingestion.BmpTest do
   alias Vix.Vips.Image
   alias Vix.Vips.Operation
 
+  # スパースファイルで用意する見かけ上のファイルサイズ（実ディスク消費はほぼ 0）
+  @sparse_bytes 192 * 1024 * 1024
+
   describe "decode/1" do
     test "24bit ボトムアップ BMP を正しい寸法・色でデコードする" do
       # トップダウン指定: (0,0)=赤 (1,0)=緑 / (0,1)=青 (1,1)=白
@@ -78,6 +81,110 @@ defmodule OmniArchive.Ingestion.BmpTest do
     test "破損した（切り詰められた）BMP は raise せず {:error, _} を返す" do
       truncated = binary_part(BmpFixture.solid(4, 4), 0, 30)
       assert {:error, _reason} = Bmp.decode(truncated)
+    end
+  end
+
+  describe "decode_file/1" do
+    @tag :tmp_dir
+    test "有効な BMP ファイルをデコードする", %{tmp_dir: tmp_dir} do
+      path = Path.join(tmp_dir, "solid.bmp")
+      File.write!(path, BmpFixture.solid(8, 6, {200, 100, 50}))
+
+      assert {:ok, img} = Bmp.decode_file(path)
+      assert Image.width(img) == 8
+      assert Image.height(img) == 6
+      assert pixel(img, 0, 0) == {200, 100, 50}
+    end
+
+    @tag :tmp_dir
+    test "BMP でないファイルは :not_bmp を返す", %{tmp_dir: tmp_dir} do
+      path = Path.join(tmp_dir, "not_bmp.dat")
+      File.write!(path, "this is definitely not a bitmap")
+
+      assert :not_bmp = Bmp.decode_file(path)
+    end
+
+    @tag :tmp_dir
+    test "ピクセルデータが不足したファイルは {:error, _} を返す", %{tmp_dir: tmp_dir} do
+      path = Path.join(tmp_dir, "truncated.bmp")
+      full = BmpFixture.solid(8, 6)
+      File.write!(path, binary_part(full, 0, byte_size(full) - 20))
+
+      assert {:error, _reason} = Bmp.decode_file(path)
+    end
+
+    @tag :tmp_dir
+    test "ヘッダが不正な巨大ファイルを全量メモリへ読み込まない（メモリ保護）", %{tmp_dir: tmp_dir} do
+      path = Path.join(tmp_dir, "huge_invalid.bmp")
+      # dib_size=0 の不正ヘッダ。検証はヘッダだけで完結するため、
+      # 後続の巨大な本体を読み込む理由はない。
+      File.write!(path, invalid_header())
+      append_sparse_bytes(path, @sparse_bytes)
+      assert File.stat!(path).size > @sparse_bytes
+
+      {result, peak_binary_bytes} = measure_peak_binary(fn -> Bmp.decode_file(path) end)
+
+      assert {:error, _reason} = result
+
+      assert peak_binary_bytes < 32 * 1024 * 1024,
+             "デコードプロセスが #{peak_binary_bytes} バイトのバイナリを保持しました（ファイル全量の読み込み）"
+    end
+  end
+
+  # dib_size=0（BITMAPINFOHEADER 未満）でヘッダ検証のみで棄却できる BMP
+  defp invalid_header do
+    <<"BM", 0::little-32, 0::little-16, 0::little-16, 54::little-32, 0::little-32,
+      4::little-signed-32, 4::little-signed-32, 1::little-16, 24::little-16, 0::little-32>> <>
+      :binary.copy(<<0>>, 20)
+  end
+
+  # 末尾に 1 バイト書き込んでファイルサイズだけを膨らませる（スパース領域）
+  defp append_sparse_bytes(path, bytes) do
+    {:ok, io} = :file.open(String.to_charlist(path), [:read, :write, :binary])
+    :ok = :file.pwrite(io, bytes, <<0>>)
+    :ok = :file.close(io)
+  end
+
+  # fun を別プロセスで実行し、そのプロセスが保持した refc バイナリの最大量を返す。
+  # 「ファイル全量をメモリへ載せたか」をプロセス局所に観測できる。
+  defp measure_peak_binary(fun) do
+    parent = self()
+
+    {pid, ref} =
+      spawn_monitor(fn ->
+        result = fun.()
+
+        # 観測ウィンドウを確保する（保持中のバイナリは GC まで一覧に残る）
+        Process.sleep(50)
+        send(parent, {:measured, result})
+      end)
+
+    peak = poll_peak_binary(pid, 0)
+
+    receive do
+      {:DOWN, ^ref, :process, ^pid, _reason} -> :ok
+    after
+      60_000 -> flunk("デコードプロセスが終了しませんでした")
+    end
+
+    result =
+      receive do
+        {:measured, result} -> result
+      after
+        1_000 -> flunk("デコード結果を受信できませんでした")
+      end
+
+    {result, peak}
+  end
+
+  defp poll_peak_binary(pid, peak) do
+    case :erlang.process_info(pid, :binary) do
+      {:binary, binaries} ->
+        current = Enum.reduce(binaries, 0, fn info, acc -> acc + elem(info, 1) end)
+        poll_peak_binary(pid, max(peak, current))
+
+      _dead ->
+        peak
     end
   end
 
