@@ -133,9 +133,11 @@ defmodule OmniArchive.Ingestion.BmpTest do
 
   # dib_size=0（BITMAPINFOHEADER 未満）でヘッダ検証のみで棄却できる BMP
   defp invalid_header do
-    <<"BM", 0::little-32, 0::little-16, 0::little-16, 54::little-32, 0::little-32,
-      4::little-signed-32, 4::little-signed-32, 1::little-16, 24::little-16, 0::little-32>> <>
-      :binary.copy(<<0>>, 20)
+    header =
+      <<"BM", 0::little-32, 0::little-16, 0::little-16, 54::little-32, 0::little-32,
+        4::little-signed-32, 4::little-signed-32, 1::little-16, 24::little-16, 0::little-32>>
+
+    header <> :binary.copy(<<0>>, 20)
   end
 
   # 末尾に 1 バイト書き込んでファイルサイズだけを膨らませる（スパース領域）
